@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
-import { TRAITS, APPEARANCE_LIMITS } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MATERIALS } from "./gameData";
 
 export default function AppearanceEditor({ character, onSave, onClose }) {
   const [appearance, setAppearance] = useState({
@@ -16,6 +16,11 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
 
   const limits = APPEARANCE_LIMITS[character.tier] || APPEARANCE_LIMITS["Minor"];
   const learned = character.learnedMaterials || [];
+  const learnedMagic = learned.filter(m => MATERIALS.magic.includes(m));
+  // A material can only fill one slot at a time
+  const usedElsewhere = (field, mat) =>
+    ["primaryMaterials", "secondaryMaterials", "magicalMaterials"]
+      .some(f => f !== field && (appearance[f] || []).includes(mat));
   const learnedTraits = character.learnedTraits || [];
 
   // With a limit of 1, picking a new material replaces the current one.
@@ -63,7 +68,7 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
               <button
                 key={mat}
                 onClick={() => toggleMat("primaryMaterials", mat, limits.primaryMaterials)}
-                disabled={appearance.secondaryMaterials.includes(mat)}
+                disabled={usedElsewhere("primaryMaterials", mat)}
                 className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
                   appearance.primaryMaterials.includes(mat)
                     ? "border-primary bg-primary/10 text-primary"
@@ -87,11 +92,37 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
                 <button
                   key={mat}
                   onClick={() => toggleMat("secondaryMaterials", mat, limits.secondaryMaterials)}
-                  disabled={appearance.primaryMaterials.includes(mat)}
+                  disabled={usedElsewhere("secondaryMaterials", mat)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
                     appearance.secondaryMaterials.includes(mat)
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {mat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Magical Materials — learned magic materials only */}
+        {limits.magicalMaterials > 0 && (
+          <div>
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+              Magical Materials (max {limits.magicalMaterials}) — learned only
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {learnedMagic.length === 0 && <span className="text-muted-foreground italic">No magical materials learned yet.</span>}
+              {learnedMagic.map(mat => (
+                <button
+                  key={mat}
+                  onClick={() => toggleMat("magicalMaterials", mat, limits.magicalMaterials)}
+                  disabled={usedElsewhere("magicalMaterials", mat)}
+                  className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
+                    appearance.magicalMaterials.includes(mat)
+                      ? "border-purple-400 bg-purple-400/10 text-purple-400"
+                      : "border-border text-muted-foreground hover:border-purple-400/30"
                   }`}
                 >
                   {mat}

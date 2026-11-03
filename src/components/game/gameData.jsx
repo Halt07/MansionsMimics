@@ -1802,7 +1802,7 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 }
 
 // Which of an adventurer's liked and disliked qualities the mimic's current look matches.
-// Materials: primary + secondary. Traits: surface, symbolic and condition traits from the appearance,
+// Materials: primary, secondary and magical. Traits: surface, symbolic and condition traits from the appearance,
 // plus the form's built-in traits (structural/aura, e.g. a Chest is Iron-Banded). Tags: the form's utility tags.
 //   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
 //   disliked — each match is -1 allure die (adventurer.repelledBy)
@@ -1810,6 +1810,7 @@ export function calcAllureBreakdown(form, currentAppearance, adventurer) {
   const appearanceMats = [
     ...(currentAppearance.primaryMaterials || []),
     ...(currentAppearance.secondaryMaterials || []),
+    ...(currentAppearance.magicalMaterials || []),
   ];
   const appearanceTraits = [
     ...(currentAppearance.surfaceTraits || []),

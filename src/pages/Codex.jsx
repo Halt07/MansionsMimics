@@ -418,7 +418,7 @@ export default function Codex() {
               <Collapsible title="Allure Check">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>Lure rolls <span className="text-foreground">Base Allure + form modifier + room context d6</span> vs. the adventurer's <span className="text-foreground">Discipline + Suspicion/2 d6</span>. Success draws them into your room.</p>
-                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials, surface traits, symbolic traits, condition traits, your form's tags and your form's built-in traits (e.g. a Chest is always Iron-Banded and Heavy-Lidded) all count.</p>
+                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials (primary, secondary and magical), surface traits, symbolic traits, condition traits, your form's tags and your form's built-in traits (e.g. a Chest is always Iron-Banded and Heavy-Lidded) all count.</p>
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• Each quality they like: <span className="text-green-400">+1 die</span>, up to your Plausibility. Going over that cap is too good to be true: <span className="text-red-400">+1 suspicion</span>.</li>
                     <li>• Each quality they dislike: <span className="text-red-400">–1 die</span>, with no cap. A King won't be tempted by anything Cracked or Dusty.</li>
