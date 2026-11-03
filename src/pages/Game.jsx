@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
   MASTER_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
+  rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
@@ -757,10 +757,11 @@ export default function Game() {
     const newCount = actionCount + 1;
     setActionCount(newCount);
 
-    // Patience check — reduce suspicion slightly (threshold scales with dice count)
-    // Runestone: +1 die (the threshold stays based on Patience alone)
+    // Patience check — reduce suspicion slightly. Roll effective Patience (after sickness and
+    // form-tier penalties; Runestone adds a die) against a threshold set by base Patience,
+    // so penalties genuinely lower the odds instead of shrinking the target with the dice.
     const roll = rollDice(effectivePatience + (hasMagic(character?.currentAppearance, "Runestone") ? 1 : 0));
-    const threshold = effectivePatience * 3;
+    const threshold = (character?.patience ?? 1) * 3;
     if (roll >= threshold) {
       setSuspicion(s => Math.max(0, s - 1));
       addEvent("stealth", `You wait in perfect stillness. Suspicion decreases.`);
@@ -931,9 +932,11 @@ export default function Game() {
   const sickPlausibilityPenalty = (currentSickness?.penalties?.plausibility ?? 0);
   const sickAdhesionPenalty = (currentSickness?.penalties?.adhesion ?? 0);
   const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
-  const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
-  const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty);
   const activeForm = character ? getActiveForm(character) : null;
+  // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
+  const formTierPenalties = activeForm ? getFormTierPenalties(activeForm.tier, character.tier) : { plausibility: 0, patience: 0 };
+  const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
+  const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
   const cfg = character ? TIER_CONFIG[character.tier] : null;
   const apProgress = cfg ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
 
@@ -1065,17 +1068,21 @@ export default function Game() {
               })()}
               <div className="space-y-2 pt-1 border-t border-border">
                 <StatBar label="Plausibility" value={character.plausibility} max={6} color="bg-green-500"
-                  penalty={massPenalty + (currentSickness?.penalties?.plausibility ?? 0)}
+                  penalty={massPenalty + (currentSickness?.penalties?.plausibility ?? 0) + formTierPenalties.plausibility}
                   penaltyLabel={currentSickness?.penalties?.plausibility ? `–${currentSickness.penalties.plausibility} ${currentSickness.name}` : null}
                   massPenalty={massPenalty}
+                  formPenalty={formTierPenalties.plausibility}
+                  formPenaltyNote="Your form is from the tier above — you can't quite match its appearance (stealth checks)."
                 />
                 <StatBar label="Adhesion" value={character.adhesion} max={6} color="bg-primary"
                   penalty={currentSickness?.penalties?.adhesion ?? 0}
                   penaltyLabel={currentSickness?.penalties?.adhesion ? `–${currentSickness.penalties.adhesion} ${currentSickness.name}` : null}
                 />
                 <StatBar label="Patience" value={character.patience} max={6} color="bg-purple-500"
-                  penalty={currentSickness?.penalties?.patience ?? 0}
+                  penalty={(currentSickness?.penalties?.patience ?? 0) + formTierPenalties.patience}
                   penaltyLabel={currentSickness?.penalties?.patience ? `–${currentSickness.penalties.patience} ${currentSickness.name}` : null}
+                  formPenalty={formTierPenalties.patience}
+                  formPenaltyNote="Your form is from the tier below — too much mass in a small space makes you restless."
                 />
               </div>
             </CardContent>

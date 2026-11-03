@@ -415,7 +415,7 @@ export default function Codex() {
                   <p>Modifiers applied before rolling:</p>
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• Form one tier <span className="text-foreground">above</span> you: <span className="text-red-400">–2 Plausibility</span></li>
-                    <li>• Form one tier <span className="text-foreground">below</span> you: <span className="text-red-400">–1 Plausibility</span></li>
+                    <li>• Form one tier <span className="text-foreground">below</span> you: <span className="text-red-400">–1 Patience</span> (fewer bonus dice from Patience)</li>
                     <li>• <span className="text-foreground">Room context bonus</span>: e.g. +1 if you're a Barrel in a Cellar</li>
                     <li>• <span className="text-foreground">Room context penalty</span>: e.g. –2 if you're a Bookshelf in a Cellar</li>
                   </ul>

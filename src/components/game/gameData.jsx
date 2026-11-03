@@ -1740,23 +1740,27 @@ export function rollDiceVerbose(numDice) {
 
 // ============================================================
 // HELPER: Get valid forms for a mimic
-// For the current tier, filter by mass. For adjacent tiers, show all forms (no mass filter).
+// Forms from the tier below, the current tier and the tier above are available
+// (with plausibility penalties for the adjacent tiers — see stealthCheck).
+// A form's minimum mass only gates it when it is higher than its own tier's starting
+// mass (e.g. Giant forms, Chapel, Castle Gate, Lighthouse). Otherwise every form in the
+// tier above would be unreachable, since a mimic is always below that tier's starting mass.
+// The upper bound of baseMassRange is display/flavor only.
 // ============================================================
+export function isFormMassGated(form) {
+  return form.baseMassRange[0] > TIER_CONFIG[form.tier].massRange[0];
+}
+
 export function getValidForms(tierStr, massVal) {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];
   const validForms = [];
   TIER_ORDER.forEach((tier, tierIndex) => {
-    const delta = tierIndex - currentTierIndex;
-    if (Math.abs(delta) <= 1) {
-      MASTER_FORMS[tier]?.forEach((form) => {
-        // Mass-gated forms: baseMassRange[0] acts as minimum mass required
-        if (massVal < form.baseMassRange[0]) return;
-        // All forms that meet the mass minimum are valid — no upper-bound exclusion.
-        // (Upper bound of baseMassRange is only used for display/flavor, not gating.)
-        validForms.push(form);
-      });
-    }
+    if (Math.abs(tierIndex - currentTierIndex) > 1) return;
+    MASTER_FORMS[tier]?.forEach((form) => {
+      if (isFormMassGated(form) && massVal < form.baseMassRange[0]) return;
+      validForms.push(form);
+    });
   });
   return validForms;
 }
@@ -1814,6 +1818,21 @@ export function wornMagic(appearance) {
 const ACOUSTIC_FLAW_TYPES = ["acoustic", "sound"];
 
 // ============================================================
+// FORM TIER PENALTIES
+// Tier above: less mass stretched into a larger form, so the disguise is never quite
+//   perfect (–2 Plausibility on stealth checks).
+// Tier below: more mass crammed into a smaller form, so the mimic is restless
+//   (–1 Patience, applied to everything Patience affects).
+// ============================================================
+export function getFormTierPenalties(formTier, mimicTier) {
+  const delta = TIER_ORDER.indexOf(formTier) - TIER_ORDER.indexOf(mimicTier);
+  return {
+    plausibility: delta === 1 ? 2 : 0,
+    patience: delta === -1 ? 1 : 0,
+  };
+}
+
+// ============================================================
 // COMBAT ENGINE
 // ============================================================
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
@@ -1825,12 +1844,9 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
       narrative: `${adventurer.name} passes the ${form.name} without a second glance — it smells of the grave, like one of its own.`,
     };
   }
-  const currentTierIndex = TIER_ORDER.indexOf(mimicTier);
-  const formTierIndex = TIER_ORDER.indexOf(formTier);
-  let basePlausi = plausibility;
-
-  if (formTierIndex === currentTierIndex + 1) basePlausi -= 2;
-  else if (formTierIndex === currentTierIndex - 1) basePlausi -= 1;
+  // Form one tier above: –2 Plausibility. (A form one tier below costs Patience instead,
+  // which the caller has already applied to the `patience` passed in.)
+  let basePlausi = plausibility - getFormTierPenalties(formTier, mimicTier).plausibility;
   // Apply room context plausibility modifier
   basePlausi += (roomContextMod.plausibility || 0);
   basePlausi = Math.max(1, basePlausi);

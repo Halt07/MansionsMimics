@@ -36,8 +36,8 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
 
   const tierLabel = (tier) => {
     const idx = TIER_ORDER.indexOf(tier);
-    if (idx === currentTierIdx - 1) return `${tier} Tier (Below — simpler forms)`;
-    if (idx === currentTierIdx + 1) return `${tier} Tier (Above — ambitious forms)`;
+    if (idx === currentTierIdx - 1) return `${tier} Tier (Below — simpler forms, –1 Patience)`;
+    if (idx === currentTierIdx + 1) return `${tier} Tier (Above — ambitious forms, –2 Plausibility)`;
     return `${tier} Tier (Current)`;
   };
 

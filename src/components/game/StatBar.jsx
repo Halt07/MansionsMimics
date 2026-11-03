@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-export default function StatBar({ label, value, max = 6, color = "bg-green-500", penalty = 0, penaltyLabel = null, massPenalty = 0 }) {
+export default function StatBar({ label, value, max = 6, color = "bg-green-500", penalty = 0, penaltyLabel = null, massPenalty = 0, formPenalty = 0, formPenaltyNote = null }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const effectiveValue = Math.max(0, value - penalty);
-  // Split penalty into mass portion vs sickness portion for separate coloring
-  const sicknessPenalty = penalty - massPenalty;
+  // Split penalty into mass, form-tier and sickness portions for separate coloring
+  const sicknessPenalty = penalty - massPenalty - formPenalty;
 
   return (
     <div className="space-y-1">
@@ -31,6 +31,13 @@ export default function StatBar({ label, value, max = 6, color = "bg-green-500",
             style={{ width: `${(massPenalty / max) * 100}%` }}
           />
         )}
+        {/* Form-tier penalty portion — sky blue */}
+        {formPenalty > 0 && (
+          <div
+            className="h-full bg-sky-500/70 transition-all duration-500"
+            style={{ width: `${(formPenalty / max) * 100}%` }}
+          />
+        )}
         {/* Sickness penalty portion — amber/orange */}
         {sicknessPenalty > 0 && (
           <div
@@ -47,9 +54,16 @@ export default function StatBar({ label, value, max = 6, color = "bg-green-500",
                 <br />Your mass is below your tier's minimum. Hunt and feed to restore it.
               </>
             )}
-            {sicknessPenalty > 0 && (
+            {formPenalty > 0 && (
               <>
                 {massPenalty > 0 && <br />}
+                <span className="text-sky-400 font-bold">–{formPenalty} form tier</span>
+                <br />{formPenaltyNote || "Your active form is from a different tier."}
+              </>
+            )}
+            {sicknessPenalty > 0 && (
+              <>
+                {(massPenalty > 0 || formPenalty > 0) && <br />}
                 <span className="text-amber-400 font-bold">{penaltyLabel || `–${sicknessPenalty} sickness`}</span>
                 <br />This penalty lasts the current hunt only.
               </>
