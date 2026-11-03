@@ -503,6 +503,9 @@ export default function Game() {
     }));
     scored.sort((a, b) => a.dist - b.dist || b.interest - a.interest);
     const target = scored[0].adv;
+    // Killing the last adventurer ends the hunt in success, so it never adds suspicion
+    const othersRemain = party.some(a =>
+      a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
     // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
@@ -534,7 +537,13 @@ export default function Game() {
           const isNewMaterial = biteMaterial && !(character.learnedMaterials || []).includes(biteMaterial);
           if (isNewMaterial) addEvent("evolve", `New material absorbed from the bite: ${biteMaterial}!`);
           applyBehaviorReactions("feed", { excludeIds: [target.id] });
-          setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
+          // A bite that wears the target down may make them collapse (killed) or flee
+          const finishing = hitsSoFar >= maxHits;
+          const flees = finishing && target.discipline >= 3 && Math.random() < 0.5;
+          const finalKill = finishing && !flees && !othersRemain;
+          if (!finalKill) {
+            setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
+          }
           const learnedMaterials = isNewMaterial
             ? [...(character.learnedMaterials || []), biteMaterial]
             : (character.learnedMaterials || []);
@@ -550,9 +559,8 @@ export default function Game() {
             lastFedAt: new Date().toISOString(),
           });
 
-          if (hitsSoFar >= maxHits) {
+          if (finishing) {
             // Dead or fled
-            const flees = target.discipline >= 3 && Math.random() < 0.5;
             if (flees) {
               addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
@@ -618,9 +626,13 @@ export default function Game() {
 
       setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
       addEvent("consume", `${target.name} has been consumed! +${apGained} Assimilation Points.`);
-      // +1 suspicion — a party member vanished
-      setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
-      addEvent("alert", `One of the party has vanished — the others grow uneasy. (+1 suspicion)`);
+      if (othersRemain) {
+        // +1 suspicion — a party member vanished
+        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        addEvent("alert", `One of the party has vanished — the others grow uneasy. (+1 suspicion)`);
+      } else {
+        addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
+      }
       applyBehaviorReactions("feed", { excludeIds: [target.id] });
       if (learnedNewMats.length > 0) addEvent("evolve", `New materials absorbed: ${learnedNewMats.join(", ")}!`);
       if (learnedNewTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learnedNewTraits.join(", ")}!`);
