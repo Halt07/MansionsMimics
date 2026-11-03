@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
-import { TRAITS, APPEARANCE_LIMITS, MATERIALS, MAGIC_EFFECTS } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials } from "./gameData";
+
+const MATERIAL_FIELDS = ["primaryMaterials", "secondaryMaterials"];
 
 export default function AppearanceEditor({ character, onSave, onClose }) {
   const [appearance, setAppearance] = useState({
     primaryMaterials: character.currentAppearance?.primaryMaterials || [],
     secondaryMaterials: character.currentAppearance?.secondaryMaterials || [],
-    magicalMaterials: character.currentAppearance?.magicalMaterials || [],
     surfaceTraits: character.currentAppearance?.surfaceTraits || [],
     symbolicTraits: character.currentAppearance?.symbolicTraits || [],
     conditionTraits: character.currentAppearance?.conditionTraits || [],
@@ -16,11 +17,40 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
 
   const limits = APPEARANCE_LIMITS[character.tier] || APPEARANCE_LIMITS["Minor"];
   const learned = character.learnedMaterials || [];
-  const learnedMagic = learned.filter(m => MATERIALS.magic.includes(m));
+  const hasLearnedMagic = learned.some(isMagicMaterial);
+  const magicInUse = countMagicMaterials(appearance);
+  const wornMagic = MATERIAL_FIELDS.flatMap(f => appearance[f]).filter(isMagicMaterial);
+
   // A material can only fill one slot at a time
   const usedElsewhere = (field, mat) =>
-    ["primaryMaterials", "secondaryMaterials", "magicalMaterials"]
-      .some(f => f !== field && (appearance[f] || []).includes(mat));
+    MATERIAL_FIELDS.some(f => f !== field && appearance[f].includes(mat));
+
+  // Magic materials go in the primary/secondary slots, but only limits.magicalMaterials of them in total.
+  const exceedsMagicCap = (field, mat) => {
+    if (!isMagicMaterial(mat) || appearance[field].includes(mat)) return false;
+    // With a slot limit of 1 the pick replaces the current material, freeing its magic slot if it had one
+    const freed = limits[field] === 1 ? appearance[field].filter(isMagicMaterial).length : 0;
+    return magicInUse - freed >= limits.magicalMaterials;
+  };
+
+  const materialButton = (field, mat) => {
+    const selected = appearance[field].includes(mat);
+    const magic = isMagicMaterial(mat);
+    const style = selected
+      ? (magic ? "border-purple-400 bg-purple-400/10 text-purple-400" : "border-primary bg-primary/10 text-primary")
+      : (magic ? "border-purple-400/30 text-purple-400/70 hover:border-purple-400/60" : "border-border text-muted-foreground hover:border-primary/30");
+    return (
+      <button
+        key={mat}
+        title={MAGIC_EFFECTS[mat]}
+        onClick={() => toggleMat(field, mat, limits[field])}
+        disabled={usedElsewhere(field, mat) || exceedsMagicCap(field, mat)}
+        className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${style}`}
+      >
+        {mat}
+      </button>
+    );
+  };
   const learnedTraits = character.learnedTraits || [];
 
   // With a limit of 1, picking a new material replaces the current one.
@@ -64,20 +94,7 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {learned.length === 0 && <span className="text-muted-foreground italic">No materials learned yet.</span>}
-            {learned.map(mat => (
-              <button
-                key={mat}
-                onClick={() => toggleMat("primaryMaterials", mat, limits.primaryMaterials)}
-                disabled={usedElsewhere("primaryMaterials", mat)}
-                className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
-                  appearance.primaryMaterials.includes(mat)
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30"
-                }`}
-              >
-                {mat}
-              </button>
-            ))}
+            {learned.map(mat => materialButton("primaryMaterials", mat))}
           </div>
         </div>
 
@@ -88,55 +105,27 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
               Secondary Material{limits.secondaryMaterials > 1 ? `s (max ${limits.secondaryMaterials})` : ""}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {learned.map(mat => (
-                <button
-                  key={mat}
-                  onClick={() => toggleMat("secondaryMaterials", mat, limits.secondaryMaterials)}
-                  disabled={usedElsewhere("secondaryMaterials", mat)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
-                    appearance.secondaryMaterials.includes(mat)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {mat}
-                </button>
-              ))}
+              {learned.map(mat => materialButton("secondaryMaterials", mat))}
             </div>
           </div>
         )}
 
-        {/* Magical Materials — learned magic materials only */}
-        {limits.magicalMaterials > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
-              Magical Materials (max {limits.magicalMaterials}) — learned only
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {learnedMagic.length === 0 && <span className="text-muted-foreground italic">No magical materials learned yet.</span>}
-              {learnedMagic.map(mat => (
-                <button
-                  key={mat}
-                  title={MAGIC_EFFECTS[mat]}
-                  onClick={() => toggleMat("magicalMaterials", mat, limits.magicalMaterials)}
-                  disabled={usedElsewhere("magicalMaterials", mat)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
-                    appearance.magicalMaterials.includes(mat)
-                      ? "border-purple-400 bg-purple-400/10 text-purple-400"
-                      : "border-border text-muted-foreground hover:border-purple-400/30"
-                  }`}
-                >
-                  {mat}
-                </button>
-              ))}
-            </div>
-            {appearance.magicalMaterials.filter(mat => MAGIC_EFFECTS[mat]).map(mat => (
-              <p key={mat} className="mt-1.5 text-[10px] text-muted-foreground">
-                <span className="text-purple-400">{mat}:</span> {MAGIC_EFFECTS[mat]}
+        {/* Magic materials: cap and effects */}
+        {hasLearnedMagic && (
+          <div className="text-[10px] text-muted-foreground space-y-1">
+            {limits.magicalMaterials > 0 ? (
+              <p>
+                <span className="text-purple-400">Magical materials</span> can fill primary or secondary slots:{" "}
+                <span className="text-foreground">{magicInUse}/{limits.magicalMaterials}</span> in use.
               </p>
+            ) : (
+              <p>Your tier can&apos;t wear <span className="text-purple-400">magical materials</span> yet.</p>
+            )}
+            {wornMagic.map(mat => (
+              <p key={mat}><span className="text-purple-400">{mat}:</span> {MAGIC_EFFECTS[mat]}</p>
             ))}
-            {appearance.magicalMaterials.length > 0 && (
-              <p className="mt-1 text-[10px] text-muted-foreground italic">Each magic material leaves arcane residue that magic-sensitive adventurers may notice.</p>
+            {wornMagic.length > 0 && (
+              <p className="italic">Each magic material leaves arcane residue that magic-sensitive adventurers may notice.</p>
             )}
           </div>
         )}

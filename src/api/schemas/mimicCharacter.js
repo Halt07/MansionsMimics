@@ -20,14 +20,16 @@ const FormRefSchema = z.strictObject({
   learned: z.boolean().default(true),
 });
 
+// Magic materials go in the primary/secondary slots (the tier's magicalMaterials limit caps
+// how many of them may be magic), so there is no separate magic slot.
 const AppearanceSchema = z.strictObject({
   primaryMaterials: z.array(z.string()).default([]),
   secondaryMaterials: z.array(z.string()).default([]),
-  magicalMaterials: z.array(z.string()).default([]),
   surfaceTraits: z.array(z.string()).default([]),
   symbolicTraits: z.array(z.string()).default([]),
   conditionTraits: z.array(z.string()).default([]),
 });
+
 
 /** Fields the game controls. Used to validate `create()` input. */
 export const MimicCharacterFieldsSchema = z.strictObject({

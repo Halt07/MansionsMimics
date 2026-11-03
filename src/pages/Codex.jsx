@@ -228,7 +228,7 @@ export default function Codex() {
                   {rarity === "magic" && (
                     <div className="mb-3 space-y-2">
                       <p className="text-xs text-purple-400/80 italic border border-purple-400/20 bg-purple-400/5 rounded px-2 py-1.5">
-                        Wearing a magic material in any appearance slot grants its effect. The cost: each one gives off <span className="font-semibold">arcane residue</span>, an extra flaw check against adventurers with Magical perception +2 or higher (wizards, clerics, inquisitors, changelings…).
+                        Magic materials are worn in your primary or secondary slots like any other material, up to your tier's Magic limit, and each one worn grants its effect. The cost: each one gives off <span className="font-semibold">arcane residue</span>, an extra flaw check against adventurers with Magical perception +2 or higher (wizards, clerics, inquisitors, changelings…).
                       </p>
                       <ul className="space-y-1 text-xs">
                         {mats.filter((mat) => MAGIC_EFFECTS[mat]).map((mat) =>
@@ -259,7 +259,7 @@ export default function Codex() {
                         <th className="text-left py-1 pr-3 font-cinzel text-foreground">Tier</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Primary</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Secondary</th>
-                        <th className="py-1 px-2 font-cinzel text-foreground">Magical</th>
+                        <th className="py-1 px-2 font-cinzel text-foreground" title="How many of your primary and secondary materials may be magic">Magic (of P+S)</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Surface</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Symbolic</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Condition</th>
@@ -283,6 +283,7 @@ export default function Codex() {
                     </tbody>
                   </table>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">Magic materials don't have their own slot. They go in your primary or secondary slots, and the Magic column caps how many of those may be magic — at Apex, up to 3 of your 4 materials.</p>
               </Collapsible>
             </div>
           }
@@ -430,7 +431,7 @@ export default function Codex() {
               <Collapsible title="Allure Check">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>Lure rolls <span className="text-foreground">Base Allure + form modifier + room context d6</span> vs. the adventurer's <span className="text-foreground">Discipline + Suspicion/2 d6</span>. Success draws them into your room.</p>
-                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials (primary, secondary and magical), surface traits, symbolic traits, condition traits, your form's tags and your form's built-in traits (e.g. a Chest is always Iron-Banded and Heavy-Lidded) all count.</p>
+                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials (primary and secondary, magic or not), surface traits, symbolic traits, condition traits, your form's tags and your form's built-in traits (e.g. a Chest is always Iron-Banded and Heavy-Lidded) all count.</p>
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• Each quality they like: <span className="text-green-400">+1 die</span>, up to your Plausibility. Going over that cap is too good to be true: <span className="text-red-400">+1 suspicion</span>.</li>
                     <li>• Each quality they dislike: <span className="text-red-400">–1 die</span>, with no cap. A King won't be tempted by anything Cracked or Dusty.</li>

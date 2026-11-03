@@ -1012,7 +1012,7 @@ export default function Game() {
               {/* Current appearance summary */}
               {character.currentAppearance && (() => {
                 const app = character.currentAppearance;
-                const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || []), ...(app.magicalMaterials || [])];
+                const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || [])];
                 const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || [])];
                 if (mats.length === 0 && traits.length === 0) return null;
                 return (

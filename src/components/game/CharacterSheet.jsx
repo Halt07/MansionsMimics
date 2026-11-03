@@ -133,9 +133,6 @@ export default function CharacterSheet({ character, onClose }) {
               {(character.currentAppearance.secondaryMaterials || []).length > 0 && (
                 <p>Secondary: <span className="text-foreground">{character.currentAppearance.secondaryMaterials.join(", ")}</span></p>
               )}
-              {(character.currentAppearance.magicalMaterials || []).length > 0 && (
-                <p>Magical: <span className="text-purple-400">{character.currentAppearance.magicalMaterials.join(", ")}</span></p>
-              )}
               {(character.currentAppearance.surfaceTraits || []).length > 0 && (
                 <p>Traits: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>
               )}

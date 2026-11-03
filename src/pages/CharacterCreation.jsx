@@ -36,7 +36,6 @@ export default function CharacterCreation() {
   const [appearance, setAppearance] = useState({
     primaryMaterials: [],
     secondaryMaterials: [],
-    magicalMaterials: [],
     surfaceTraits: [],
     symbolicTraits: [],
     conditionTraits: [],
@@ -106,7 +105,6 @@ export default function CharacterCreation() {
       currentAppearance: {
         primaryMaterials: appearance.primaryMaterials.length ? appearance.primaryMaterials : [startingMats[0]],
         secondaryMaterials: appearance.secondaryMaterials,
-        magicalMaterials: [],
         surfaceTraits: appearance.surfaceTraits || [],
         symbolicTraits: appearance.symbolicTraits || [],
         conditionTraits: appearance.conditionTraits || [],
@@ -348,6 +346,26 @@ export default function CharacterCreation() {
               </div>
             </div>
 
+            {/* Condition trait */}
+            <div>
+              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Condition Trait (optional, max 1)</p>
+              <div className="flex flex-wrap gap-2">
+                {TRAITS.condition.map(trait => (
+                  <button
+                    key={trait}
+                    onClick={() => toggleTrait("conditionTraits", trait)}
+                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
+                      (appearance.conditionTraits || []).includes(trait)
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    {trait}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {appearance.primaryMaterials.length === 0 && (
               <div className="flex items-center gap-2 text-xs text-orange-400 bg-orange-400/10 border border-orange-400/20 rounded p-3">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -389,7 +407,7 @@ export default function CharacterCreation() {
                 <div>
                   <p className="text-xs text-muted-foreground font-cinzel uppercase tracking-wide mb-2">Appearance</p>
                   <p className="text-sm text-foreground">
-                    {appearance.primaryMaterials.join(", ")}{appearance.surfaceTraits?.[0] ? `, ${appearance.surfaceTraits[0]}` : ""}
+                    {[...appearance.primaryMaterials, ...appearance.surfaceTraits, ...appearance.conditionTraits].join(", ")}
                   </p>
                 </div>
                 <div className="flavor-text text-xs text-muted-foreground/70 italic border-t border-border pt-3">

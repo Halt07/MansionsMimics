@@ -52,7 +52,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_jewelry_box", name: "Jewelry Box", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Ornate", "Heavy-Lidded"],
+      builtInTraits: ["Ornate", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Storage"],
       materialSlots: 3, digestCapacityRequired: 2, description: "Extremely tempting if ornate.",
       flawProfiles: [
@@ -99,7 +99,7 @@ export const MASTER_FORMS = {
   Lesser: [
     {
       id: "lesser_chest", name: "Chest", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Iron-Banded", "Heavy-Lidded"],
+      builtInTraits: ["Iron-Banded", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 3, description: "Classic treasure lure.",
       flawProfiles: [
@@ -110,18 +110,18 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Iron-Banded"],
+      builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Common in cellars and cargo holds.",
       flawProfiles: [
         { type: "material", description: "Metal bands lack realistic hammering marks" },
         { type: "structure", description: "Staves align too perfectly with no warping" },
-        { type: "sound", description: "Produces a dull, inconsistent echo when tapped" },
+        { type: "acoustic", description: "Produces a dull, inconsistent echo when tapped" },
       ],
     },
     {
       id: "lesser_crate", name: "Crate", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Reinforced", "Minimalist"],
+      builtInTraits: ["Reinforced", "Minimalist", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Stacked and overlooked in storage rooms.",
       flawProfiles: [
@@ -132,13 +132,13 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_chair", name: "Chair", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Upholstered"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Seating"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Invites close and prolonged contact.",
       flawProfiles: [
         { type: "structure", description: "Legs remain perfectly level even on uneven flooring" },
         { type: "material", description: "Cushion padding resists compression slightly too long" },
-        { type: "sound", description: "Fails to creak under a seated person's weight" },
+        { type: "acoustic", description: "Fails to creak under a seated person's weight" },
       ],
     },
     {
@@ -190,7 +190,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_bookshelf", name: "Bookshelf", tier: "Standard", baseMassRange: [9, 12],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Arched"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 4, description: "A scholar's temptation.",
       flawProfiles: [
@@ -218,12 +218,12 @@ export const MASTER_FORMS = {
       flawProfiles: [
         { type: "structure", description: "Remains perfectly level even on uneven flooring" },
         { type: "material", description: "Surface scratches lack depth variation" },
-        { type: "sound", description: "Produces a muted, inconsistent tone when knocked upon" },
+        { type: "acoustic", description: "Produces a muted, inconsistent tone when knocked upon" },
       ],
     },
     {
       id: "standard_door", name: "Door", tier: "Standard", baseMassRange: [9, 12],
-      builtInTraits: ["Reinforced", "Iron-Banded"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Locked", "Arched"],
       baseAllureModifier: 1, plausibilityModifier: 1, utilityTags: ["Structural"],
       materialSlots: 2, digestCapacityRequired: 4, description: "Blends seamlessly into architecture.",
       flawProfiles: [
@@ -234,7 +234,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_grand_chair", name: "Grand Chair", tier: "Standard", baseMassRange: [9, 12],
-      builtInTraits: ["Ornate", "Carved"],
+      builtInTraits: ["Ornate", "Carved", "Upholstered"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Seating", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 4, description: "Ornate and commanding.",
       flawProfiles: [
@@ -263,7 +263,7 @@ export const MASTER_FORMS = {
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment"],
       materialSlots: 4, digestCapacityRequired: 5, description: "Elegant, complex, and sonically dangerous.",
       flawProfiles: [
-        { type: "sound", description: "Notes resonate slightly longer than acoustically appropriate" },
+        { type: "acoustic", description: "Notes resonate slightly longer than acoustically appropriate" },
         { type: "structure", description: "Internal strings appear too uniformly spaced" },
         { type: "material", description: "Polish reflects light with unnatural clarity" },
       ],
@@ -292,7 +292,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "greater_bed", name: "Bed", tier: "Greater", baseMassRange: [13, 16],
-      builtInTraits: ["Carved", "Warm to Touch"],
+      builtInTraits: ["Carved", "Warm to Touch", "Upholstered"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Comfort"],
       materialSlots: 3, digestCapacityRequired: 5, description: "Invites vulnerability.",
       flawProfiles: [
@@ -318,24 +318,24 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_parlor", name: "Parlor", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Ornate"],
+      builtInTraits: ["Ornate", "Upholstered"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Structural", "Social"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Designed for comfort, conversation, and subtle entrapment.",
       flawProfiles: [
         { type: "environmental", description: "Airflow feels slightly stagnant regardless of window position" },
         { type: "structure", description: "Furniture arrangement remains subtly symmetrical beyond reason" },
-        { type: "sound", description: "Conversation carries strangely, dampened in certain corners" },
+        { type: "acoustic", description: "Conversation carries strangely, dampened in certain corners" },
         { type: "presence", description: "Room temperature remains faintly warm even without a hearth" },
       ],
     },
     {
       id: "grand_carriage", name: "Carriage", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Reinforced", "Iron-Banded"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Upholstered"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Transport"],
       materialSlots: 5, digestCapacityRequired: 6, description: "Elegant transport with predatory patience.",
       flawProfiles: [
         { type: "structure", description: "Suspension absorbs movement too smoothly over rough ground" },
-        { type: "sound", description: "Wheel rotation lacks expected rhythmic variation" },
+        { type: "acoustic", description: "Wheel rotation lacks expected rhythmic variation" },
         { type: "material", description: "Interior upholstery shows no signs of wear despite age" },
         { type: "spatial", description: "Interior dimensions feel subtly larger than exterior suggests" },
       ],
@@ -354,7 +354,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_vault", name: "Vault", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Massive, secure, and hungry.",
       flawProfiles: [
@@ -366,7 +366,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_small_outhouse", name: "Small Outhouse", tier: "Grand", baseMassRange: [17, 22],
-      builtInTraits: ["Minimalist"],
+      builtInTraits: ["Minimalist", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 2, utilityTags: ["Structural"],
       materialSlots: 4, digestCapacityRequired: 6, description: "Unassuming, isolated, and rarely questioned.",
       flawProfiles: [
@@ -393,7 +393,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_stable", name: "Stable", tier: "Apex", baseMassRange: [24, 35],
-      builtInTraits: ["Minimalist", "Reinforced"],
+      builtInTraits: ["Minimalist", "Reinforced", "Rustic"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Agricultural"],
       materialSlots: 7, digestCapacityRequired: 8, description: "Warm hay, heavy beams, and the quiet patience of a trap.",
       flawProfiles: [
@@ -405,7 +405,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_chapel", name: "Chapel", tier: "Apex", baseMassRange: [28, 45],
-      builtInTraits: ["Carved", "Ornate"],
+      builtInTraits: ["Carved", "Ornate", "Arched"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Religious"],
       materialSlots: 8, digestCapacityRequired: 9, description: "Sanctuary to some. Sanctuary from none.",
       flawProfiles: [
@@ -429,7 +429,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_abandoned_cottage", name: "Abandoned Cottage", tier: "Apex", baseMassRange: [22, 34],
-      builtInTraits: ["Minimalist"],
+      builtInTraits: ["Minimalist", "Rustic"],
       baseAllureModifier: 3, plausibilityModifier: 3, utilityTags: ["Structural", "Rural"],
       materialSlots: 7, digestCapacityRequired: 8, description: "Lonely, quiet, and patiently waiting.",
       flawProfiles: [
@@ -442,7 +442,7 @@ export const MASTER_FORMS = {
     // ── Mass-gated Apex forms ──
     {
       id: "apex_castle_gate", name: "Castle Gate", tier: "Apex", baseMassRange: [35, 99],
-      builtInTraits: ["Reinforced", "Iron-Banded"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Arched"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive", "Authority"],
       materialSlots: 9, digestCapacityRequired: 10, description: "Imposing, inevitable, and patient as stone.",
       flawProfiles: [
@@ -491,7 +491,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_chest", name: "Giant Chest", tier: "Apex", baseMassRange: [30, 99],
-      builtInTraits: ["Iron-Banded", "Heavy-Lidded"],
+      builtInTraits: ["Iron-Banded", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 5, digestCapacityRequired: 8, description: "A treasure chest large enough to swallow a horse — and hungry for giants.",
       flawProfiles: [
@@ -513,18 +513,18 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_barrel", name: "Giant Barrel", tier: "Apex", baseMassRange: [28, 99],
-      builtInTraits: ["Iron-Banded"],
+      builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage"],
       materialSlots: 4, digestCapacityRequired: 7, description: "A barrel that could hold a whole tavern's supply — and something far more dangerous.",
       flawProfiles: [
         { type: "material", description: "The iron bands have no rust or stress marks despite apparent age" },
         { type: "structure", description: "The staves are uniformly perfect — no warping or swelling from liquid" },
-        { type: "sound", description: "Produces a resonant, living echo when struck" },
+        { type: "acoustic", description: "Produces a resonant, living echo when struck" },
       ],
     },
     {
       id: "giant_throne", name: "Giant Throne", tier: "Apex", baseMassRange: [35, 99],
-      builtInTraits: ["Carved", "Ornate"],
+      builtInTraits: ["Carved", "Ornate", "Upholstered"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Valuable", "Authority"],
       materialSlots: 6, digestCapacityRequired: 10, description: "A seat of giant power — carved from beanstalk timber and inlaid with gold. Nothing is more tempting to a giant lord.",
       flawProfiles: [
@@ -536,7 +536,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_bed", name: "Giant Bed", tier: "Apex", baseMassRange: [33, 99],
-      builtInTraits: ["Warm to Touch", "Carved"],
+      builtInTraits: ["Warm to Touch", "Carved", "Upholstered"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Comfort"],
       materialSlots: 5, digestCapacityRequired: 9, description: "Piled with golden goose down and cloud fleece — the most vulnerable moment for any giant.",
       flawProfiles: [
@@ -581,6 +581,8 @@ export const MATERIAL_COLORS = {
 // ============================================================
 // APPEARANCE LIMITS
 // ============================================================
+// magicalMaterials: how many of the primary + secondary materials may be magic.
+// Minor mimics are too inexperienced to mimic magical materials at all.
 export const APPEARANCE_LIMITS = {
   Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
   Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
@@ -597,7 +599,7 @@ export const TRAITS = {
   surface:    ["Polished", "Tarnished", "Gilded", "Etched", "Inlaid", "Lacquered", "Rough-Hewn", "Soft", "Wrinkled", "Smooth", "Pitted", "Mossy"],
   symbolic:   ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
   condition:  ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence"],
-  structural: ["Reinforced", "Carved", "Ornate", "Minimalist", "Heavy-Lidded", "Iron-Banded"],
+  structural: ["Reinforced", "Carved", "Ornate", "Minimalist", "Heavy-Lidded", "Iron-Banded", "Upholstered", "Locked", "Rustic", "Arched"],
   aura:       ["Faint Glow", "Cold to Touch", "Warm to Touch", "Whispering", "Radiant"],
 };
 
@@ -624,7 +626,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Greedy Rogue", type: "Rogue", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
     group: "common",
     quirks: ["Inspects valuables closely", "Tests hinges and seams"],
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Polished", "Gilded"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Polished", "Gilded", "Locked"], tags: ["Valuable"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 1, text: 0, magical: 0, social: 1, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
     lootMaterials: ["Tanned Hide", "Steel", "Goatskin"],
     lootTraits: [],
@@ -634,7 +636,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Wary Cutpurse", type: "Rogue", discipline: 2, baseSuspicion: 3, constitution: 3, interactionStyle: "sight",
     group: "common",
     quirks: ["Rarely touches anything directly", "Scans exits first"],
-    alluringQualities: { materials: ["Gold", "Silver", "Silk"], traits: [], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Silk"], traits: ["Locked"], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Goatskin", "Iron", "Linen"],
     lootTraits: [],
@@ -646,7 +648,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { traits: ["Bloodstained", "Shadowed Presence", "Arcane Sigil"] },
     quirks: ["Blesses suspicious objects", "Avoids direct skin contact"],
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol"], tags: ["Religious"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched"], tags: ["Religious"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 2, social: 1, spatial: 1, environmental: 1, acoustic: 0, presence: 2 },
     lootMaterials: ["Gold", "Silver", "Cotton"],
     lootTraits: ["Sacred Symbol"],
@@ -657,7 +659,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Whispers prayers when nervous", "Easily distracted by relics"],
-    alluringQualities: { materials: ["Gold", "Silver", "Marble"], traits: ["Sacred Symbol", "Runescript"], tags: ["Religious", "Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Marble"], traits: ["Sacred Symbol", "Runescript", "Arched"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
     lootMaterials: ["Cotton", "Silver", "Linen"],
     lootTraits: ["Sacred Symbol"],
@@ -669,7 +671,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { traits: ["Bloodstained"] },
     quirks: ["Talks to inanimate objects", "Distracted by comfort"],
-    alluringQualities: { materials: ["Velvet", "Silk", "Gold"], traits: ["Tarnished", "Worn"], tags: ["Comfort", "Valuable", "Social"] },
+    alluringQualities: { materials: ["Velvet", "Silk", "Gold"], traits: ["Tarnished", "Worn", "Upholstered"], tags: ["Comfort", "Valuable", "Social"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 0, social: 2, spatial: 0, environmental: 1, acoustic: 2, presence: 1 },
     lootMaterials: ["Silk", "Velvet", "Mahogany"],
     lootTraits: ["Gilded"],
@@ -733,7 +735,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Observant Ranger", type: "Ranger", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "sight",
     group: "common",
     quirks: ["Watches airflow", "Listens for wildlife cues"],
-    alluringQualities: { materials: ["Tanned Hide", "Oak"], traits: [], tags: ["Structural"] },
+    alluringQualities: { materials: ["Tanned Hide", "Oak"], traits: ["Rustic"], tags: ["Structural"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 1, presence: 1 },
     lootMaterials: ["Deerskin", "Oak", "Boarhide"],
     lootTraits: [],
@@ -752,7 +754,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { traits: ["Gilded", "Lacquered"] },
     quirks: ["Marks exits mentally", "Stays near walls"],
-    alluringQualities: { materials: ["Oak", "Deerskin"], traits: ["Weathered", "Worn"], tags: ["Structural"] },
+    alluringQualities: { materials: ["Oak", "Deerskin"], traits: ["Weathered", "Worn", "Rustic"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 2, acoustic: 2, presence: 0 },
     lootMaterials: ["Goatskin", "Linen", "Oak"],
     lootTraits: [],
@@ -772,7 +774,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { materials: ["Gravecloth"], traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Detects evil presence", "Slow to trust but fierce when provoked"],
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol"], tags: ["Religious", "Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 2, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 2 },
     lootMaterials: ["Gold", "Silver", "Granite"],
     lootTraits: ["Sacred Symbol", "Heraldic Crest"],
@@ -795,7 +797,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "common",
     repelledBy: { materials: ["Steel", "Blacksteel"], traits: ["Lacquered", "Polished"] },
     quirks: ["Speaks to animals before entering", "Uncomfortable indoors"],
-    alluringQualities: { materials: ["Oak", "Feywood"], traits: [], tags: ["Structural"] },
+    alluringQualities: { materials: ["Oak", "Feywood"], traits: ["Rustic"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 2 },
     lootMaterials: ["Feywood", "Oak", "Wool"],
     lootTraits: [],
@@ -838,7 +840,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Halfling Treasure Hunter", type: "Rogue", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
     group: "common",
     quirks: ["Pockets small items instinctively", "Underestimates danger"],
-    alluringQualities: { materials: ["Gold", "Silver", "Crystal"], traits: [], tags: ["Valuable", "Comfort"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Crystal"], traits: ["Upholstered", "Locked"], tags: ["Valuable", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 1, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Silk", "Silver", "Linen"],
     lootTraits: [],
@@ -849,6 +851,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Mimic Hunter", type: "Hunter", discipline: 5, baseSuspicion: 5, constitution: 5, interactionStyle: "touch",
     group: "huntersElites",
+    repelledBy: { traits: ["Locked"] },
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Taps every surface methodically", "Carries a vial of acid for testing", "Never touches anything without gloves"],
     alluringQualities: { materials: ["Gold"], traits: [], tags: ["Valuable"] },
@@ -871,6 +874,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Gnomish Tinkerer-Hunter", type: "Hunter", discipline: 4, baseSuspicion: 5, constitution: 3, interactionStyle: "touch",
     group: "huntersElites",
+    repelledBy: { traits: ["Locked"] },
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Carries mechanical probes that measure density", "Obsessed with metalwork and alloys", "Taps every surface with a tiny silver hammer"],
     alluringQualities: { materials: ["Mithril", "Brass", "Iron", "Gold"], traits: ["Arcane Sigil", "Etched"], tags: ["Valuable", "Knowledge"] },
@@ -908,7 +912,7 @@ export const ADVENTURER_TEMPLATES = [
     repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained"] },
     minTier: "Grand",
     quirks: ["Casts detect magic on entry", "Marks rooms with chalk sigils", "Interrogates every object aloud"],
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Runescript"], tags: ["Religious"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Runescript", "Arched"], tags: ["Religious"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 2, magical: 3, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 3 },
     lootMaterials: ["Gold", "Mithril", "Spellweave Silk"],
     lootTraits: ["Sacred Symbol", "Heraldic Crest"],
@@ -932,7 +936,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "commoners",
     repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Jumps at shadows", "Clutches holy symbol", "Easily startled by unusual things"],
-    alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty"], tags: ["Comfort", "Storage"] },
+    alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty", "Upholstered", "Rustic"], tags: ["Comfort", "Storage"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 1 },
     lootMaterials: ["Wool", "Linen", "Burlap"],
     lootTraits: [],
@@ -942,7 +946,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Road Vagabond", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
     group: "commoners",
     quirks: ["Rifles through anything unlocked", "Sleeps anywhere flat", "Interested in anything left behind"],
-    alluringQualities: { materials: ["Iron", "Brass", "Cotton"], traits: ["Worn", "Weathered", "Tarnished"], tags: ["Storage", "Comfort"] },
+    alluringQualities: { materials: ["Iron", "Brass", "Cotton"], traits: ["Worn", "Weathered", "Tarnished", "Rustic"], tags: ["Storage", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Linen", "Cowhide", "Iron"],
     lootTraits: ["Worn"],
@@ -953,9 +957,9 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The King", type: "Nobility", discipline: 2, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "commoners",
-    repelledBy: { materials: ["Burlap", "Cotton"], traits: ["Cracked", "Worn", "Dusty", "Tarnished"] },
+    repelledBy: { materials: ["Burlap", "Cotton"], traits: ["Cracked", "Worn", "Dusty", "Tarnished", "Rustic"] },
     quirks: ["Demands everything be inspected by guards first", "Attracted to displays of wealth", "Expects furnishings worthy of royalty"],
-    alluringQualities: { materials: ["Gold", "Marble", "Silk", "Velvet"], traits: ["Gilded", "Inlaid", "Polished"], tags: ["Valuable", "Authority", "Comfort"] },
+    alluringQualities: { materials: ["Gold", "Marble", "Silk", "Velvet"], traits: ["Gilded", "Inlaid", "Polished", "Upholstered"], tags: ["Valuable", "Authority", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 0, social: 2, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
     lootMaterials: ["Gold", "Silk", "Velvet"],
     lootTraits: ["Gilded", "Heraldic Crest"],
@@ -971,9 +975,9 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The Princess", type: "Nobility", discipline: 1, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
     group: "commoners",
-    repelledBy: { materials: ["Burlap"], traits: ["Cracked", "Dusty", "Bloodstained", "Rough-Hewn"] },
+    repelledBy: { materials: ["Burlap"], traits: ["Cracked", "Dusty", "Bloodstained", "Rough-Hewn", "Rustic"] },
     quirks: ["Reaches out to touch pretty things", "Easily enchanted by ornate objects", "Wanders from her escort"],
-    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched"], tags: ["Valuable", "Comfort", "Decor"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched", "Upholstered"], tags: ["Valuable", "Comfort", "Decor"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Silk", "Silver", "Crystal"],
     lootTraits: ["Gilded"],
@@ -989,7 +993,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The High Merchant", type: "Nobility", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
     group: "commoners",
-    repelledBy: { traits: ["Cracked", "Worn", "Tarnished"] },
+    repelledBy: { traits: ["Cracked", "Worn", "Tarnished", "Rustic"] },
     quirks: ["Mentally appraises everything", "Tests material quality with fingers", "Offers to buy things on the spot"],
     alluringQualities: { materials: ["Gold", "Silver", "Mahogany", "Silk"], traits: ["Polished", "Lacquered", "Gilded"], tags: ["Valuable", "Storage", "Dining"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
@@ -1025,7 +1029,7 @@ export const ADVENTURER_TEMPLATES = [
     repelledBy: { traits: ["Sacred Symbol"] },
     locations: ["noble_estate", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     quirks: ["Drawn to bloodstained objects", "Cannot enter without invitation — waits at thresholds", "Hypersensitive to magical auras"],
-    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Gravecloth", "Bloodoak"], traits: ["Bloodstained", "Tarnished", "Gilded"], tags: ["Valuable", "Comfort", "Religious"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Gravecloth", "Bloodoak"], traits: ["Bloodstained", "Tarnished", "Gilded", "Upholstered"], tags: ["Valuable", "Comfort", "Religious"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 1, magical: 3, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 4 },
     lootMaterials: ["Gravecloth", "Silk", "Gold", "Bloodoak"],
     lootTraits: ["Bloodstained"],
@@ -1101,7 +1105,7 @@ export const ADVENTURER_TEMPLATES = [
     locations: ["wizard_tower", "noble_estate", "cursed_chapel", "ruined_city", "abandoned_castle"],
     behavior: "stoneWatch",
     quirks: ["Never moves from its perch", "Memorizes where every object in sight sits", "Watches without blinking for hours"],
-    alluringQualities: { materials: ["Marble", "Granite", "Basalt"], traits: ["Etched", "Pitted", "Sacred Symbol"], tags: ["Structural", "Religious"] },
+    alluringQualities: { materials: ["Marble", "Granite", "Basalt"], traits: ["Etched", "Pitted", "Sacred Symbol", "Arched"], tags: ["Structural", "Religious"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 4, environmental: 1, acoustic: 0, presence: 1 },
     lootMaterials: ["Basalt", "Runestone"],
     lootTraits: ["Etched"],
@@ -1115,7 +1119,7 @@ export const ADVENTURER_TEMPLATES = [
     locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor"],
     behavior: "bloodScent",
     quirks: ["Follows the smell of blood through walls", "Paces restlessly between rooms", "Snarls at anything that smells wrong"],
-    alluringQualities: { materials: ["Direwolf Pelt", "Oak"], traits: ["Mossy", "Rough-Hewn"], tags: ["Rural"] },
+    alluringQualities: { materials: ["Direwolf Pelt", "Oak"], traits: ["Mossy", "Rough-Hewn", "Rustic"], tags: ["Rural"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 4, acoustic: 2, presence: 2 },
     lootMaterials: ["Direwolf Pelt", "Boarhide"],
     lootTraits: ["Rough-Hewn"],
@@ -1140,7 +1144,7 @@ export const ADVENTURER_TEMPLATES = [
     repelledBy: { traits: ["Polished", "Lacquered", "Pristine"] },
     minTier: "Apex", minMass: 28, wholeMealMass: 36,
     quirks: ["Chants at suspicious objects", "Smells for earth-magic residue", "Distrustful of anything too neat or symmetrical"],
-    alluringQualities: { materials: ["Beanstalk Timber", "Giant Oak", "Cloud Fleece"], traits: ["Mossy", "Weathered", "Rough-Hewn"], tags: ["Structural", "Rural"] },
+    alluringQualities: { materials: ["Beanstalk Timber", "Giant Oak", "Cloud Fleece"], traits: ["Mossy", "Weathered", "Rough-Hewn", "Rustic"], tags: ["Structural", "Rural"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 3, social: 0, spatial: 2, environmental: 4, acoustic: 1, presence: 3 },
     lootMaterials: ["Beanstalk Timber", "Cloud Fleece", "Giant Oak"],
     lootTraits: ["Mossy"],
@@ -1186,7 +1190,7 @@ export const ADVENTURER_TEMPLATES = [
     repelledBy: { traits: ["Tarnished", "Cracked"] },
     minTier: "Apex", minMass: 35, wholeMealMass: 43,
     quirks: ["Appraises everything by picking it up and sniffing it", "Obsessed with gold and gemstone items", "Drops things carelessly — they are very large"],
-    alluringQualities: { materials: ["Giant Gold", "Giant Marble", "Soulglass"], traits: ["Gilded", "Inlaid", "Polished", "Warm to Touch"], tags: ["Valuable", "Storage", "Authority"] },
+    alluringQualities: { materials: ["Giant Gold", "Giant Marble", "Soulglass"], traits: ["Gilded", "Inlaid", "Polished", "Warm to Touch", "Locked"], tags: ["Valuable", "Storage", "Authority"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 4, text: 0, magical: 1, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Giant Gold", "Giant Marble", "Soulglass"],
     lootTraits: ["Gilded", "Inlaid"],
@@ -1197,7 +1201,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "giantKin",
     minTier: "Apex", minMass: 30, wholeMealMass: 38,
     quirks: ["Has climbed the stalk before — checks everything for traps", "Moves silently for their size", "Paranoid about giant detection — checks ceilings constantly"],
-    alluringQualities: { materials: ["Giant Gold", "Golden Goose Down", "Giant Marble"], traits: ["Gilded", "Polished"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Giant Gold", "Golden Goose Down", "Giant Marble"], traits: ["Gilded", "Polished", "Locked"], tags: ["Valuable"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 1, social: 1, spatial: 3, environmental: 2, acoustic: 3, presence: 1 },
     lootMaterials: ["Beanstalk Leather", "Giant Oak", "Giant Gold"],
     lootTraits: [],
@@ -1759,7 +1763,9 @@ export function getValidForms(tierStr, massVal) {
 
 // ============================================================
 // MAGICAL MATERIAL EFFECTS
-// Wearing a magic material (in any appearance slot) grants its effect.
+// Magic materials are worn in the primary/secondary slots like any other material; the
+// tier's APPEARANCE_LIMITS.magicalMaterials caps how many of those may be magic.
+// Wearing one grants its effect.
 // The cost: every worn magic material gives off arcane residue, an extra "magical"
 // flaw check against adventurers with magical perception 2+ (see stealthCheck).
 // ============================================================
@@ -1778,13 +1784,21 @@ export const MAGIC_EFFECTS = {
   "Soulglass":       "Reveals which room a hidden rival mimic is lurking in.",
 };
 
-/** All materials currently worn in the appearance (primary, secondary and magical slots). */
+/** All materials currently worn in the appearance (primary and secondary slots). */
 function wornMaterials(appearance) {
   return [
     ...(appearance?.primaryMaterials || []),
     ...(appearance?.secondaryMaterials || []),
-    ...(appearance?.magicalMaterials || []),
   ];
+}
+
+export function isMagicMaterial(material) {
+  return MATERIALS.magic.includes(material);
+}
+
+/** How many magic materials the appearance wears (checked against APPEARANCE_LIMITS[tier].magicalMaterials). */
+export function countMagicMaterials(appearance) {
+  return wornMaterials(appearance).filter(isMagicMaterial).length;
 }
 
 /** True if the appearance is wearing this magic material in any slot. */
@@ -1866,7 +1880,7 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 }
 
 // Which of an adventurer's liked and disliked qualities the mimic's current look matches.
-// Materials: primary, secondary and magical. Traits: surface, symbolic and condition traits from the appearance,
+// Materials: primary and secondary (including any magic ones). Traits: surface, symbolic and condition traits from the appearance,
 // plus the form's built-in traits (structural/aura, e.g. a Chest is Iron-Banded). Tags: the form's utility tags.
 //   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
 //   disliked — each match is -1 allure die (adventurer.repelledBy)
@@ -1874,7 +1888,6 @@ export function calcAllureBreakdown(form, currentAppearance, adventurer) {
   const appearanceMats = [
     ...(currentAppearance.primaryMaterials || []),
     ...(currentAppearance.secondaryMaterials || []),
-    ...(currentAppearance.magicalMaterials || []),
   ];
   const appearanceTraits = [
     ...(currentAppearance.surfaceTraits || []),
