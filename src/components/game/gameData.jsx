@@ -598,6 +598,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Paranoid Cleric", type: "Cleric", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "touch",
     group: "common",
+    repelledBy: { traits: ["Bloodstained", "Shadowed Presence", "Arcane Sigil"] },
     quirks: ["Blesses suspicious objects", "Avoids direct skin contact"],
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol"], tags: ["Religious"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 2, social: 1, spatial: 1, environmental: 1, acoustic: 0, presence: 2 },
@@ -608,6 +609,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Young Acolyte", type: "Cleric", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
     group: "common",
+    repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Whispers prayers when nervous", "Easily distracted by relics"],
     alluringQualities: { materials: ["Gold", "Silver", "Marble"], traits: ["Sacred Symbol", "Runescript"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
@@ -619,6 +621,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Naive Bard", type: "Bard", discipline: 2, baseSuspicion: 1, constitution: 3, interactionStyle: "touch",
     group: "common",
+    repelledBy: { traits: ["Bloodstained"] },
     quirks: ["Talks to inanimate objects", "Distracted by comfort"],
     alluringQualities: { materials: ["Velvet", "Silk", "Gold"], traits: ["Tarnished", "Worn"], tags: ["Comfort", "Valuable", "Social"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 0, social: 2, spatial: 0, environmental: 1, acoustic: 2, presence: 1 },
@@ -629,6 +632,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Seasoned Troubadour", type: "Bard", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
     group: "common",
+    repelledBy: { traits: ["Cracked"] },
     quirks: ["Records observations in verse", "Draws comparisons to old stories"],
     alluringQualities: { materials: ["Mahogany", "Silk", "Gold"], traits: ["Tarnished", "Heraldic Crest"], tags: ["Social", "Knowledge"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 0, social: 2, spatial: 0, environmental: 1, acoustic: 2, presence: 1 },
@@ -700,6 +704,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Wilderness Scout", type: "Ranger", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
     group: "common",
+    repelledBy: { traits: ["Gilded", "Lacquered"] },
     quirks: ["Marks exits mentally", "Stays near walls"],
     alluringQualities: { materials: ["Oak", "Deerskin"], traits: ["Weathered", "Worn"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 2, acoustic: 2, presence: 0 },
@@ -719,6 +724,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Grizzled Paladin", type: "Paladin", discipline: 4, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "common",
+    repelledBy: { materials: ["Gravecloth"], traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Detects evil presence", "Slow to trust but fierce when provoked"],
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 2, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 2 },
@@ -741,6 +747,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Wandering Druid", type: "Druid", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "sight",
     group: "common",
+    repelledBy: { materials: ["Steel", "Blacksteel"], traits: ["Lacquered", "Polished"] },
     quirks: ["Speaks to animals before entering", "Uncomfortable indoors"],
     alluringQualities: { materials: ["Oak", "Feywood"], traits: [], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 2 },
@@ -752,6 +759,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Silent Assassin", type: "Assassin", discipline: 4, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
     group: "common",
+    repelledBy: { traits: ["Gilded"] },
     quirks: ["Never announces presence", "Studies shadows carefully"],
     alluringQualities: { materials: ["Shadowwood", "Silk"], traits: [], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
@@ -830,7 +838,7 @@ export const ADVENTURER_TEMPLATES = [
     group: "huntersElites",
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Follows scent trails", "Breaks off pieces of suspicious objects to taste them", "Ignores anything that doesn't smell like prey"],
-    alluringQualities: { materials: ["Iron", "Bone", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced"], tags: ["Structural", "Valuable"] },
+    alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 2 },
     lootMaterials: ["Boarhide", "Iron", "Horn"],
     lootTraits: ["Reinforced"],
@@ -839,6 +847,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Tiefling Hexblade", type: "Hunter", discipline: 5, baseSuspicion: 4, constitution: 4, interactionStyle: "spell",
     group: "huntersElites",
+    repelledBy: { traits: ["Sacred Symbol"] },
     minTier: "Apex", isMimicHunter: true,
     quirks: ["Can sense the life-force of a mimic's last meal", "Wears gloves treated with mimic-repellent", "Counts corners in every room — mimics always have one too many"],
     alluringQualities: { materials: ["Obsidian", "Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence"], tags: ["Valuable", "Knowledge"] },
@@ -850,6 +859,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Veteran Inquisitor", type: "Paladin", discipline: 5, baseSuspicion: 5, constitution: 4, interactionStyle: "touch",
     group: "huntersElites",
+    repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained"] },
     minTier: "Grand",
     quirks: ["Casts detect magic on entry", "Marks rooms with chalk sigils", "Interrogates every object aloud"],
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Runescript"], tags: ["Religious"] },
@@ -874,6 +884,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Frightened Peasant", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
     group: "commoners",
+    repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Jumps at shadows", "Clutches holy symbol", "Easily startled by unusual things"],
     alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty"], tags: ["Comfort", "Storage"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 1 },
@@ -896,6 +907,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The King", type: "Nobility", discipline: 2, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "commoners",
+    repelledBy: { materials: ["Burlap", "Cotton"], traits: ["Cracked", "Worn", "Dusty", "Tarnished"] },
     quirks: ["Demands everything be inspected by guards first", "Attracted to displays of wealth", "Expects furnishings worthy of royalty"],
     alluringQualities: { materials: ["Gold", "Marble", "Silk", "Velvet"], traits: ["Gilded", "Inlaid", "Polished"], tags: ["Valuable", "Authority", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 0, social: 2, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
@@ -913,6 +925,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The Princess", type: "Nobility", discipline: 1, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
     group: "commoners",
+    repelledBy: { materials: ["Burlap"], traits: ["Cracked", "Dusty", "Bloodstained", "Rough-Hewn"] },
     quirks: ["Reaches out to touch pretty things", "Easily enchanted by ornate objects", "Wanders from her escort"],
     alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched"], tags: ["Valuable", "Comfort", "Decor"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 1, presence: 1 },
@@ -930,6 +943,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "The High Merchant", type: "Nobility", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
     group: "commoners",
+    repelledBy: { traits: ["Cracked", "Worn", "Tarnished"] },
     quirks: ["Mentally appraises everything", "Tests material quality with fingers", "Offers to buy things on the spot"],
     alluringQualities: { materials: ["Gold", "Silver", "Mahogany", "Silk"], traits: ["Polished", "Lacquered", "Gilded"], tags: ["Valuable", "Storage", "Dining"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
@@ -942,6 +956,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Pact-Bound Warlock", type: "Wizard", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "spell",
     group: "common",
+    repelledBy: { traits: ["Sacred Symbol"] },
     quirks: ["Speaks to unseen entities", "Prefers shadowy corners", "Reacts strangely near magical objects"],
     alluringQualities: { materials: ["Shadowwood", "Obsidian", "Gravecloth"], traits: ["Arcane Sigil", "Shadowed Presence"], tags: ["Knowledge", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 3, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 3 },
@@ -961,6 +976,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
     group: "supernatural",
+    repelledBy: { traits: ["Sacred Symbol"] },
     locations: ["noble_estate", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     quirks: ["Drawn to bloodstained objects", "Cannot enter without invitation — waits at thresholds", "Hypersensitive to magical auras"],
     alluringQualities: { materials: ["Gold", "Silver", "Silk", "Gravecloth", "Bloodoak"], traits: ["Bloodstained", "Tarnished", "Gilded"], tags: ["Valuable", "Comfort", "Religious"] },
@@ -982,6 +998,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Cursed Revenant", type: "Undead", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
+    repelledBy: { traits: ["Sacred Symbol", "Pristine"] },
     locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
     quirks: ["Fixated on objects from their past life", "Ignores most things unless they trigger recognition", "Slow but relentless — its body is intact, unlike a zombie"],
     alluringQualities: { materials: ["Oak", "Linen", "Iron"], traits: ["Bloodstained", "Worn", "Cracked", "Dusty"], tags: ["Comfort", "Structural"] },
@@ -994,6 +1011,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Wailing Banshee", type: "Undead", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "supernatural",
+    repelledBy: { traits: ["Pristine"] },
     locations: ["haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
     behavior: "keenHearing",
     quirks: ["A gaunt, grave-pale crone — flesh and bone, whatever the stories say", "Turns toward every creak and footstep", "Keens softly when something nearby moves"],
@@ -1006,6 +1024,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Ghoul", type: "Undead", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
+    repelledBy: { traits: ["Sacred Symbol"] },
     locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     behavior: "carrionScent",
     quirks: ["Sniffs at cupboards and larders", "Gnaws on anything that smells of meat", "Follows the scent of a fresh kill"],
@@ -1019,6 +1038,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Fey Changeling", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
     minTier: "Standard",
     group: "supernatural",
+    repelledBy: { materials: ["Iron", "Steel", "Blacksteel"] },
     locations: ["wizard_tower", "noble_estate", "hidden_grove", "crossroads"],
     behavior: "shapeSense",
     quirks: ["Its face never quite settles on one shape", "Feels the moment anything nearby changes its form", "Cannot resist pretty, delicate things"],
@@ -1045,6 +1065,7 @@ export const ADVENTURER_TEMPLATES = [
     name: "Werewolf", type: "Beast", discipline: 5, baseSuspicion: 2, constitution: 6, interactionStyle: "touch",
     minTier: "Greater",
     group: "supernatural",
+    repelledBy: { materials: ["Silver"] },
     locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor"],
     behavior: "bloodScent",
     quirks: ["Follows the smell of blood through walls", "Paces restlessly between rooms", "Snarls at anything that smells wrong"],
@@ -1059,7 +1080,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Half-Giant Mercenary", type: "Warrior", discipline: 4, baseSuspicion: 1, constitution: 7, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 28,
+    minTier: "Apex", minMass: 28, wholeMealMass: 36,
     quirks: ["Shoves furniture to test sturdiness", "Sits on things without asking", "Drawn to large, sturdy objects"],
     alluringQualities: { materials: ["Giant Oak", "Giant Iron", "Beanstalk Leather"], traits: ["Reinforced", "Iron-Banded", "Heavy-Lidded"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 4, weight: 4, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 0 },
@@ -1070,7 +1091,8 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Giant-Blood Shaman", type: "Druid", discipline: 4, baseSuspicion: 3, constitution: 6, interactionStyle: "spell",
     group: "giantKin",
-    minTier: "Apex", minMass: 28,
+    repelledBy: { traits: ["Polished", "Lacquered", "Pristine"] },
+    minTier: "Apex", minMass: 28, wholeMealMass: 36,
     quirks: ["Chants at suspicious objects", "Smells for earth-magic residue", "Distrustful of anything too neat or symmetrical"],
     alluringQualities: { materials: ["Beanstalk Timber", "Giant Oak", "Cloud Fleece"], traits: ["Mossy", "Weathered", "Rough-Hewn"], tags: ["Structural", "Rural"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 3, social: 0, spatial: 2, environmental: 4, acoustic: 1, presence: 3 },
@@ -1081,7 +1103,8 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Cloud Giant Scout", type: "Warrior", discipline: 5, baseSuspicion: 2, constitution: 9, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 35,
+    repelledBy: { traits: ["Cracked", "Dusty"] },
+    minTier: "Apex", minMass: 35, wholeMealMass: 43,
     quirks: ["Everything is too small — they break things accidentally", "Listens at walls with ear to stone", "Attracted to gold and goose-feather items"],
     alluringQualities: { materials: ["Giant Gold", "Golden Goose Down", "Giant Marble"], traits: ["Gilded", "Polished", "Inlaid"], tags: ["Valuable", "Comfort", "Authority"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 5, text: 0, magical: 1, social: 0, spatial: 3, environmental: 2, acoustic: 3, presence: 1 },
@@ -1092,7 +1115,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Storm Giant Wanderer", type: "Warrior", discipline: 6, baseSuspicion: 2, constitution: 12, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 40,
+    minTier: "Apex", minMass: 40, wholeMealMass: 48,
     quirks: ["Shakes the ground when walking", "Can sense electrical charge — mimic bio-electricity makes them cautious", "Attracted to enormous structural objects"],
     alluringQualities: { materials: ["Stormforged Iron", "Giant Granite", "Beanstalk Timber"], traits: ["Iron-Banded", "Rough-Hewn", "Carved"], tags: ["Structural", "Defensive"] },
     perceptionAffinity: { material: 3, structure: 5, weight: 5, text: 0, magical: 2, social: 0, spatial: 3, environmental: 3, acoustic: 4, presence: 2 },
@@ -1103,7 +1126,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Giant's Goose-Keeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 5, interactionStyle: "sight",
     group: "giantKin",
-    minTier: "Apex", minMass: 28,
+    minTier: "Apex", minMass: 28, wholeMealMass: 36,
     quirks: ["Wanders after escaped geese", "Easily distracted by shiny objects", "Terrified of small spaces"],
     alluringQualities: { materials: ["Golden Goose Down", "Giant Oak", "Cloud Fleece"], traits: ["Soft", "Warm to Touch", "Gilded"], tags: ["Comfort", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 1 },
@@ -1114,7 +1137,8 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Giant Treasure Hoarder", type: "Nobility", discipline: 3, baseSuspicion: 2, constitution: 8, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 35,
+    repelledBy: { traits: ["Tarnished", "Cracked"] },
+    minTier: "Apex", minMass: 35, wholeMealMass: 43,
     quirks: ["Appraises everything by picking it up and sniffing it", "Obsessed with gold and gemstone items", "Drops things carelessly — they are very large"],
     alluringQualities: { materials: ["Giant Gold", "Giant Marble", "Soulglass"], traits: ["Gilded", "Inlaid", "Polished", "Warm to Touch"], tags: ["Valuable", "Storage", "Authority"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 4, text: 0, magical: 1, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
@@ -1125,7 +1149,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Beanstalk Climber", type: "Rogue", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 30,
+    minTier: "Apex", minMass: 30, wholeMealMass: 38,
     quirks: ["Has climbed the stalk before — checks everything for traps", "Moves silently for their size", "Paranoid about giant detection — checks ceilings constantly"],
     alluringQualities: { materials: ["Giant Gold", "Golden Goose Down", "Giant Marble"], traits: ["Gilded", "Polished"], tags: ["Valuable"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 1, social: 1, spatial: 3, environmental: 2, acoustic: 3, presence: 1 },
@@ -1731,8 +1755,11 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
   };
 }
 
-// Returns interest score [0-N] without rolling — used for targeting priority
-export function calcAllureInterest(form, currentAppearance, adventurer) {
+// Which of an adventurer's liked and disliked qualities the mimic's current look matches.
+// Materials: primary + secondary. Traits: surface, symbolic and condition. Tags: the form's utility tags.
+//   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
+//   disliked — each match is -1 allure die (adventurer.repelledBy)
+export function calcAllureBreakdown(form, currentAppearance, adventurer) {
   const appearanceMats = [
     ...(currentAppearance.primaryMaterials || []),
     ...(currentAppearance.secondaryMaterials || []),
@@ -1740,12 +1767,23 @@ export function calcAllureInterest(form, currentAppearance, adventurer) {
   const appearanceTraits = [
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),
+    ...(currentAppearance.conditionTraits || []),
   ];
-  let score = 0;
-  (adventurer.alluringQualities.materials || []).forEach(mat => { if (appearanceMats.includes(mat)) score += 1; });
-  (adventurer.alluringQualities.traits || []).forEach(trait => { if (appearanceTraits.includes(trait)) score += 1; });
-  (adventurer.alluringQualities.tags || []).forEach(tag => { if (form.utilityTags.includes(tag)) score += 1; });
-  return score;
+  const formTags = form.utilityTags || [];
+  const matching = (qualities = {}) => [
+    ...(qualities.materials || []).filter(mat => appearanceMats.includes(mat)),
+    ...(qualities.traits || []).filter(trait => appearanceTraits.includes(trait)),
+    ...(qualities.tags || []).filter(tag => formTags.includes(tag)),
+  ];
+  const liked = matching(adventurer.alluringQualities);
+  const disliked = matching(adventurer.repelledBy);
+  return { liked, disliked, interest: liked.length, aversion: disliked.length };
+}
+
+// Net interest score (likes minus dislikes) without rolling — used for targeting priority
+export function calcAllureInterest(form, currentAppearance, adventurer) {
+  const { interest, aversion } = calcAllureBreakdown(form, currentAppearance, adventurer);
+  return interest - aversion;
 }
 
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
@@ -1753,13 +1791,15 @@ export function allureCheck(baseAllure, plausibility, form, currentAppearance, a
   // Base mimic allure dice = baseAllure + form modifier + room context
   let allureDice = baseAllure + (form.baseAllureModifier || 0) + (roomContextMod.allure || 0);
 
-  const interestBonus = calcAllureInterest(form, currentAppearance, adventurer);
+  const { interest: interestBonus, aversion, disliked } = calcAllureBreakdown(form, currentAppearance, adventurer);
 
   let suspicionChange = 0;
   // Only add interest bonus if plausibility supports it; excess causes suspicion
   const usableBonus = Math.min(interestBonus, plausibility);
   if (interestBonus > plausibility) suspicionChange += 1;
   allureDice += usableBonus;
+  // Each disliked quality costs a die — dislikes are never capped
+  allureDice -= aversion;
   allureDice = Math.max(1, allureDice);
 
   // Adventurer resists with discipline + suspicion (wariness makes luring harder)
@@ -1769,7 +1809,7 @@ export function allureCheck(baseAllure, plausibility, form, currentAppearance, a
   const success = mimicRoll >= advRoll;
 
   return {
-    success, mimicRoll, advRoll, interestBonus, suspicionChange, detectedFlaws: [],
+    success, mimicRoll, advRoll, interestBonus, aversion, disliked, suspicionChange, detectedFlaws: [],
     narrative: success
       ? `${adventurer.name} is drawn toward the ${form.name}, eyes gleaming with interest.`
       : `${adventurer.name} glances at the ${form.name} but shows no interest.`,
@@ -1801,6 +1841,30 @@ export const AP_REWARDS = {
 export function getApReward(adventurer) {
   if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
   return AP_REWARDS[adventurer.type] || 3;
+}
+
+// ============================================================
+// PARTIAL BITES
+// Minor mimics are too small to swallow anyone whole, and Apex mimics can't swallow
+// a giant until they reach its wholeMealMass. Both bite pieces off instead.
+// ============================================================
+export const BITE_MATERIAL_CHANCE = 0.35; // chance a held bite teaches one of the target's loot materials
+
+export function needsPartialBites(character, target) {
+  if (character.tier === "Minor") return true;
+  return !!target.wholeMealMass && (character.mass ?? 0) < target.wholeMealMass;
+}
+
+/** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
+export function getBiteAp(target) {
+  return target.group === "giantKin" ? 2 + Math.floor(Math.random() * 2) : 1;
+}
+
+/** Maybe learn a real material from a bite. Returns a material name or null. */
+export function rollBiteMaterial(target) {
+  const mats = target.lootMaterials || [];
+  if (mats.length === 0 || Math.random() >= BITE_MATERIAL_CHANCE) return null;
+  return mats[Math.floor(Math.random() * mats.length)];
 }
 
 // ============================================================

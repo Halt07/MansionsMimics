@@ -7,7 +7,8 @@ import {
   rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
-  isTemplateEligible, getBehaviorReactions, isStationary
+  isTemplateEligible, getBehaviorReactions, isStationary,
+  needsPartialBites, getBiteAp, rollBiteMaterial
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -395,6 +396,9 @@ export default function Game() {
         character.currentAppearance || {}, adv, roomMod
       );
       addEvent(result.success ? "allure" : "info", result.narrative);
+      if (result.disliked.length > 0) {
+        addEvent("info", `${adv.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
+      }
       if (result.suspicionChange > 0) {
         setSuspicion(s => {
           const next = Math.min(s + result.suspicionChange, 10);
@@ -495,10 +499,16 @@ export default function Game() {
     const target = scored[0].adv;
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
-    // Minor mimics: partial bites, track hit count
-    if (character.tier === "Minor") {
+    // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
+    if (needsPartialBites(character, target)) {
+      const isGiantTarget = target.group === "giantKin";
+      if (isGiantTarget && character.tier !== "Minor") {
+        addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
+      }
       const biteResult = adhesionCheck(effectiveAdhesion, form, target);
-      const bodyParts = ["hand", "forearm", "boot", "calf", "pant leg", "cloak edge", "shirt sleeve"];
+      const bodyParts = isGiantTarget
+        ? ["ankle", "bootlace, thick as rope", "cloak hem", "calloused toe", "belt edge", "trailing sleeve"]
+        : ["hand", "forearm", "boot", "calf", "pant leg", "cloak edge", "shirt sleeve"];
       const part = bodyParts[Math.floor(Math.random() * bodyParts.length)];
       if (biteResult.success) {
         addEvent("attack", `You latch onto ${target.name}'s ${part}!`);
@@ -509,15 +519,19 @@ export default function Game() {
         const maxHits = target.constitution || 3;
 
         if (held) {
-          // Gain a scrap material from the bite
+          // The scrap is flavor; sometimes the bite also teaches one of the target's real materials
           const partialLoot = target.partialLoot || ["scrap of cloth"];
           const scrap = partialLoot[Math.floor(Math.random() * partialLoot.length)];
-          const apGained = 1;
+          const apGained = getBiteAp(target);
           addEvent("consume", `You tear free with a ${scrap}! +${apGained} AP. ${target.name} staggers back. (${hitsSoFar}/${maxHits} hits taken)`);
+          const biteMaterial = rollBiteMaterial(target);
+          const isNewMaterial = biteMaterial && !(character.learnedMaterials || []).includes(biteMaterial);
+          if (isNewMaterial) addEvent("evolve", `New material absorbed from the bite: ${biteMaterial}!`);
           applyBehaviorReactions("feed", { excludeIds: [target.id] });
           setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
-          // Learn the scrap as a material if not already known
-          const learnedMaterials = [...new Set([...(character.learnedMaterials || []), scrap])];
+          const learnedMaterials = isNewMaterial
+            ? [...(character.learnedMaterials || []), biteMaterial]
+            : (character.learnedMaterials || []);
           const updatedChar = {
             ...character,
             assimilationPoints: (character.assimilationPoints || 0) + apGained,

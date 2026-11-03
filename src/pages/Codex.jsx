@@ -309,7 +309,7 @@ export default function Codex() {
                 {`${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
                 {adv.minTier && (
                   <span className="ml-2 align-middle text-[10px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
-                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}
+                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{adv.wholeMealMass ? ` · Whole at ${adv.wholeMealMass}` : ""}
                   </span>
                 )}
               </>}>
@@ -327,6 +327,16 @@ export default function Codex() {
                     <span key={q} className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400 bg-yellow-400/5">{q}</span>
                     )}
                       </div>
+                      {adv.repelledBy && (
+                        <>
+                          <p className="text-xs text-muted-foreground mt-3 mb-1">Put Off By</p>
+                          <div className="flex flex-wrap gap-1">
+                            {[...(adv.repelledBy.materials || []), ...(adv.repelledBy.traits || []), ...(adv.repelledBy.tags || [])].map((q) =>
+                              <span key={q} className="text-[10px] px-1.5 py-0.5 rounded border border-red-400/30 text-red-400 bg-red-400/5">{q}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Perception Strengths</p>
@@ -402,6 +412,17 @@ export default function Codex() {
                   <p>A failed stealth check raises suspicion. Detected flaws add further suspicion on top.</p>
                 </div>
               </Collapsible>
+              <Collapsible title="Allure Check">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>Lure rolls <span className="text-foreground">Base Allure + form modifier + room context d6</span> vs. the adventurer's <span className="text-foreground">Discipline + Suspicion/2 d6</span>. Success draws them into your room.</p>
+                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials, surface traits, symbolic traits, condition traits and your form's tags all count.</p>
+                  <ul className="space-y-1 ml-4 text-xs">
+                    <li>• Each quality they like: <span className="text-green-400">+1 die</span>, up to your Plausibility. Going over that cap is too good to be true: <span className="text-red-400">+1 suspicion</span>.</li>
+                    <li>• Each quality they dislike: <span className="text-red-400">–1 die</span>, with no cap. A King won't be tempted by anything Cracked or Dusty.</li>
+                  </ul>
+                  <p>When you Strike, you go for the nearest lured adventurer, preferring whoever likes your look most (likes minus dislikes).</p>
+                </div>
+              </Collapsible>
               <Collapsible title="Room Context Modifiers">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>Certain forms gain or lose plausibility and allure based on the room you inhabit. This reflects how natural or out-of-place an object looks in its surroundings.</p>
@@ -440,6 +461,7 @@ export default function Codex() {
                   <p>You can only use materials and traits in your appearance if you have <span className="text-foreground">previously consumed or directly observed</span> them.</p>
                   <p>Consuming an adventurer does <span className="text-foreground">not</span> guarantee you learn everything they carry. Assimilation is imperfect — each kill yields a <span className="text-foreground">random subset</span> of their materials and traits. Hunt the same type repeatedly to learn all they have to offer.</p>
                   <p>Traits have a lower chance of transfer than materials — they represent deeper knowledge that may require multiple encounters to fully absorb.</p>
+                  <p>A partial bite that holds has a <span className="text-foreground">35% chance</span> to teach one of the target's materials.</p>
                   <p>The number of materials and traits you can apply simultaneously scales with your tier — see the Appearance Limits table.</p>
                 </div>
               </Collapsible>
@@ -457,7 +479,7 @@ export default function Codex() {
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p><span className="text-foreground">Successful consumption</span> raises suspicion by <span className="text-red-400">+1</span> — a party member has gone missing.</p>
                   <p><span className="text-foreground">Failed strike</span> raises suspicion by <span className="text-red-400">+4</span> — the target saw you lunge and knows exactly what you are.</p>
-                  <p>Minor mimics dealing bite damage raise suspicion by <span className="text-red-400">+2</span> per hit, and <span className="text-red-400">+3</span> if the target flees.</p>
+                  <p>Partial bites (Minor mimics, or any mimic biting a giant it can't yet swallow) raise suspicion by <span className="text-red-400">+2</span> per hit, and <span className="text-red-400">+3</span> if the target flees.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Bounty Hunts (Legendary Reputation)">
@@ -557,6 +579,8 @@ export default function Codex() {
                     <li>• <span className="text-foreground">Giant Throne, Giant Bed</span> — mass 33–35+</li>
                   </ul>
                   <p>Giant-kin adventurers yield <span className="text-foreground font-semibold">12 AP</span> when consumed — roughly double to triple normal adventurer rewards.</p>
+                  <p className="font-semibold text-foreground mt-2">Too big to swallow</p>
+                  <p>Each giant can only be swallowed whole once your mass is <span className="text-foreground">8 above the mass it first appears at</span> (shown as "Whole at" on its Codex entry — e.g. a Half-Giant Mercenary at mass 36). Until then you take <span className="text-foreground">partial bites</span>, like a Minor mimic: each bite that holds is worth <span className="text-foreground">2–3 AP</span> and may teach one of the giant's materials, and a giant worn down by enough bites collapses for a final <span className="text-foreground">+2 AP</span>.</p>
                 </div>
               </Collapsible>
             </div>
