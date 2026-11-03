@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, STARTING_STATS } from
+  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, STARTING_STATS } from
 "../components/game/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
 const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"];
 
-function Collapsible({ title, children, defaultOpen = false }) {
+function Collapsible({ title, subtitle, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -19,7 +19,10 @@ function Collapsible({ title, children, defaultOpen = false }) {
         onClick={() => setOpen(!open)}
         className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 hover:bg-muted/40 transition-colors text-left">
 
-        <span className="font-cinzel text-sm text-foreground">{title}</span>
+        <span className="min-w-0">
+          <span className="font-cinzel text-sm text-foreground">{title}</span>
+          {subtitle && <span className="block text-xs text-muted-foreground mt-0.5">{subtitle}</span>}
+        </span>
         {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
       </button>
       {open && <div className="p-4 bg-card">{children}</div>}
@@ -289,11 +292,25 @@ export default function Codex() {
               <p className="text-sm text-muted-foreground mb-2">
                 Parties are randomly assembled from these templates. Each adventurer has unique perception affinities and luring preferences. Entries marked <span className="text-primary">✦</span> may bring a companion.
               </p>
-              <div className="p-3 mb-4 border border-amber-400/20 bg-amber-400/5 rounded-lg text-xs text-amber-400/80">
-                <span className="font-cinzel font-semibold text-amber-400">Giant-Kin Adventurers</span> — Half-Giants, Giant-Blood Shamans, Cloud Giants, Storm Giants, Goose-Keepers, Giant Treasure Hoarders, and Beanstalk Climbers only appear in the <span className="font-semibold">Giant's Castle</span> and <span className="font-semibold">Cloud Kingdom Outpost</span> locations. They are gated by Apex tier and minimum mass. Giant-kin yield significantly more AP than standard adventurers (up to 12 per kill).
-              </div>
-              {ADVENTURER_TEMPLATES.map((adv) =>
-            <Collapsible key={adv.name} title={`${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}>
+              {ADVENTURER_GROUPS.map((group, groupIndex) => {
+                const members = ADVENTURER_TEMPLATES.filter((adv) => adv.group === group.id);
+                if (members.length === 0) return null;
+                return (
+              <Collapsible
+                key={group.id}
+                title={`${group.label} (${members.length})`}
+                subtitle={group.description}
+                defaultOpen={groupIndex === 0}>
+                <div className="space-y-2">
+              {members.map((adv) =>
+            <Collapsible key={adv.name} title={<>
+                {`${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
+                {adv.minTier && (
+                  <span className="ml-2 align-middle text-[10px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
+                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}
+                  </span>
+                )}
+              </>}>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Base Stats</p>
@@ -340,6 +357,10 @@ export default function Codex() {
                   </div>
                 </Collapsible>
             )}
+                </div>
+              </Collapsible>
+                );
+              })}
             </div>
           }
 

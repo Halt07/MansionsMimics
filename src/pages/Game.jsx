@@ -38,7 +38,7 @@ function generateParty(location, mimicTier, mimicMass) {
     const meetsMinMass = !t.minMass || (mimicMass ?? 0) >= t.minMass;
     if (!meetsMinMass) return false;
     // Giant-kin only appear in giant realm locations
-    const isGiantKin = !!t.minMass && t.minTier === "Apex" && t.lootMaterials?.some(m => m.startsWith("Giant") || m.startsWith("Beanstalk") || m.startsWith("Cloud") || m.startsWith("Golden Goose") || m.startsWith("Stormforged"));
+    const isGiantKin = t.group === "giantKin";
     if (isGiantKin && !isGiantRealm) return false;
     if (!isGiantKin && isGiantRealm && tierIdx < TIER_ORDER.indexOf("Apex")) return false;
     return true;
