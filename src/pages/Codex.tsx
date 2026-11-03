@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS } from
+  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
+  isMagicMaterial, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +12,20 @@ import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
 const LOCATION_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
 
-const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"];
+const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"] as const;
+type Section = (typeof SECTIONS)[number];
 
-function Collapsible({ title, subtitle, children, defaultOpen = false }) {
+// MATERIALS as typed [rarity, materials] pairs (Object.entries would lose the key types)
+const MATERIAL_GROUPS = Object.entries(MATERIALS) as [MaterialRarity, readonly Material[]][];
+
+interface CollapsibleProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}
+
+function Collapsible({ title, subtitle, children, defaultOpen = false }: CollapsibleProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -33,8 +45,8 @@ function Collapsible({ title, subtitle, children, defaultOpen = false }) {
 }
 
 export default function Codex() {
-  const [activeSection, setActiveSection] = useState("Overview");
-  const [selectedTier, setSelectedTier] = useState("Minor");
+  const [activeSection, setActiveSection] = useState<Section>("Overview");
+  const [selectedTier, setSelectedTier] = useState<Tier>("Minor");
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,7 +152,7 @@ export default function Codex() {
               </div>
               <Collapsible title="Starting Type Tradeoffs">
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {["Minor", "Lesser"].map((type) => {
+                  {STARTING_TYPES.map((type) => {
                   const s = STARTING_STATS[type];
                   return (
                     <div key={type}>
@@ -186,7 +198,7 @@ export default function Codex() {
               )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {MASTER_FORMS[selectedTier]?.map((form) =>
+                {MASTER_FORMS[selectedTier].map((form) =>
               <Card key={form.id} className="bg-card border-border">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-1">
@@ -200,7 +212,7 @@ export default function Codex() {
                         {form.utilityTags.map((t) =>
                     <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{t}</span>
                     )}
-                        {(form.builtInTraits || []).map((t) =>
+                        {form.builtInTraits.map((t) =>
                     <span key={t} title="Built-in trait" className="text-[9px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{t}</span>
                     )}
                       </div>
@@ -223,7 +235,7 @@ export default function Codex() {
               <p className="text-sm text-muted-foreground mb-4">
                 You can only use materials you have <em>consumed or directly observed</em>. Each tier unlocks the ability to use more complex appearance combinations.
               </p>
-              {Object.entries(MATERIALS).map(([rarity, mats]) =>
+              {MATERIAL_GROUPS.map(([rarity, mats]) =>
             <Collapsible key={rarity} title={`${rarity.charAt(0).toUpperCase() + rarity.slice(1)} Materials (${mats.length})`} defaultOpen={rarity === "mundane"}>
                   {rarity === "magic" && (
                     <div className="mb-3 space-y-2">
@@ -231,7 +243,7 @@ export default function Codex() {
                         Magic materials are worn in your primary or secondary slots like any other material, up to your tier's Magic limit, and each one worn grants its effect. The cost: each one gives off <span className="font-semibold">arcane residue</span>, an extra flaw check against adventurers with Magical perception +2 or higher (wizards, clerics, inquisitors, changelings…).
                       </p>
                       <ul className="space-y-1 text-xs">
-                        {mats.filter((mat) => MAGIC_EFFECTS[mat]).map((mat) =>
+                        {mats.filter(isMagicMaterial).map((mat) =>
                           <li key={mat}><span className="text-purple-400">{mat}</span> <span className="text-muted-foreground">— {MAGIC_EFFECTS[mat]}</span></li>
                         )}
                       </ul>
@@ -244,7 +256,7 @@ export default function Codex() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     {mats.map((mat) =>
-                <span key={mat} className={`text-xs px-2.5 py-1 rounded border ${MATERIAL_COLORS[rarity] ?? MATERIAL_COLORS.mundane}`}>
+                <span key={mat} className={`text-xs px-2.5 py-1 rounded border ${MATERIAL_COLORS[rarity]}`}>
                         {mat}
                       </span>
                 )}
@@ -371,7 +383,7 @@ export default function Codex() {
                       <ul className="space-y-0.5 text-xs text-muted-foreground">
                         {adv.quirks.map((q) => <li key={q}>• {q}</li>)}
                       </ul>
-                      {BEHAVIORS[adv.behavior] && (
+                      {adv.behavior && (
                         <div className="mt-3">
                           <p className="text-xs text-muted-foreground mb-1">
                             Instinct: <span className="text-purple-400">{BEHAVIORS[adv.behavior].label}</span>

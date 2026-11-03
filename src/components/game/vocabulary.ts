@@ -98,3 +98,10 @@ export type CombatStat = "plausibility" | "adhesion" | "patience";
 // ── Event log ──
 export type GameEventType =
   | "info" | "system" | "alert" | "stealth" | "allure" | "attack" | "consume" | "escape" | "evolve" | "flaw";
+
+/** One line in the hunt's event log. */
+export interface GameEvent {
+  turn: number;
+  type: GameEventType;
+  message: string;
+}

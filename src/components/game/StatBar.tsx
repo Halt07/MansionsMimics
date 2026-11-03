@@ -1,6 +1,24 @@
 import { useState } from "react";
 
-export default function StatBar({ label, value, max = 6, color = "bg-green-500", penalty = 0, penaltyLabel = null, massPenalty = 0, formPenalty = 0, formPenaltyNote = null }) {
+interface StatBarProps {
+  label: string;
+  value: number;
+  max?: number;
+  /** Tailwind background class for the bar. */
+  color?: string;
+  /** Total penalty (mass + form tier + sickness). */
+  penalty?: number;
+  /** Tooltip text for the sickness part of the penalty. */
+  penaltyLabel?: string | null;
+  massPenalty?: number;
+  formPenalty?: number;
+  formPenaltyNote?: string | null;
+}
+
+export default function StatBar({
+  label, value, max = 6, color = "bg-green-500", penalty = 0, penaltyLabel = null,
+  massPenalty = 0, formPenalty = 0, formPenaltyNote = null,
+}: StatBarProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const effectiveValue = Math.max(0, value - penalty);
   // Split penalty into mass, form-tier and sickness portions for separate coloring

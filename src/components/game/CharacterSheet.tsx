@@ -1,21 +1,24 @@
-import { TIER_CONFIG, MASTER_FORMS, TIER_ORDER, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
+import { TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import StatBar from "./StatBar";
 
-export default function CharacterSheet({ character, onClose }) {
-  const cfg = TIER_CONFIG[character.tier];
-  const apProgress = cfg.apToEvolve === Infinity ? 100 : Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100);
+interface CharacterSheetProps {
+  character: MimicCharacter;
+  onClose?: () => void;
+}
 
-  const activeForms = (character.forms || []).map(ref => {
-    for (const tier of TIER_ORDER) {
-      const found = MASTER_FORMS[tier]?.find(f => f.id === ref.formId);
-      if (found) return { ...found, formRef: ref };
-    }
-    return null;
-  }).filter(Boolean);
+export default function CharacterSheet({ character, onClose }: CharacterSheetProps) {
+  const cfg = TIER_CONFIG[character.tier];
+  const apProgress = Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100);
+
+  const activeForms = character.forms.flatMap(ref => {
+    const found = ALL_FORMS.find(f => f.id === ref.formId);
+    return found ? [{ ...found, formRef: ref }] : [];
+  });
 
   return (
     <Card className="bg-card border-border">
@@ -61,7 +64,7 @@ export default function CharacterSheet({ character, onClose }) {
         <div>
           <div className="flex justify-between text-[10px] mb-1">
             <span className="font-cinzel text-muted-foreground uppercase tracking-widest">Evolution</span>
-            <span className="text-foreground">{character.assimilationPoints} / {cfg.apToEvolve === Infinity ? "MAX" : cfg.apToEvolve} AP</span>
+            <span className="text-foreground">{character.assimilationPoints} / {cfg.apToEvolve} AP</span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${apProgress}%` }} />
@@ -99,9 +102,9 @@ export default function CharacterSheet({ character, onClose }) {
             </p>
             <div className="flex flex-wrap gap-1.5">
               {character.learnedMaterials.map(mat => {
-                const rarity = MATERIAL_RARITY?.[mat] || "mundane";
+                const rarity = MATERIAL_RARITY[mat];
                 return (
-                  <span key={mat} className={`text-[10px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity] ?? MATERIAL_COLORS.mundane}`}>
+                  <span key={mat} className={`text-[10px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity]}`}>
                     {mat}
                   </span>
                 );

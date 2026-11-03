@@ -1,23 +1,29 @@
 import { useState } from "react";
-import { TIER_ORDER, getValidForms, canAddForm, MAX_FORMS_ABOVE_TIER } from "./gameData";
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
+import { TIER_ORDER, getValidForms, canAddForm, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
 import { Button } from "@/components/ui/button";
 
 const MAX_FORMS = 3;
 
-export default function FormSelector({ character, onConfirm, onSkip }) {
+interface FormSelectorProps {
+  character: MimicCharacter;
+  onConfirm: (selectedForms: Form[]) => void;
+  onSkip: () => void;
+}
+
+export default function FormSelector({ character, onConfirm, onSkip }: FormSelectorProps) {
   const currentTierIdx = TIER_ORDER.indexOf(character.tier);
   // Include all forms from tier-1, current tier, and tier+1
   const validForms = getValidForms(character.tier, character.mass);
 
   // Start from the current forms, keeping within the form limit and the one-form-above rule
-  const [selected, setSelected] = useState(() => {
-    return (character.forms || [])
-      .map(ref => validForms.find(f => f.id === ref.formId))
-      .filter(Boolean)
-      .reduce((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, character.tier) ? [...acc, form] : acc), []);
+  const [selected, setSelected] = useState<Form[]>(() => {
+    return character.forms
+      .flatMap(ref => validForms.filter(f => f.id === ref.formId))
+      .reduce<Form[]>((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, character.tier) ? [...acc, form] : acc), []);
   });
 
-  const toggle = (form) => {
+  const toggle = (form: Form) => {
     setSelected(prev => {
       const exists = prev.find(f => f.id === form.id);
       if (exists) return prev.filter(f => f.id !== form.id);
@@ -26,7 +32,7 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
     });
   };
 
-  const tierMeta = {
+  const tierMeta: Record<Tier, { color: string; label: string }> = {
     Minor:    { color: "text-muted-foreground", label: "Minor" },
     Lesser:   { color: "text-green-400",  label: "Lesser" },
     Standard: { color: "text-blue-400",   label: "Standard" },
@@ -35,14 +41,14 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
     Apex:     { color: "text-primary",    label: "Apex" },
   };
 
-  const tierLabel = (tier) => {
+  const tierLabel = (tier: Tier) => {
     const idx = TIER_ORDER.indexOf(tier);
     if (idx === currentTierIdx - 1) return `${tier} Tier (Below — simpler forms, –1 Patience)`;
     if (idx === currentTierIdx + 1) return `${tier} Tier (Above — ambitious forms, –2 Plausibility, max ${MAX_FORMS_ABOVE_TIER})`;
     return `${tier} Tier (Current)`;
   };
 
-  const groupedForms = TIER_ORDER.reduce((acc, tier) => {
+  const groupedForms = TIER_ORDER.reduce<Partial<Record<Tier, Form[]>>>((acc, tier) => {
     const formsInTier = validForms.filter(f => f.tier === tier);
     if (formsInTier.length > 0) acc[tier] = formsInTier;
     return acc;
@@ -60,7 +66,7 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
         </p>
       </div>
 
-      {Object.entries(groupedForms).map(([tier, forms]) => (
+      {TIER_ORDER.flatMap(tier => { const forms = groupedForms[tier]; return forms ? [[tier, forms] as const] : []; }).map(([tier, forms]) => (
         <div key={tier}>
           <p className={`text-[10px] font-cinzel uppercase tracking-widest mb-2 ${tierMeta[tier]?.color}`}>{tierLabel(tier)}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -115,8 +121,8 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
         </Button>
         <Button
           onClick={onSkip}
-          disabled={!(character.forms || []).length}
-          title={(character.forms || []).length ? undefined : "You have no forms left to keep — choose at least one."}
+          disabled={!character.forms.length}
+          title={character.forms.length ? undefined : "You have no forms left to keep — choose at least one."}
           variant="outline"
           className="border-border text-muted-foreground hover:text-foreground"
         >

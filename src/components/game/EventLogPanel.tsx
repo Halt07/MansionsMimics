@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { GameEvent, GameEventType } from "./vocabulary";
 
-const EVENT_STYLES = {
+// A Record over every event type, so a new type can't be added without a style
+const EVENT_STYLES: Record<GameEventType, { prefix: string; color: string }> = {
   attack:   { prefix: "⚔", color: "text-red-400" },
   consume:  { prefix: "🔒", color: "text-primary" },
   stealth:  { prefix: "👁", color: "text-muted-foreground" },
@@ -9,14 +11,13 @@ const EVENT_STYLES = {
   escape:   { prefix: "💨", color: "text-orange-400" },
   alert:    { prefix: "⚠", color: "text-red-400" },
   info:     { prefix: "•", color: "text-muted-foreground" },
-  success:  { prefix: "✓", color: "text-green-400" },
   evolve:   { prefix: "↑", color: "text-primary" },
   flaw:     { prefix: "🔍", color: "text-orange-400" },
   system:   { prefix: "—", color: "text-muted-foreground/60" },
 };
 
-export default function EventLogPanel({ events = [] }) {
-  const bottomRef = useRef(null);
+export default function EventLogPanel({ events = [] }: { events?: GameEvent[] }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +37,7 @@ export default function EventLogPanel({ events = [] }) {
             </p>
           )}
           {events.map((event, i) => {
-            const style = EVENT_STYLES[event.type] || EVENT_STYLES.info;
+            const style = EVENT_STYLES[event.type];
             return (
               <div key={i} className={`text-xs flex gap-2 leading-relaxed ${i === events.length - 1 ? "opacity-100" : "opacity-70"}`}>
                 <span className={`${style.color} shrink-0 font-bold`}>{style.prefix}</span>

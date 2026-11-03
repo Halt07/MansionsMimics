@@ -2,12 +2,26 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials } from "./gameData";
+import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, type Material } from "./gameData";
 
-const MATERIAL_FIELDS = ["primaryMaterials", "secondaryMaterials"];
+type MaterialField = "primaryMaterials" | "secondaryMaterials";
+type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits";
 
-export default function AppearanceEditor({ character, onSave, onClose }) {
-  const [appearance, setAppearance] = useState({
+const MATERIAL_FIELDS: readonly MaterialField[] = ["primaryMaterials", "secondaryMaterials"];
+
+/** A copy of the appearance with one field replaced. */
+const withField = <F extends keyof Appearance>(a: Appearance, field: F, value: Appearance[F]): Appearance =>
+  ({ ...a, [field]: value });
+
+interface AppearanceEditorProps {
+  character: MimicCharacter;
+  onSave: (appearance: Appearance) => void;
+  onClose: () => void;
+}
+
+export default function AppearanceEditor({ character, onSave, onClose }: AppearanceEditorProps) {
+  const [appearance, setAppearance] = useState<Appearance>({
     primaryMaterials: character.currentAppearance?.primaryMaterials || [],
     secondaryMaterials: character.currentAppearance?.secondaryMaterials || [],
     surfaceTraits: character.currentAppearance?.surfaceTraits || [],
@@ -15,33 +29,33 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
     conditionTraits: character.currentAppearance?.conditionTraits || [],
   });
 
-  const limits = APPEARANCE_LIMITS[character.tier] || APPEARANCE_LIMITS["Minor"];
+  const limits = APPEARANCE_LIMITS[character.tier];
   const learned = character.learnedMaterials || [];
   const hasLearnedMagic = learned.some(isMagicMaterial);
   const magicInUse = countMagicMaterials(appearance);
   const wornMagic = MATERIAL_FIELDS.flatMap(f => appearance[f]).filter(isMagicMaterial);
 
   // A material can only fill one slot at a time
-  const usedElsewhere = (field, mat) =>
+  const usedElsewhere = (field: MaterialField, mat: Material) =>
     MATERIAL_FIELDS.some(f => f !== field && appearance[f].includes(mat));
 
   // Magic materials go in the primary/secondary slots, but only limits.magicalMaterials of them in total.
-  const exceedsMagicCap = (field, mat) => {
+  const exceedsMagicCap = (field: MaterialField, mat: Material) => {
     if (!isMagicMaterial(mat) || appearance[field].includes(mat)) return false;
     // With a slot limit of 1 the pick replaces the current material, freeing its magic slot if it had one
     const freed = limits[field] === 1 ? appearance[field].filter(isMagicMaterial).length : 0;
     return magicInUse - freed >= limits.magicalMaterials;
   };
 
-  const materialButton = (field, mat) => {
+  const materialButton = (field: MaterialField, mat: Material) => {
     const selected = appearance[field].includes(mat);
     const magic = isMagicMaterial(mat);
     const inOtherSlot = usedElsewhere(field, mat);
     const magicCapped = !inOtherSlot && exceedsMagicCap(field, mat);
     const blocked = inOtherSlot || magicCapped;
 
-    let style;
-    let title = MAGIC_EFFECTS[mat];
+    let style: string;
+    let title: string | undefined = isMagicMaterial(mat) ? MAGIC_EFFECTS[mat] : undefined;
     if (selected) {
       style = magic ? "border-purple-400 bg-purple-400/10 text-purple-400" : "border-primary bg-primary/10 text-primary";
     } else if (magicCapped) {
@@ -75,27 +89,24 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
 
   // With a limit of 1, picking a new material replaces the current one.
   // With higher limits, extra picks are ignored once the limit is reached.
-  const toggleMat = (field, mat, maxCount) => {
+  const toggleMat = (field: MaterialField, mat: Material, maxCount: number) => {
     setAppearance(a => {
-      const cur = a[field] || [];
-      if (cur.includes(mat)) return { ...a, [field]: cur.filter(m => m !== mat) };
-      if (maxCount === 1) return { ...a, [field]: [mat] };
+      const cur = a[field];
+      if (cur.includes(mat)) return withField(a, field, cur.filter(m => m !== mat));
+      if (maxCount === 1) return withField(a, field, [mat]);
       if (cur.length >= maxCount) return a;
-      return { ...a, [field]: [...cur, mat] };
+      return withField(a, field, [...cur, mat]);
     });
   };
 
-  const toggleTrait = (field, trait, maxCount) => {
+  const toggleTrait = <F extends TraitField>(field: F, trait: Appearance[F][number], maxCount: number) => {
     setAppearance(a => {
-      const cur = a[field] || [];
-      if (cur.includes(trait)) return { ...a, [field]: cur.filter(t => t !== trait) };
+      const cur: Appearance[F][number][] = a[field];
+      if (cur.includes(trait)) return withField(a, field, cur.filter(t => t !== trait) as Appearance[F]);
       if (cur.length >= maxCount) return a;
-      return { ...a, [field]: [...cur, trait] };
+      return withField(a, field, [...cur, trait] as Appearance[F]);
     });
   };
-
-  const allLearnedTraits = [...learnedTraits, ...TRAITS.surface, ...TRAITS.condition];
-  const uniqueLearnedTraits = [...new Set(allLearnedTraits)];
 
   return (
     <Card className="bg-card border-border">

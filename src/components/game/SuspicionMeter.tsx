@@ -8,7 +8,13 @@ const LEVELS = [
   { label: "HUNT MODE", color: "text-red-600", bg: "bg-red-600" },
 ];
 
-export default function SuspicionMeter({ value, max = 10, label = "Global Suspicion" }) {
+interface SuspicionMeterProps {
+  value: number;
+  max?: number;
+  label?: string;
+}
+
+export default function SuspicionMeter({ value, max = 10, label = "Global Suspicion" }: SuspicionMeterProps) {
   const levelIndex = Math.min(Math.floor((value / max) * LEVELS.length), LEVELS.length - 1);
   const level = LEVELS[levelIndex];
   const pct = Math.min((value / max) * 100, 100);

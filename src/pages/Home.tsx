@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { TIER_ORDER, TIER_CONFIG } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye, BookOpen, Sword, User, Trophy } from "lucide-react";
 
 export default function Home() {
-  const [characters, setCharacters] = useState([]);
-  const [peakMimics, setPeakMimics] = useState([]);
+  const [characters, setCharacters] = useState<MimicCharacter[]>([]);
+  const [peakMimics, setPeakMimics] = useState<MimicCharacter[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function Home() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mb-3">
-                      {TIER_CONFIG[char.tier]?.description}
+                      {TIER_CONFIG[char.tier].description}
                     </p>
                     <div className="flex gap-2 text-xs text-muted-foreground">
                       <span>PL: {char.plausibility}</span>

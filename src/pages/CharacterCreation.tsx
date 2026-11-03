@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  STARTING_STATS, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER, canAddForm, MAX_FORMS_ABOVE_TIER
+  STARTING_STATS, STARTING_TYPES, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER, canAddForm, MAX_FORMS_ABOVE_TIER,
+  type Form, type Material, type StartingType,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,26 +16,32 @@ import StatBar from "../components/game/StatBar";
 
 const STEPS = ["Origin", "Name", "Forms", "Appearance", "Confirm"];
 
-const STARTING_MATERIALS = {
+const STARTING_MATERIALS: Record<StartingType, readonly [Material, ...Material[]]> = {
   Minor: ["Oak", "Iron", "Cotton"],
   Lesser: ["Oak", "Iron", "Cowhide"],
 };
+
+type TraitField = "surfaceTraits" | "conditionTraits";
+
+/** A copy of the appearance with one field replaced. */
+const withField = <F extends keyof Appearance>(a: Appearance, field: F, value: Appearance[F]): Appearance =>
+  ({ ...a, [field]: value });
 
 export default function CharacterCreation() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [origin, setOrigin] = useState(null); // "Minor" | "Lesser"
+  const [origin, setOrigin] = useState<StartingType | null>(null);
 
-  const handleOriginSelect = (type) => {
+  const handleOriginSelect = (type: StartingType) => {
     setOrigin(type);
     setSelectedForms([]); // reset forms when origin changes
   };
   const [name, setName] = useState("");
-  const [selectedForms, setSelectedForms] = useState([]);
-  const [appearance, setAppearance] = useState({
+  const [selectedForms, setSelectedForms] = useState<Form[]>([]);
+  const [appearance, setAppearance] = useState<Appearance>({
     primaryMaterials: [],
     secondaryMaterials: [],
     surfaceTraits: [],
@@ -43,10 +51,10 @@ export default function CharacterCreation() {
 
   // Forms available at creation: same tier as origin, plus one tier above (±1 rule)
   // Minor origin starts at Minor tier; Lesser origin starts at Lesser tier
-  const startingTier = origin || "Minor";
+  const startingTier: StartingType = origin || "Minor";
   const tierIndex = TIER_ORDER.indexOf(startingTier);
-  const availableForms = TIER_ORDER.reduce((acc, tier, i) => {
-    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...(MASTER_FORMS[tier] || [])];
+  const availableForms = TIER_ORDER.reduce<Form[]>((acc, tier, i) => {
+    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier]];
     return acc;
   }, []);
 
@@ -58,27 +66,27 @@ export default function CharacterCreation() {
     return true;
   };
 
-  const toggleForm = (form) => {
+  const toggleForm = (form: Form) => {
     if (selectedForms.find(f => f.id === form.id)) {
       setSelectedForms(selectedForms.filter(f => f.id !== form.id));
     } else if (selectedForms.length < 2 && canAddForm(selectedForms, form, startingTier)) {
-      setSelectedForms([...selectedForms, { ...form, learned: true }]);
+      setSelectedForms([...selectedForms, form]);
     }
   };
 
-  const toggleTrait = (category, trait) => {
-    const current = appearance[category] || [];
+  // Starting mimics may pick one trait per category
+  const toggleTrait = <F extends TraitField>(category: F, trait: Appearance[F][number]) => {
+    const current: Appearance[F][number][] = appearance[category];
     if (current.includes(trait)) {
-      setAppearance({ ...appearance, [category]: current.filter(t => t !== trait) });
+      setAppearance(withField(appearance, category, current.filter(t => t !== trait) as Appearance[F]));
     } else if (current.length < 1) {
-      setAppearance({ ...appearance, [category]: [...current, trait] });
+      setAppearance(withField(appearance, category, [...current, trait] as Appearance[F]));
     }
   };
 
   // Starting mimics may pick one material per slot, so a new pick replaces the old one.
-  const toggleMaterial = (field, mat) => {
-    const current = appearance[field] || [];
-    setAppearance({ ...appearance, [field]: current.includes(mat) ? [] : [mat] });
+  const toggleMaterial = (field: "primaryMaterials" | "secondaryMaterials", mat: Material) => {
+    setAppearance(withField(appearance, field, appearance[field].includes(mat) ? [] : [mat]));
   };
 
   const handleCreate = async () => {
@@ -87,7 +95,7 @@ export default function CharacterCreation() {
     setSaveError(null);
     const stats = STARTING_STATS[origin];
     const startingMats = STARTING_MATERIALS[origin];
-    const charData = {
+    const charData: MimicCharacterInput = {
       name: name.trim(),
       tier: origin, // start AS the chosen tier
       startingType: origin,
@@ -100,14 +108,14 @@ export default function CharacterCreation() {
       baseAllure: stats.baseAllure,
       forms: selectedForms.map(f => ({ formId: f.id, name: f.name, tier: f.tier, learned: true })),
       activeFormIndex: 0,
-      learnedMaterials: startingMats,
+      learnedMaterials: [...startingMats],
       learnedTraits: [],
       currentAppearance: {
         primaryMaterials: appearance.primaryMaterials.length ? appearance.primaryMaterials : [startingMats[0]],
         secondaryMaterials: appearance.secondaryMaterials,
-        surfaceTraits: appearance.surfaceTraits || [],
-        symbolicTraits: appearance.symbolicTraits || [],
-        conditionTraits: appearance.conditionTraits || [],
+        surfaceTraits: appearance.surfaceTraits,
+        symbolicTraits: appearance.symbolicTraits,
+        conditionTraits: appearance.conditionTraits,
       },
       isActive: true,
     };
@@ -116,7 +124,7 @@ export default function CharacterCreation() {
       navigate(createPageUrl(`Game?characterId=${created.id}`));
     } catch (err) {
       console.error("Failed to create character:", err);
-      setSaveError(err?.message || "Unknown error");
+      setSaveError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
@@ -155,7 +163,7 @@ export default function CharacterCreation() {
             <p className="text-center text-muted-foreground text-sm mb-6">
               Every mimic begins as one of two forms. Your origin shapes your strengths and weaknesses forever.
             </p>
-            {["Minor", "Lesser"].map(type => {
+            {STARTING_TYPES.map(type => {
               const s = STARTING_STATS[type];
               const cfg = TIER_CONFIG["Minor"];
               const isSelected = origin === type;

@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 
-export default function DiceRollDisplay({ rolls, label, color = "text-primary", animate = false }) {
+interface DiceRollDisplayProps {
+  /** Individual die results, 1–6. */
+  rolls: number[] | null | undefined;
+  label: string;
+  /** Tailwind text color class for the total. */
+  color?: string;
+  /** Fade the dice in each time the rolls change. */
+  animate?: boolean;
+}
+
+/** Shows a set of d6 results and their total. Not used yet; kept for showing rolls in the hunt UI. */
+export default function DiceRollDisplay({ rolls, label, color = "text-primary", animate = false }: DiceRollDisplayProps) {
   const [visible, setVisible] = useState(!animate);
 
   useEffect(() => {

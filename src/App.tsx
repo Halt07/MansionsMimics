@@ -1,26 +1,25 @@
+import type { ReactNode } from 'react'
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { pagesConfig } from './pages.config'
+import { pagesConfig, type PageName } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 
 const { Pages, Layout, mainPage } = pagesConfig;
-const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const MainPage = Pages[mainPage];
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+const LayoutWrapper = ({ children, currentPageName }: { children: ReactNode; currentPageName: PageName }) =>
+  <Layout currentPageName={currentPageName}>{children}</Layout>;
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={
-      <LayoutWrapper currentPageName={mainPageKey}>
+      <LayoutWrapper currentPageName={mainPage}>
         <MainPage />
       </LayoutWrapper>
     } />
-    {Object.entries(Pages).map(([path, Page]) => (
+    {(Object.entries(Pages) as [PageName, (typeof Pages)[PageName]][]).map(([path, Page]) => (
       <Route
         key={path}
         path={`/${path}`}
