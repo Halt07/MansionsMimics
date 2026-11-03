@@ -115,6 +115,8 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
         </Button>
         <Button
           onClick={onSkip}
+          disabled={!(character.forms || []).length}
+          title={(character.forms || []).length ? undefined : "You have no forms left to keep — choose at least one."}
           variant="outline"
           className="border-border text-muted-foreground hover:text-foreground"
         >

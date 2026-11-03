@@ -142,6 +142,9 @@ export default function Game() {
   // Post-hunt form selection
   const [pendingFormChoices, setPendingFormChoices] = useState(null); // { slot: 0|1|2, options: [...] }
   const [formSelectionSlot, setFormSelectionSlot] = useState(0);
+  // Where form selection returns to: the hunting-ground screen normally, or straight back
+  // into the hunt when a mid-hunt tier-up forced the selection
+  const [formSelectReturnPhase, setFormSelectReturnPhase] = useState("setup");
   const [newFormSelections, setNewFormSelections] = useState([]);
 
   useEffect(() => {
@@ -701,8 +704,9 @@ export default function Game() {
     }
   };
 
-  // Post-hunt: offer form re-selection before next hunt
-  const startFormSelection = () => {
+  // Open form selection. returnTo is where confirming or skipping goes afterwards.
+  const startFormSelection = (returnTo = "setup") => {
+    setFormSelectReturnPhase(returnTo);
     setPhase("formSelect");
   };
 
@@ -713,7 +717,7 @@ export default function Game() {
     setCharacter(updatedChar);
     persist({ forms: formRefs, activeFormIndex: 0 });
     addEvent("info", `You reshape yourself. New forms prepared: ${formRefs.map(f => f.name).join(", ")}.`);
-    setPhase("setup");
+    setPhase(formSelectReturnPhase);
   };
 
   const doChangeForm = (formIndex) => {
@@ -907,7 +911,8 @@ export default function Game() {
 
     // Leave the upgrade screen right away. If forms were invalidated on tier-up, force form selection.
     if (updates.forms !== undefined) {
-      setPhase("formSelect");
+      // Tier-ups happen while feeding, so pick the replacement and go straight back to the hunt
+      startFormSelection("hunt");
     } else if (phase === "evolve") {
       setPhase("hunt");
     }
@@ -1462,7 +1467,7 @@ export default function Game() {
                     {party.filter(a => a.isConsumed).length} consumed · {party.filter(a => a.fled).length} fled
                   </p>
                   <div className="flex gap-2 justify-center">
-                    <Button onClick={startFormSelection} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
+                    <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
                       Choose New Forms
                     </Button>
                     <Button onClick={() => setPhase("setup")} variant="outline" className="border-border text-xs">
@@ -1480,7 +1485,7 @@ export default function Game() {
               <FormSelector
                 character={character}
                 onConfirm={confirmFormSelections}
-                onSkip={() => setPhase("setup")}
+                onSkip={() => setPhase(formSelectReturnPhase)}
               />
             </ScrollArea>
           )}
@@ -1543,7 +1548,7 @@ export default function Game() {
                   : "You must find a new hunting ground. Your forms remain, but consider changing them — the survivors will warn others of your shape."}
               </p>
               <div className="flex flex-col gap-2 items-center">
-                <Button onClick={() => setPhase("formSelect")} className="bg-primary text-primary-foreground hover:bg-primary/80 w-48">
+                <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 w-48">
                   Change Forms & Hunt Again
                 </Button>
                 <Button onClick={() => setPhase("setup")} variant="outline" className="border-border w-48">
