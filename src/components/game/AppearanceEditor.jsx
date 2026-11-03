@@ -36,16 +36,36 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
   const materialButton = (field, mat) => {
     const selected = appearance[field].includes(mat);
     const magic = isMagicMaterial(mat);
-    const style = selected
-      ? (magic ? "border-purple-400 bg-purple-400/10 text-purple-400" : "border-primary bg-primary/10 text-primary")
-      : (magic ? "border-purple-400/30 text-purple-400/70 hover:border-purple-400/60" : "border-border text-muted-foreground hover:border-primary/30");
+    const inOtherSlot = usedElsewhere(field, mat);
+    const magicCapped = !inOtherSlot && exceedsMagicCap(field, mat);
+    const blocked = inOtherSlot || magicCapped;
+
+    let style;
+    let title = MAGIC_EFFECTS[mat];
+    if (selected) {
+      style = magic ? "border-purple-400 bg-purple-400/10 text-purple-400" : "border-primary bg-primary/10 text-primary";
+    } else if (magicCapped) {
+      // Muted purple (not grey) so it still reads as a magic material
+      style = "border-purple-400/15 bg-purple-400/5 text-purple-300/35 cursor-not-allowed";
+      title = limits.magicalMaterials === 0
+        ? "Your tier is too inexperienced to imitate magic materials."
+        : "You are unable to imitate any more magic materials at one time.";
+    } else if (inOtherSlot) {
+      style = "border-border text-muted-foreground opacity-30 cursor-not-allowed";
+      title = "Already used in your other material slot.";
+    } else {
+      style = magic ? "border-purple-400/30 text-purple-400/70 hover:border-purple-400/60" : "border-border text-muted-foreground hover:border-primary/30";
+    }
+
+    // aria-disabled instead of disabled, so the hover message still shows in every browser
     return (
       <button
         key={mat}
-        title={MAGIC_EFFECTS[mat]}
-        onClick={() => toggleMat(field, mat, limits[field])}
-        disabled={usedElsewhere(field, mat) || exceedsMagicCap(field, mat)}
-        className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${style}`}
+        type="button"
+        title={title}
+        aria-disabled={blocked}
+        onClick={() => { if (!blocked) toggleMat(field, mat, limits[field]); }}
+        className={`px-2.5 py-1 rounded border text-xs transition-all ${style}`}
       >
         {mat}
       </button>
