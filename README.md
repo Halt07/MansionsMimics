@@ -13,7 +13,31 @@ npm run dev
 
 Then open the URL Vite prints (usually http://localhost:5173).
 
-Other scripts: `npm run build`, `npm run preview`, `npm run lint`.
+Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm test`.
+
+## Tests
+
+`npm test` runs the checks in `tests/` against the game rules (`src/components/game/gameData.jsx`)
+and the data layer (`src/api/db.js`). Source files are loaded through Vite with the app's own
+config, so there is no separate build step.
+
+```sh
+npm test                 # run everything
+npm test -- magic        # only files whose name contains "magic"
+npm test -- --verbose    # also print each passing check and extra info
+```
+
+| File | Covers |
+|---|---|
+| `tests/db.test.mjs` | Saving and loading characters, schema validation, defaults, corrupt records |
+| `tests/monsters.test.mjs` | Adventurer data integrity, spawn gating (tier/mass/location), AP, special behaviors |
+| `tests/allure.test.mjs` | Likes/dislikes when luring, partial bites |
+| `tests/magic.test.mjs` | Magic material effects and arcane residue |
+| `tests/traits.test.mjs` | Forms' built-in traits and flaw data |
+
+Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
+`tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and
+compare rates). Their margins are wide, but if one fails once, rerun before assuming a bug.
 
 ## Data storage
 
