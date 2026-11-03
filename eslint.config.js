@@ -1,36 +1,30 @@
 import globals from "globals";
 import pluginJs from "@eslint/js";
+import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
 
-export default [
+export default tseslint.config(
   {
-    files: [
-      "src/components/**/*.{js,mjs,cjs,jsx}",
-      "src/pages/**/*.{js,mjs,cjs,jsx}",
-      "src/Layout.jsx",
-    ],
-    ignores: ["src/lib/**/*", "src/components/ui/**/*"],
-    ...pluginJs.configs.recommended,
-    ...pluginReact.configs.flat.recommended,
+    // Generated/vendored code: build output and the shadcn UI primitives
+    ignores: ["dist/**", "src/components/ui/**", "src/lib/**"],
+  },
+  {
+    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    extends: [pluginJs.configs.recommended, pluginReact.configs.flat.recommended],
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: "module",
-        ecmaFeatures: {
-          jsx: true,
-        },
+        ecmaFeatures: { jsx: true },
       },
     },
     settings: {
-      react: {
-        version: "detect",
-      },
+      react: { version: "detect" },
     },
     plugins: {
-      react: pluginReact,
       "react-hooks": pluginReactHooks,
       "unused-imports": pluginUnusedImports,
     },
@@ -55,6 +49,17 @@ export default [
         { ignore: ["cmdk-input-wrapper", "toast-close"] },
       ],
       "react-hooks/rules-of-hooks": "error",
+      // Apostrophes and quotes in prose render fine; only flag characters that usually mean a JSX typo
+      "react/no-unescaped-entities": ["error", { forbid: [">", "}"] }],
     },
   },
-];
+  {
+    // TypeScript files: type-aware syntax rules on top of the shared ones
+    files: ["src/**/*.{ts,tsx}"],
+    extends: [tseslint.configs.recommended],
+    rules: {
+      // unused-imports handles unused variables/imports (with the _ prefix escape hatch)
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+);
