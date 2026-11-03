@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, STARTING_STATS } from
+  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS } from
 "../components/game/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -225,6 +225,18 @@ export default function Codex() {
               </p>
               {Object.entries(MATERIALS).map(([rarity, mats]) =>
             <Collapsible key={rarity} title={`${rarity.charAt(0).toUpperCase() + rarity.slice(1)} Materials (${mats.length})`} defaultOpen={rarity === "mundane"}>
+                  {rarity === "magic" && (
+                    <div className="mb-3 space-y-2">
+                      <p className="text-xs text-purple-400/80 italic border border-purple-400/20 bg-purple-400/5 rounded px-2 py-1.5">
+                        Wearing a magic material in any appearance slot grants its effect. The cost: each one gives off <span className="font-semibold">arcane residue</span>, an extra flaw check against adventurers with Magical perception +2 or higher (wizards, clerics, inquisitors, changelings…).
+                      </p>
+                      <ul className="space-y-1 text-xs">
+                        {mats.filter((mat) => MAGIC_EFFECTS[mat]).map((mat) =>
+                          <li key={mat}><span className="text-purple-400">{mat}</span> <span className="text-muted-foreground">— {MAGIC_EFFECTS[mat]}</span></li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                   {rarity === "giant" && (
                     <p className="text-xs text-amber-400/80 italic mb-3 border border-amber-400/20 bg-amber-400/5 rounded px-2 py-1.5">
                       ⚠ Giant-realm materials are only obtainable by consuming Giant-kin adventurers or creatures in the <span className="font-semibold">Giant's Castle</span> or <span className="font-semibold">Cloud Kingdom Outpost</span> locations. These locations require Apex tier and a minimum mass of 28–38.

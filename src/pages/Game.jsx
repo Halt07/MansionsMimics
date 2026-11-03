@@ -8,7 +8,7 @@ import {
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
-  needsPartialBites, getBiteAp, rollBiteMaterial
+  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -255,6 +255,9 @@ export default function Game() {
     }
     if (rivalData) {
       addEvent("alert", `Something feels wrong. Another predator lurks within these walls — and it is not you.`);
+      if (hasMagic(character?.currentAppearance, "Soulglass")) {
+        addEvent("alert", `Your Soulglass hums faintly. The intruder hides in the ${rivalData.room}.`);
+      }
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
     newParty.forEach(a => addEvent("info", `${a.name} (${a.type}) — currently in the ${a.location}.`));
@@ -284,7 +287,7 @@ export default function Game() {
     const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
-      const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, character.tier, form, adv, roomMod);
+      const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, character.tier, form, adv, roomMod, character.currentAppearance);
       if (result.detectedFlaws.length > 0) {
         result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
       }
@@ -314,7 +317,7 @@ export default function Game() {
   // ctx may override mimicRoom (e.g. while relocating) and pass fromRoom / excludeIds.
   const applyBehaviorReactions = (trigger, ctx = {}) => {
     const roomNow = ctx.mimicRoom ?? mimicRoom;
-    const reactions = getBehaviorReactions(trigger, { party, location, mimicRoom: roomNow, ...ctx });
+    const reactions = getBehaviorReactions(trigger, { party, location, mimicRoom: roomNow, appearance: character?.currentAppearance, ...ctx });
     reactions.events.forEach(e => addEvent(e.type, e.text));
     if (Object.keys(reactions.patches).length > 0) {
       setParty(prev => prev.map(a => {
@@ -367,7 +370,8 @@ export default function Game() {
   };
 
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
-  const getAllureRange = () => (character?.baseAllure ?? 2) >= 5 ? 2 : 1;
+  const getAllureRange = () =>
+    ((character?.baseAllure ?? 2) >= 5 ? 2 : 1) + (hasMagic(character?.currentAppearance, "Aether Crystal") ? 1 : 0);
 
   const doAllureTurn = () => {
     if (!character || !location || !mimicRoom) return;
@@ -446,12 +450,14 @@ export default function Game() {
 
   const doStrikeTurn = () => {
     if (!character || !location) return;
+    // Bonesteel: +1 die on strike rolls
+    const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
 
     // Check if rival mimic can be struck (revealed + in same room)
     if (rivalMimic && rivalMimic.revealed && !rivalMimic.consumed && rivalMimic.room === mimicRoom) {
       setActing(true);
       setActionCount(0); // Strike resets action counter
-      const roll = rollDice(effectiveAdhesion);
+      const roll = rollDice(strikeAdhesion);
       const rivalRoll = rollDice(3); // rival resists with 3 dice
       if (roll >= rivalRoll) {
         const apGained = 12;
@@ -505,7 +511,7 @@ export default function Game() {
       if (isGiantTarget && character.tier !== "Minor") {
         addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
       }
-      const biteResult = adhesionCheck(effectiveAdhesion, form, target);
+      const biteResult = adhesionCheck(strikeAdhesion, form, target);
       const bodyParts = isGiantTarget
         ? ["ankle", "bootlace, thick as rope", "cloak hem", "calloused toe", "belt edge", "trailing sleeve"]
         : ["hand", "forearm", "boot", "calf", "pant leg", "cloak edge", "shirt sleeve"];
@@ -593,7 +599,7 @@ export default function Game() {
     }
 
     // Full-size mimics: full consumption
-    const result = adhesionCheck(effectiveAdhesion, form, target);
+    const result = adhesionCheck(strikeAdhesion, form, target);
     addEvent(result.success ? "attack" : "escape", result.narrative);
 
     if (result.success) {
@@ -643,8 +649,9 @@ export default function Game() {
         setPhase("evolve");
       }
     } else {
-      setSuspicion(s => { const n = Math.min(s + 4, 10); if (n >= 10) triggerHuntEnd(); return n; });
-      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+4 suspicion)`);
+      const lungePenalty = hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4;
+      setSuspicion(s => { const n = Math.min(s + lungePenalty, 10); if (n >= 10) triggerHuntEnd(); return n; });
+      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${lungePenalty} suspicion${lungePenalty < 4 ? ", softened by your Dragonhide" : ""})`);
       setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 3 } : a));
     }
     setActing(false);
@@ -688,8 +695,12 @@ export default function Game() {
     setCharacter(updatedChar);
     db.entities.MimicCharacter.update(character.id, { activeFormIndex: formIndex });
     const newForm = MASTER_FORMS[character.forms[formIndex]?.tier]?.find(f => f.id === character.forms[formIndex]?.formId);
-    addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
-    setSuspicion(s => Math.min(s + 1, 10)); // shifting takes time, slight suspicion risk
+    if (hasMagic(character.currentAppearance, "Feywood")) {
+      addEvent("info", `You flow seamlessly into the form of a ${newForm?.name || "new shape"} — the Feywood makes the shift effortless.`);
+    } else {
+      addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
+      setSuspicion(s => Math.min(s + 1, 10)); // shifting takes time, slight suspicion risk
+    }
     applyBehaviorReactions("formChange");
     setShowFormPanel(false);
   };
@@ -699,6 +710,10 @@ export default function Game() {
     setCharacter(updatedChar);
     db.entities.MimicCharacter.update(character.id, { currentAppearance: newAppearance });
     addEvent("info", `You adjust your surface appearance.`);
+    const soulglassNew = hasMagic(newAppearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
+    if (soulglassNew && phase === "hunt" && rivalMimic && !rivalMimic.consumed && !rivalMimic.revealed) {
+      addEvent("alert", `Your Soulglass hums faintly. The rival mimic hides in the ${rivalMimic.room}.`);
+    }
     setShowAppearancePanel(false);
   };
 
@@ -717,7 +732,8 @@ export default function Game() {
     setActionCount(newCount);
 
     // Patience check — reduce suspicion slightly (threshold scales with dice count)
-    const roll = rollDice(effectivePatience);
+    // Runestone: +1 die (the threshold stays based on Patience alone)
+    const roll = rollDice(effectivePatience + (hasMagic(character?.currentAppearance, "Runestone") ? 1 : 0));
     const threshold = effectivePatience * 3;
     if (roll >= threshold) {
       setSuspicion(s => Math.max(0, s - 1));

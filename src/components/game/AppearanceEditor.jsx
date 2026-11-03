@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
-import { TRAITS, APPEARANCE_LIMITS, MATERIALS } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MATERIALS, MAGIC_EFFECTS } from "./gameData";
 
 export default function AppearanceEditor({ character, onSave, onClose }) {
   const [appearance, setAppearance] = useState({
@@ -117,6 +117,7 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
               {learnedMagic.map(mat => (
                 <button
                   key={mat}
+                  title={MAGIC_EFFECTS[mat]}
                   onClick={() => toggleMat("magicalMaterials", mat, limits.magicalMaterials)}
                   disabled={usedElsewhere("magicalMaterials", mat)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
@@ -129,6 +130,14 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
                 </button>
               ))}
             </div>
+            {appearance.magicalMaterials.filter(mat => MAGIC_EFFECTS[mat]).map(mat => (
+              <p key={mat} className="mt-1.5 text-[10px] text-muted-foreground">
+                <span className="text-purple-400">{mat}:</span> {MAGIC_EFFECTS[mat]}
+              </p>
+            ))}
+            {appearance.magicalMaterials.length > 0 && (
+              <p className="mt-1 text-[10px] text-muted-foreground italic">Each magic material leaves arcane residue that magic-sensitive adventurers may notice.</p>
+            )}
           </div>
         )}
 

@@ -1758,10 +1758,59 @@ export function getValidForms(tierStr, massVal) {
 }
 
 // ============================================================
+// MAGICAL MATERIAL EFFECTS
+// Wearing a magic material (in any appearance slot) grants its effect.
+// The cost: every worn magic material gives off arcane residue, an extra "magical"
+// flaw check against adventurers with magical perception 2+ (see stealthCheck).
+// ============================================================
+export const MAGIC_EFFECTS = {
+  "Void Marble":     "Muffles you. Banshees' Keen Hearing doesn't trigger, and acoustic flaws can't be spotted.",
+  "Direwolf Pelt":   "Masks your scent. Werewolves' Blood Scent doesn't trigger, and environmental flaw checks get –1 die.",
+  "Feywood":         "Changing form costs no suspicion, and Changelings' Shape Sense doesn't trigger.",
+  "Gravecloth":      "Undead take you for one of their own and never make stealth checks against you.",
+  "Shadowwood":      "+1 die on stealth rolls.",
+  "Spellweave Silk": "+1 allure die.",
+  "Aether Crystal":  "+1 lure range.",
+  "Bonesteel":       "+1 die on strike rolls.",
+  "Dragonhide":      "A failed strike costs +3 suspicion instead of +4.",
+  "Runestone":       "+1 die on Wait's roll to reduce suspicion.",
+  "Starforged Iron": "Mimic hunters roll 2 fewer dice on every stealth and flaw check against you.",
+  "Soulglass":       "Reveals which room a hidden rival mimic is lurking in.",
+};
+
+/** All materials currently worn in the appearance (primary, secondary and magical slots). */
+function wornMaterials(appearance) {
+  return [
+    ...(appearance?.primaryMaterials || []),
+    ...(appearance?.secondaryMaterials || []),
+    ...(appearance?.magicalMaterials || []),
+  ];
+}
+
+/** True if the appearance is wearing this magic material in any slot. */
+export function hasMagic(appearance, material) {
+  return wornMaterials(appearance).includes(material);
+}
+
+/** The magic materials (with effects) worn in the appearance. */
+export function wornMagic(appearance) {
+  return [...new Set(wornMaterials(appearance).filter(m => MAGIC_EFFECTS[m]))];
+}
+
+const ACOUSTIC_FLAW_TYPES = ["acoustic", "sound"];
+
+// ============================================================
 // COMBAT ENGINE
 // ============================================================
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
-export function stealthCheck(plausibility, patience, formTier, mimicTier, form, adventurer, roomContextMod = {}) {
+export function stealthCheck(plausibility, patience, formTier, mimicTier, form, adventurer, roomContextMod = {}, appearance = {}) {
+  // Gravecloth: undead take the mimic for one of their own
+  if (adventurer.type === "Undead" && hasMagic(appearance, "Gravecloth")) {
+    return {
+      success: true, mimicRoll: 0, advRoll: 0, suspicionChange: 0, detectedFlaws: [],
+      narrative: `${adventurer.name} passes the ${form.name} without a second glance — it smells of the grave, like one of its own.`,
+    };
+  }
   const currentTierIndex = TIER_ORDER.indexOf(mimicTier);
   const formTierIndex = TIER_ORDER.indexOf(formTier);
   let basePlausi = plausibility;
@@ -1774,6 +1823,8 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 
   // Patience adds bonus dice to the mimic's stealth roll (stillness aids deception)
   const patienceBonus = Math.floor((patience || 1) / 2);
+  const stealthDice = basePlausi + patienceBonus + (hasMagic(appearance, "Shadowwood") ? 1 : 0);
+  const hunterPenalty = adventurer.isMimicHunter && hasMagic(appearance, "Starforged Iron") ? 2 : 0;
 
   let flawCount = 0;
   if (plausibility <= 2) flawCount = 2;
@@ -1782,14 +1833,27 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
   const detectedFlaws = [];
   const shuffled = [...form.flawProfiles].sort(() => Math.random() - 0.5).slice(0, flawCount);
   shuffled.forEach((flaw) => {
+    // Void Marble: acoustic flaws can't be spotted
+    if (ACOUSTIC_FLAW_TYPES.includes(flaw.type) && hasMagic(appearance, "Void Marble")) return;
     const affinityBonus = adventurer.perceptionAffinity[flaw.type] || 0;
-    const advRollResult = rollDice(adventurer.discipline + affinityBonus);
-    const mimicRollResult = rollDice(basePlausi + patienceBonus);
+    const scentPenalty = flaw.type === "environmental" && hasMagic(appearance, "Direwolf Pelt") ? 1 : 0;
+    const advRollResult = rollDice(Math.max(1, adventurer.discipline + affinityBonus - scentPenalty - hunterPenalty));
+    const mimicRollResult = rollDice(stealthDice);
     if (advRollResult > mimicRollResult) detectedFlaws.push(flaw.description);
   });
 
-  const mimicRoll = rollDice(basePlausi + patienceBonus);
-  const advRoll = rollDice(adventurer.discipline + adventurer.suspicion);
+  // Arcane residue: each worn magic material is an extra flaw check for magic-sensitive adventurers
+  const magicalAffinity = adventurer.perceptionAffinity.magical || 0;
+  if (magicalAffinity >= 2) {
+    wornMagic(appearance).forEach((mat) => {
+      const advRollResult = rollDice(Math.max(1, adventurer.discipline + magicalAffinity - hunterPenalty));
+      const mimicRollResult = rollDice(stealthDice);
+      if (advRollResult > mimicRollResult) detectedFlaws.push(`Faint arcane residue clings to it (${mat})`);
+    });
+  }
+
+  const mimicRoll = rollDice(stealthDice);
+  const advRoll = rollDice(Math.max(1, adventurer.discipline + adventurer.suspicion - hunterPenalty));
   const success = mimicRoll >= advRoll;
   const suspicionChange = detectedFlaws.length + (success ? 0 : 1);
 
@@ -1849,6 +1913,7 @@ export function allureCheck(baseAllure, plausibility, form, currentAppearance, a
   allureDice += usableBonus;
   // Each disliked quality costs a die — dislikes are never capped
   allureDice -= aversion;
+  if (hasMagic(currentAppearance, "Spellweave Silk")) allureDice += 1;
   allureDice = Math.max(1, allureDice);
 
   // Adventurer resists with discipline + suspicion (wariness makes luring harder)
@@ -1984,7 +2049,7 @@ function stepToward(location, fromRoom, targetRoom) {
  * Work out how party members with behaviors react to a mimic action.
  * Pure: returns changes for the caller to apply.
  *
- * ctx: { party, location, mimicRoom, fromRoom?, excludeIds? }
+ * ctx: { party, location, mimicRoom, fromRoom?, excludeIds?, appearance? } — appearance lets magic materials suppress behaviors
  * returns {
  *   patches:  { [advId]: { location?, isAttracted?, suspicionDelta? } },
  *   suspicion: number,          // party-wide suspicion to add
@@ -1992,7 +2057,7 @@ function stepToward(location, fromRoom, targetRoom) {
  *   arrivals: [adventurer],     // adventurers who moved into the mimic's room (need stealth checks)
  * }
  */
-export function getBehaviorReactions(trigger, { party, location, mimicRoom, fromRoom, excludeIds = [] }) {
+export function getBehaviorReactions(trigger, { party, location, mimicRoom, fromRoom, excludeIds = [], appearance = {} }) {
   const result = { patches: {}, suspicion: 0, events: [], arrivals: [] };
   if (!location || !mimicRoom) return result;
   const dist = (a, b) => getRoomDistance(location, a, b);
@@ -2003,6 +2068,7 @@ export function getBehaviorReactions(trigger, { party, location, mimicRoom, from
     switch (adv.behavior) {
       case "keenHearing": {
         if (trigger !== "relocate" && trigger !== "strike") return;
+        if (hasMagic(appearance, "Void Marble")) return;
         if (dist(adv.location, mimicRoom) > 2) return;
         result.patches[adv.id] = { suspicionDelta: 1 };
         result.suspicion += 1;
@@ -2011,6 +2077,7 @@ export function getBehaviorReactions(trigger, { party, location, mimicRoom, from
       }
       case "shapeSense": {
         if (trigger !== "formChange") return;
+        if (hasMagic(appearance, "Feywood")) return;
         if (dist(adv.location, mimicRoom) > 2) return;
         result.patches[adv.id] = { suspicionDelta: 2 };
         result.suspicion += 2;
@@ -2029,6 +2096,7 @@ export function getBehaviorReactions(trigger, { party, location, mimicRoom, from
       case "carrionScent":
       case "bloodScent": {
         if (trigger !== "feed") return;
+        if (adv.behavior === "bloodScent" && hasMagic(appearance, "Direwolf Pelt")) return;
         const newRoom = stepToward(location, adv.location, mimicRoom);
         const arrived = newRoom === mimicRoom;
         const moved = newRoom !== adv.location;
