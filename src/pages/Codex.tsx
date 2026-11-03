@@ -129,7 +129,7 @@ export default function Codex() {
           <div className="space-y-4">
               <h2 className="font-cinzel text-2xl text-foreground mb-4">Mimic Tiers</h2>
               <div className="space-y-3">
-                {TIER_ORDER.map((tier, i) => {
+                {TIER_ORDER.map((tier) => {
                 const cfg = TIER_CONFIG[tier];
                 return (
                   <Card key={tier} className="bg-card border-border">

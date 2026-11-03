@@ -1,6 +1,6 @@
 # Mansions & Mimics
 
-A text-based RPG where you play the mimic. Built with React, Vite and Tailwind.
+A text-based RPG where you play the mimic. Built with React, TypeScript (strict), Vite and Tailwind.
 
 ## Running locally
 
@@ -13,7 +13,11 @@ npm run dev
 
 Then open the URL Vite prints (usually http://localhost:5173).
 
-Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm test`.
+Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck`, `npm test`.
+
+The game's word lists (tiers, materials, traits, tags…) live in `src/components/game/vocabulary.ts`,
+and forms, adventurers, locations and the rules in `src/components/game/gameData.ts`. Names are
+type-checked everywhere, so a misspelled material, trait, form, location or room is a compile error.
 
 ## Tests
 

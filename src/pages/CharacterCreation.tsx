@@ -130,8 +130,6 @@ export default function CharacterCreation() {
     }
   };
 
-  const stats = origin ? STARTING_STATS[origin] : null;
-
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -165,7 +163,6 @@ export default function CharacterCreation() {
             </p>
             {STARTING_TYPES.map(type => {
               const s = STARTING_STATS[type];
-              const cfg = TIER_CONFIG["Minor"];
               const isSelected = origin === type;
               return (
                 <Card

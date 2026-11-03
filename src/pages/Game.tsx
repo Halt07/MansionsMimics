@@ -2,13 +2,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  MASTER_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
+  ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
   rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
-  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic
+  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
+  type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
+  type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
+  type RoomName, type Sickness, type Tier,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,14 +27,38 @@ import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
 
-function generateParty(location, mimicTier, mimicMass) {
+// ── Game-screen state types ──
+type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
+type GameoverReason = "discovered" | "abandoned";
+type UpgradeChoice = "mass" | CombatStat;
+
+/** A small creature (rat, crow…) wandering the location during a hunt. */
+interface SmallCreature extends LocationCreature {
+  uid: string;
+  isConsumed: boolean;
+  location: RoomName;
+}
+
+/** Another mimic hunting the same location. */
+interface RivalMimic {
+  room: RoomName;
+  revealed: boolean;
+  consumed: boolean;
+  clueGiven: boolean;
+}
+
+const ACTION_LIMIT = 50;
+const STAT_CAP = 6;
+
+// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
+// Everyone else — including tier-gated monsters — fills the common slots.
+const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
+
+function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: number): PartyMember[] {
   const [min, max] = location.partySize;
   const size = min + Math.floor(Math.random() * (max - min + 1));
   const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
 
-  // Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
-  // Everyone else — including tier-gated monsters — fills the common slots.
-  const ELITE_GROUPS = ["huntersElites", "giantKin"];
   const eligible = ADVENTURER_TEMPLATES.filter(t => isTemplateEligible(t, location, mimicTier, mimicMass));
   const common = eligible.filter(t => !ELITE_GROUPS.includes(t.group));
   const elite = eligible.filter(t => ELITE_GROUPS.includes(t.group));
@@ -39,7 +67,7 @@ function generateParty(location, mimicTier, mimicMass) {
   const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
   const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
 
-  const baseParty = [];
+  const baseParty: AdventurerTemplate[] = [];
   for (let i = 0; i < eliteCount && i < size; i++) {
     if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
   }
@@ -48,7 +76,7 @@ function generateParty(location, mimicTier, mimicMass) {
     baseParty.push(shuffledCommon[ci++]);
   }
 
-  const members = [];
+  const members: PartyMember[] = [];
   baseParty.forEach((t, i) => {
     const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
     members.push({
@@ -92,35 +120,48 @@ function generateParty(location, mimicTier, mimicMass) {
   return members;
 }
 
-function getActiveForm(character) {
-  if (!character?.forms?.length) return null;
-  const idx = character.activeFormIndex ?? 0;
-  const formRef = character.forms[idx];
+function getActiveForm(character: MimicCharacter | null): Form | null {
+  const formRef = character?.forms[character.activeFormIndex];
   if (!formRef) return null;
-  for (const tier of TIER_ORDER) {
-    const found = MASTER_FORMS[tier]?.find(f => f.id === formRef.formId);
-    if (found) return found;
+  return ALL_FORMS.find(f => f.id === formRef.formId) ?? null;
+}
+
+const FALLBACK_CREATURES: readonly LocationCreature[] = [
+  { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
+  { id: "cat", name: "Cat", ap: 2, discipline: 2, description: "A wary housecat." },
+  { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "A rooftop crow, curious and bold." },
+  { id: "spider", name: "Giant Spider", ap: 2, discipline: 2, description: "A palm-sized cellar spider." },
+  { id: "weasel", name: "Weasel", ap: 1, discipline: 2, description: "Fast and wiry." },
+  { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat and oblivious." },
+];
+
+function spawnSmallCreatures(loc: HuntLocation): SmallCreature[] {
+  const pool = loc.locationCreatures.length ? loc.locationCreatures : FALLBACK_CREATURES;
+  const count = 3 + Math.floor(Math.random() * 3);
+  const creatures: SmallCreature[] = [];
+  for (let i = 0; i < count; i++) {
+    const template = pool[Math.floor(Math.random() * pool.length)];
+    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
   }
-  return null;
+  return creatures;
 }
 
 export default function Game() {
   const urlParams = new URLSearchParams(window.location.search);
   const characterId = urlParams.get("characterId");
 
-  const [character, setCharacter] = useState(null);
-  const [loadError, setLoadError] = useState(null);
-  const [session, setSession] = useState(null);
-  const [location, setLocation] = useState(null);
-  const [party, setParty] = useState([]);
-  const [events, setEvents] = useState([]);
+  const [character, setCharacter] = useState<MimicCharacter | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [location, setLocation] = useState<HuntLocation | null>(null);
+  const [party, setParty] = useState<PartyMember[]>([]);
+  const [events, setEvents] = useState<GameEvent[]>([]);
   const [suspicion, setSuspicion] = useState(0);
-  const [phase, setPhase] = useState("setup"); // setup | roomSelect | hunt | formSelect | evolve | gameover
-  const [gameoverReason, setGameoverReason] = useState("discovered"); // "discovered" | "abandoned"
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [gameoverReason, setGameoverReason] = useState<GameoverReason>("discovered");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
-  const [evolveChoice, setEvolveChoice] = useState(null);
   // One purchase per visit to the upgrade screen; reset each time the screen opens
   const upgradeChosenRef = useRef(false);
   useEffect(() => {
@@ -128,24 +169,19 @@ export default function Game() {
   }, [phase]);
   const [showFormPanel, setShowFormPanel] = useState(false);
   const [showAppearancePanel, setShowAppearancePanel] = useState(false);
-  const [smallCreatures, setSmallCreatures] = useState([]);
-  const [mimicRoom, setMimicRoom] = useState(null);
+  const [smallCreatures, setSmallCreatures] = useState<SmallCreature[]>([]);
+  const [mimicRoom, setMimicRoom] = useState<RoomName | null>(null);
   const [roomSelecting, setRoomSelecting] = useState(false);
   const [showMovePanel, setShowMovePanel] = useState(false);
   const [apexPeakAchieved, setApexPeakAchieved] = useState(false);
-  const ACTION_LIMIT = 50;
   const [isBountyHunt, setIsBountyHunt] = useState(false);
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
-  const [rivalMimic, setRivalMimic] = useState(null); // { room, clue, revealed, consumed }
-  const [massDecayNotice, setMassDecayNotice] = useState(null); // string message shown once on load
-  const [currentSickness, setCurrentSickness] = useState(null); // cleared each hunt
-  // Post-hunt form selection
-  const [pendingFormChoices, setPendingFormChoices] = useState(null); // { slot: 0|1|2, options: [...] }
-  const [formSelectionSlot, setFormSelectionSlot] = useState(0);
+  const [rivalMimic, setRivalMimic] = useState<RivalMimic | null>(null);
+  const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
+  const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
   // Where form selection returns to: the hunting-ground screen normally, or straight back
   // into the hunt when a mid-hunt tier-up forced the selection
-  const [formSelectReturnPhase, setFormSelectReturnPhase] = useState("setup");
-  const [newFormSelections, setNewFormSelections] = useState([]);
+  const [formSelectReturnPhase, setFormSelectReturnPhase] = useState<Phase>("setup");
 
   useEffect(() => {
     if (!characterId) {
@@ -156,7 +192,7 @@ export default function Game() {
       if (res[0]) {
         const char = res[0];
         // Mass decay check: 1 mass per 3 days since last fed
-        let decayMessage = null;
+        let decayMessage: string | null = null;
         if (char.lastFedAt && char.mass > 1) {
           const daysSinceFed = (Date.now() - new Date(char.lastFedAt).getTime()) / (1000 * 60 * 60 * 24);
           const massLost = Math.min(Math.floor(daysSinceFed / 3), char.mass - 1);
@@ -175,44 +211,26 @@ export default function Game() {
       }
     }).catch(err => {
       console.error("Failed to load character:", err);
-      setLoadError(err?.message || "Unknown error");
+      setLoadError(err instanceof Error ? err.message : String(err));
     }).finally(() => setLoading(false));
   }, [characterId]);
 
-  const addEvent = useCallback((type, message) => {
+  const addEvent = useCallback((type: GameEventType, message: string) => {
     setEvents(prev => [...prev, { turn: prev.length + 1, type, message }]);
   }, []);
 
   // Save changes to the character. The game never waits on this; a failed save is
   // reported in the event log instead of silently disappearing.
-  const persist = (updates) =>
-    db.entities.MimicCharacter.update(character.id, updates).catch(err => {
+  const persist = (updates: Partial<MimicCharacterInput>) => {
+    if (!character) return;
+    db.entities.MimicCharacter.update(character.id, updates).catch((err: unknown) => {
       console.error("Failed to save character:", err);
-      addEvent("alert", `⚠ Your progress could not be saved: ${String(err?.message || err).split("\n")[0]}`);
+      const message = err instanceof Error ? err.message : String(err);
+      addEvent("alert", `⚠ Your progress could not be saved: ${message.split("\n")[0]}`);
     });
-
-  const FALLBACK_CREATURES = [
-    { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
-    { id: "cat", name: "Cat", ap: 2, discipline: 2, description: "A wary housecat." },
-    { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "A rooftop crow, curious and bold." },
-    { id: "spider", name: "Giant Spider", ap: 2, discipline: 2, description: "A palm-sized cellar spider." },
-    { id: "weasel", name: "Weasel", ap: 1, discipline: 2, description: "Fast and wiry." },
-    { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat and oblivious." },
-  ];
-
-  const spawnSmallCreatures = (loc) => {
-    const pool = loc.locationCreatures?.length ? loc.locationCreatures : FALLBACK_CREATURES;
-    const count = 3 + Math.floor(Math.random() * 3);
-    const creatures = [];
-    for (let i = 0; i < count; i++) {
-      const template = pool[Math.floor(Math.random() * pool.length)];
-      const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
-      creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
-    }
-    return creatures;
   };
 
-  const chooseLocation = (loc) => {
+  const chooseLocation = (loc: HuntLocation) => {
     setLocation(loc);
     setSuspicion(0);
     setEvents([]);
@@ -225,13 +243,13 @@ export default function Game() {
     setRoomSelecting(true);
   };
 
-  const confirmRoom = (room, loc) => {
+  const confirmRoom = (room: RoomName, loc: HuntLocation) => {
     const bounty = shouldTriggerBountyHunt(character?.mass ?? 0);
     // Rival mimic: ~1 in 7 chance, only on non-bounty hunts, Greater tier+
     const tierIdx = TIER_ORDER.indexOf(character?.tier ?? "Minor");
     const canHaveRival = !bounty && tierIdx >= TIER_ORDER.indexOf("Greater");
     const hasRival = canHaveRival && Math.random() < (1/7);
-    let rivalData = null;
+    let rivalData: RivalMimic | null = null;
     if (hasRival) {
       // Pick a room other than the player's starting room
       const otherRooms = loc.rooms.filter(r => r !== room);
@@ -239,12 +257,9 @@ export default function Game() {
       rivalData = { room: rivalRoom, revealed: false, consumed: false, clueGiven: false };
     }
 
-    let newParty;
-    if (bounty) {
-      newParty = generateBountyParty(loc, character?.mass ?? 26);
-    } else {
-      newParty = generateParty(loc, character?.tier, character?.mass);
-    }
+    const newParty = bounty
+      ? generateBountyParty(loc, character?.mass ?? 26)
+      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0);
     const creatures = spawnSmallCreatures(loc);
     setMimicRoom(room);
     setParty(newParty);
@@ -291,9 +306,9 @@ export default function Game() {
 
   // Runs stealth checks for a given list of adventurers entering/in the mimic's room.
   // Returns total suspicion gained so caller can apply it.
-  const runStealthChecks = (advs, currentMimicRoom) => {
+  const runStealthChecks = (advs: PartyMember[], currentMimicRoom: RoomName | null): number => {
     const form = getActiveForm(character);
-    if (!form || !location || !currentMimicRoom || advs.length === 0) return 0;
+    if (!form || !character || !location || !currentMimicRoom || advs.length === 0) return 0;
 
     const roomMod = getRoomContextMod(form.id, currentMimicRoom);
     if (roomMod.plausibility !== 0) {
@@ -332,8 +347,11 @@ export default function Game() {
 
   // Let adventurers with special behaviors (see BEHAVIORS in gameData) react to an action.
   // ctx may override mimicRoom (e.g. while relocating) and pass fromRoom / excludeIds.
-  const applyBehaviorReactions = (trigger, ctx = {}) => {
-    const roomNow = ctx.mimicRoom ?? mimicRoom;
+  const applyBehaviorReactions = (
+    trigger: BehaviorTrigger,
+    ctx: Pick<BehaviorContext, "mimicRoom" | "fromRoom" | "excludeIds"> | Pick<BehaviorContext, "excludeIds"> = {},
+  ) => {
+    const roomNow = ("mimicRoom" in ctx ? ctx.mimicRoom : undefined) ?? mimicRoom;
     const reactions = getBehaviorReactions(trigger, { party, location, mimicRoom: roomNow, appearance: character?.currentAppearance, ...ctx });
     reactions.events.forEach(e => addEvent(e.type, e.text));
     if (Object.keys(reactions.patches).length > 0) {
@@ -356,7 +374,7 @@ export default function Game() {
   };
 
   // Relocate to an adjacent empty room (+1 suspicion cost)
-  const doRelocate = (targetRoom) => {
+  const doRelocate = (targetRoom: RoomName) => {
     if (!character || !location) return;
     setShowMovePanel(false);
     addEvent("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
@@ -406,7 +424,7 @@ export default function Game() {
     }
 
     let anyInRange = false;
-    const newlyAttracted = [];
+    const newlyAttracted: PartyMember[] = [];
     const updatedParty = party.map(adv => {
       if (!adv.isAlive || adv.isConsumed || adv.isAttracted) return adv;
       const dist = getRoomDistance(location, mimicRoom, adv.location);
@@ -508,9 +526,10 @@ export default function Game() {
       addEvent("info", "No adventurers are close enough to strike. Use Allure first.");
       return;
     }
+    const form = getActiveForm(character);
+    if (!form) { addEvent("alert", "No active form!"); return; }
     setActing(true);
     setActionCount(0); // Strike resets the action counter
-    const form = getActiveForm(character);
 
     // Pick target: closest to mimic, break ties by highest allure interest score
     const scored = attracted.map(a => ({
@@ -551,8 +570,8 @@ export default function Game() {
           const apGained = getBiteAp(target);
           addEvent("consume", `You tear free with a ${scrap}! +${apGained} AP. ${target.name} staggers back. (${hitsSoFar}/${maxHits} hits taken)`);
           const biteMaterial = rollBiteMaterial(target);
-          const isNewMaterial = biteMaterial && !(character.learnedMaterials || []).includes(biteMaterial);
-          if (isNewMaterial) addEvent("evolve", `New material absorbed from the bite: ${biteMaterial}!`);
+          const newMaterial = biteMaterial && !character.learnedMaterials.includes(biteMaterial) ? biteMaterial : null;
+          if (newMaterial) addEvent("evolve", `New material absorbed from the bite: ${newMaterial}!`);
           applyBehaviorReactions("feed", { excludeIds: [target.id] });
           // A bite that wears the target down may make them collapse (killed) or flee
           const finishing = hitsSoFar >= maxHits;
@@ -561,9 +580,9 @@ export default function Game() {
           if (!finalKill) {
             setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
           }
-          const learnedMaterials = isNewMaterial
-            ? [...(character.learnedMaterials || []), biteMaterial]
-            : (character.learnedMaterials || []);
+          const learnedMaterials = newMaterial
+            ? [...character.learnedMaterials, newMaterial]
+            : character.learnedMaterials;
           const updatedChar = {
             ...character,
             assimilationPoints: (character.assimilationPoints || 0) + apGained,
@@ -674,7 +693,6 @@ export default function Game() {
       const cfg = TIER_CONFIG[character.tier];
       if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
         addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-        setEvolveChoice("evolve");
         setPhase("evolve");
       }
     } else {
@@ -686,7 +704,7 @@ export default function Game() {
     setActing(false);
   };
 
-  const doConsumeCreature = (creature) => {
+  const doConsumeCreature = (creature: SmallCreature) => {
     if (!character) return;
     addEvent("consume", `You snap up the ${creature.name} — a modest feast. +${creature.ap} AP.`);
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
@@ -705,14 +723,14 @@ export default function Game() {
   };
 
   // Open form selection. returnTo is where confirming or skipping goes afterwards.
-  const startFormSelection = (returnTo = "setup") => {
+  const startFormSelection = (returnTo: Phase = "setup") => {
     setFormSelectReturnPhase(returnTo);
     setPhase("formSelect");
   };
 
-  const confirmFormSelections = (selectedForms) => {
-    // selectedForms: array of form objects (up to 3)
-    const formRefs = selectedForms.map(f => ({ formId: f.id, name: f.name, tier: f.tier, learned: true }));
+  const confirmFormSelections = (selectedForms: Form[]) => {
+    if (!character) return;
+    const formRefs: FormRef[] = selectedForms.map(f => ({ formId: f.id, name: f.name, tier: f.tier, learned: true }));
     const updatedChar = { ...character, forms: formRefs, activeFormIndex: 0 };
     setCharacter(updatedChar);
     persist({ forms: formRefs, activeFormIndex: 0 });
@@ -720,11 +738,12 @@ export default function Game() {
     setPhase(formSelectReturnPhase);
   };
 
-  const doChangeForm = (formIndex) => {
+  const doChangeForm = (formIndex: number) => {
+    if (!character) return;
     const updatedChar = { ...character, activeFormIndex: formIndex };
     setCharacter(updatedChar);
     persist({ activeFormIndex: formIndex });
-    const newForm = MASTER_FORMS[character.forms[formIndex]?.tier]?.find(f => f.id === character.forms[formIndex]?.formId);
+    const newForm = ALL_FORMS.find(f => f.id === character.forms[formIndex]?.formId);
     if (hasMagic(character.currentAppearance, "Feywood")) {
       addEvent("info", `You flow seamlessly into the form of a ${newForm?.name || "new shape"} — the Feywood makes the shift effortless.`);
     } else {
@@ -735,7 +754,8 @@ export default function Game() {
     setShowFormPanel(false);
   };
 
-  const doUpdateAppearance = (newAppearance) => {
+  const doUpdateAppearance = (newAppearance: Appearance) => {
+    if (!character) return;
     const updatedChar = { ...character, currentAppearance: newAppearance };
     setCharacter(updatedChar);
     persist({ currentAppearance: newAppearance });
@@ -747,7 +767,7 @@ export default function Game() {
     setShowAppearancePanel(false);
   };
 
-  const checkActionLimit = (newCount) => {
+  const checkActionLimit = (newCount: number) => {
     if (newCount >= ACTION_LIMIT) {
       addEvent("info", `After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
       addEvent("system", `The party leaves the ${location?.name} of their own accord. Find new prey.`);
@@ -757,6 +777,7 @@ export default function Game() {
   };
 
   const doWaitTurn = () => {
+    if (!character || !location) return;
     // Increment action counter
     const newCount = actionCount + 1;
     setActionCount(newCount);
@@ -764,8 +785,8 @@ export default function Game() {
     // Patience check — reduce suspicion slightly. Roll effective Patience (after sickness and
     // form-tier penalties; Runestone adds a die) against a threshold set by base Patience,
     // so penalties genuinely lower the odds instead of shrinking the target with the dice.
-    const roll = rollDice(effectivePatience + (hasMagic(character?.currentAppearance, "Runestone") ? 1 : 0));
-    const threshold = (character?.patience ?? 1) * 3;
+    const roll = rollDice(effectivePatience + (hasMagic(character.currentAppearance, "Runestone") ? 1 : 0));
+    const threshold = character.patience * 3;
     if (roll >= threshold) {
       setSuspicion(s => Math.max(0, s - 1));
       addEvent("stealth", `You wait in perfect stillness. Suspicion decreases.`);
@@ -778,7 +799,7 @@ export default function Game() {
     const currentMimicRoom = mimicRoom;
     const currentRival = rivalMimic;
 
-    const newlyArrived = [];
+    const newlyArrived: PartyMember[] = [];
     const updatedParty = currentParty.map(adv => {
       if (!adv.isAlive || adv.isConsumed) return adv;
       if (isStationary(adv)) return adv;
@@ -836,17 +857,15 @@ export default function Game() {
     checkActionLimit(newCount);
   };
 
-  const STAT_CAP = 6;
-
   // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
   // to upgrade again you have to reach the AP threshold again.
-  const handleEvolution = (choice) => {
+  const handleEvolution = (choice: UpgradeChoice) => {
     if (!character || upgradeChosenRef.current) return;
-    let updates = {};
+    let updates: Partial<MimicCharacter> = {};
     const cfg = TIER_CONFIG[character.tier];
 
     if (choice === "mass") {
-      const nextTier = TIER_ORDER[TIER_ORDER.indexOf(character.tier) + 1];
+      const nextTier: Tier | undefined = TIER_ORDER[TIER_ORDER.indexOf(character.tier) + 1];
       const newMass = character.mass + 2;
       const shouldEvolve = !!nextTier && newMass > cfg.massRange[1];
 
@@ -859,9 +878,9 @@ export default function Game() {
       if (shouldEvolve) {
         addEvent("evolve", `🌟 You have evolved to ${nextTier} tier!`);
         // On tier evolution: reduce the highest stat by 1 (min 1)
-        const stats = { plausibility: character.plausibility, adhesion: character.adhesion, patience: character.patience };
+        const stats: Record<CombatStat, number> = { plausibility: character.plausibility, adhesion: character.adhesion, patience: character.patience };
         const maxVal = Math.max(stats.plausibility, stats.adhesion, stats.patience);
-        const highStats = Object.keys(stats).filter(k => stats[k] === maxVal);
+        const highStats = (Object.keys(stats) as CombatStat[]).filter(k => stats[k] === maxVal);
         const statToReduce = highStats[Math.floor(Math.random() * highStats.length)];
         const newVal = Math.max(1, maxVal - 1);
         updates[statToReduce] = newVal;
@@ -869,7 +888,7 @@ export default function Game() {
 
         // Invalidate forms that are now out of range (more than 1 tier from new tier)
         const newTierIdx = TIER_ORDER.indexOf(nextTier);
-        const currentForms = character.forms || [];
+        const currentForms = character.forms;
         const validForms = currentForms.filter(ref => {
           const formTierIdx = TIER_ORDER.indexOf(ref.tier);
           return Math.abs(formTierIdx - newTierIdx) <= 1;
@@ -916,7 +935,6 @@ export default function Game() {
     } else if (phase === "evolve") {
       setPhase("hunt");
     }
-    setEvolveChoice(null);
     persist(updates);
   };
 
@@ -939,11 +957,11 @@ export default function Game() {
   const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
   const activeForm = character ? getActiveForm(character) : null;
   // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
-  const formTierPenalties = activeForm ? getFormTierPenalties(activeForm.tier, character.tier) : { plausibility: 0, patience: 0 };
+  const formTierPenalties = activeForm && character ? getFormTierPenalties(activeForm.tier, character.tier) : { plausibility: 0, patience: 0 };
   const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
   const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
   const cfg = character ? TIER_CONFIG[character.tier] : null;
-  const apProgress = cfg ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
+  const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
 
   // Filter locations by minTier and minMass
   const availableLocations = LOCATIONS.filter(loc => {
@@ -1041,7 +1059,7 @@ export default function Game() {
               {activeForm && (
                 <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
               )}
-              {activeForm?.builtInTraits?.length > 0 && (
+              {activeForm && activeForm.builtInTraits.length > 0 && (
                 <p className="text-[10px] text-muted-foreground mb-1">
                   Built-in: <span className="text-primary">{activeForm.builtInTraits.join(", ")}</span>
                 </p>
@@ -1170,7 +1188,7 @@ export default function Game() {
                         {adv.isAttracted && !adv.isConsumed && (
                           <Badge className="text-[9px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
                         )}
-                        {adv.hitsTaken > 0 && !adv.isConsumed && !fled && (
+                        {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
                           <span className="text-[9px] text-destructive/70">{adv.hitsTaken}/{maxHits}hp</span>
                         )}
                         {dist !== null && (
@@ -1319,11 +1337,11 @@ export default function Game() {
               </div>
 
               {/* Form switcher panel */}
-              {showFormPanel && character.forms?.length > 0 && (
+              {showFormPanel && character.forms.length > 0 && (
                 <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-2">
                   <p className="text-[10px] text-muted-foreground font-cinzel uppercase tracking-widest">Select Active Form (costs 1 suspicion)</p>
                   {character.forms.map((ref, i) => {
-                    const form = TIER_ORDER.reduce((found, t) => found || MASTER_FORMS[t]?.find(f => f.id === ref.formId), null);
+                    const form = ALL_FORMS.find(f => f.id === ref.formId);
                     if (!form) return null;
                     const isActive = i === (character.activeFormIndex ?? 0);
                     return (
@@ -1360,6 +1378,7 @@ export default function Game() {
 
               {/* Relocate panel */}
               {showMovePanel && (() => {
+                if (!location || !mimicRoom) return null;
                 const adjacentRooms = getAdjacentRooms(location, mimicRoom);
                 const openRooms = adjacentRooms.filter(room =>
                   !activeAdventurers.some(a => a.location === room)
@@ -1501,12 +1520,12 @@ export default function Game() {
                 Choose one. To upgrade again, you&apos;ll need to reach the threshold again ({character.assimilationPoints} / {cfg?.apToEvolve} AP).
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
+                {([
                   { key: "mass", label: "Increase Mass", desc: `Grow toward the next tier. Cost: ${cfg?.apToEvolve} AP`, icon: "⬆", capped: false },
-                  { key: "plausibility", label: "+1 Plausibility", desc: `Improve deception. Cost: ${cfg?.apToUpgrade} AP (${character.plausibility}/${6})`, icon: "👁", capped: character.plausibility >= 6 },
-                  { key: "adhesion", label: "+1 Adhesion", desc: `Better grappling. Cost: ${cfg?.apToUpgrade} AP (${character.adhesion}/${6})`, icon: "🔒", capped: character.adhesion >= 6 },
-                  { key: "patience", label: "+1 Patience", desc: `Longer stillness. Cost: ${cfg?.apToUpgrade} AP (${character.patience}/${6})`, icon: "⌛", capped: character.patience >= 6 },
-                ].map(opt => (
+                  { key: "plausibility", label: "+1 Plausibility", desc: `Improve deception. Cost: ${cfg?.apToUpgrade} AP (${character.plausibility}/${STAT_CAP})`, icon: "👁", capped: character.plausibility >= STAT_CAP },
+                  { key: "adhesion", label: "+1 Adhesion", desc: `Better grappling. Cost: ${cfg?.apToUpgrade} AP (${character.adhesion}/${STAT_CAP})`, icon: "🔒", capped: character.adhesion >= STAT_CAP },
+                  { key: "patience", label: "+1 Patience", desc: `Longer stillness. Cost: ${cfg?.apToUpgrade} AP (${character.patience}/${STAT_CAP})`, icon: "⌛", capped: character.patience >= STAT_CAP },
+                ] satisfies { key: UpgradeChoice; label: string; desc: string; icon: string; capped: boolean }[]).map(opt => (
                   <Card
                     key={opt.key}
                     onClick={() => !opt.capped && handleEvolution(opt.key)}
