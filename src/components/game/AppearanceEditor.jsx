@@ -6,8 +6,8 @@ import { TRAITS, APPEARANCE_LIMITS } from "./gameData";
 
 export default function AppearanceEditor({ character, onSave, onClose }) {
   const [appearance, setAppearance] = useState({
-    primaryMaterial: character.currentAppearance?.primaryMaterial || null,
-    secondaryMaterial: character.currentAppearance?.secondaryMaterial || null,
+    primaryMaterials: character.currentAppearance?.primaryMaterials || [],
+    secondaryMaterials: character.currentAppearance?.secondaryMaterials || [],
     magicalMaterials: character.currentAppearance?.magicalMaterials || [],
     surfaceTraits: character.currentAppearance?.surfaceTraits || [],
     symbolicTraits: character.currentAppearance?.symbolicTraits || [],
@@ -18,17 +18,16 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
   const learned = character.learnedMaterials || [];
   const learnedTraits = character.learnedTraits || [];
 
+  // With a limit of 1, picking a new material replaces the current one.
+  // With higher limits, extra picks are ignored once the limit is reached.
   const toggleMat = (field, mat, maxCount) => {
-    if (field === "primaryMaterial" || field === "secondaryMaterial") {
-      setAppearance(a => ({ ...a, [field]: a[field] === mat ? null : mat }));
-    } else {
-      setAppearance(a => {
-        const cur = a[field] || [];
-        if (cur.includes(mat)) return { ...a, [field]: cur.filter(m => m !== mat) };
-        if (cur.length >= maxCount) return a;
-        return { ...a, [field]: [...cur, mat] };
-      });
-    }
+    setAppearance(a => {
+      const cur = a[field] || [];
+      if (cur.includes(mat)) return { ...a, [field]: cur.filter(m => m !== mat) };
+      if (maxCount === 1) return { ...a, [field]: [mat] };
+      if (cur.length >= maxCount) return a;
+      return { ...a, [field]: [...cur, mat] };
+    });
   };
 
   const toggleTrait = (field, trait, maxCount) => {
@@ -56,16 +55,17 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
         {/* Primary Material */}
         <div>
           <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
-            Primary Material — learned only
+            Primary Material{limits.primaryMaterials > 1 ? `s (max ${limits.primaryMaterials})` : ""} — learned only
           </p>
           <div className="flex flex-wrap gap-1.5">
             {learned.length === 0 && <span className="text-muted-foreground italic">No materials learned yet.</span>}
             {learned.map(mat => (
               <button
                 key={mat}
-                onClick={() => toggleMat("primaryMaterial", mat, 1)}
-                className={`px-2.5 py-1 rounded border text-xs transition-all ${
-                  appearance.primaryMaterial === mat
+                onClick={() => toggleMat("primaryMaterials", mat, limits.primaryMaterials)}
+                disabled={appearance.secondaryMaterials.includes(mat)}
+                className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
+                  appearance.primaryMaterials.includes(mat)
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:border-primary/30"
                 }`}
@@ -80,16 +80,16 @@ export default function AppearanceEditor({ character, onSave, onClose }) {
         {limits.secondaryMaterials > 0 && (
           <div>
             <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
-              Secondary Material
+              Secondary Material{limits.secondaryMaterials > 1 ? `s (max ${limits.secondaryMaterials})` : ""}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {learned.map(mat => (
                 <button
                   key={mat}
-                  onClick={() => toggleMat("secondaryMaterial", mat, 1)}
-                  disabled={mat === appearance.primaryMaterial}
+                  onClick={() => toggleMat("secondaryMaterials", mat, limits.secondaryMaterials)}
+                  disabled={appearance.primaryMaterials.includes(mat)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all disabled:opacity-30 ${
-                    appearance.secondaryMaterial === mat
+                    appearance.secondaryMaterials.includes(mat)
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/30"
                   }`}

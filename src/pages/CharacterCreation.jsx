@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/db";
 import {
-  STARTING_STATS, TIER_CONFIG, MASTER_FORMS, MATERIALS, TRAITS, ALL_MATERIALS_FLAT, TIER_ORDER
+  STARTING_STATS, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ export default function CharacterCreation() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const [origin, setOrigin] = useState(null); // "Minor" | "Lesser"
 
@@ -33,8 +34,8 @@ export default function CharacterCreation() {
   const [name, setName] = useState("");
   const [selectedForms, setSelectedForms] = useState([]);
   const [appearance, setAppearance] = useState({
-    primaryMaterial: null,
-    secondaryMaterial: null,
+    primaryMaterials: [],
+    secondaryMaterials: [],
     magicalMaterials: [],
     surfaceTraits: [],
     symbolicTraits: [],
@@ -54,7 +55,7 @@ export default function CharacterCreation() {
     if (step === 0) return !!origin;
     if (step === 1) return name.trim().length >= 2;
     if (step === 2) return selectedForms.length === 2;
-    if (step === 3) return !!appearance.primaryMaterial;
+    if (step === 3) return appearance.primaryMaterials.length > 0;
     return true;
   };
 
@@ -75,17 +76,16 @@ export default function CharacterCreation() {
     }
   };
 
+  // Starting mimics may pick one material per slot, so a new pick replaces the old one.
   const toggleMaterial = (field, mat) => {
-    if (appearance[field] === mat) {
-      setAppearance({ ...appearance, [field]: null });
-    } else {
-      setAppearance({ ...appearance, [field]: mat });
-    }
+    const current = appearance[field] || [];
+    setAppearance({ ...appearance, [field]: current.includes(mat) ? [] : [mat] });
   };
 
   const handleCreate = async () => {
     if (!origin || !name.trim() || selectedForms.length < 2) return;
     setSaving(true);
+    setSaveError(null);
     const stats = STARTING_STATS[origin];
     const startingMats = STARTING_MATERIALS[origin];
     const charData = {
@@ -104,8 +104,8 @@ export default function CharacterCreation() {
       learnedMaterials: startingMats,
       learnedTraits: [],
       currentAppearance: {
-        primaryMaterial: appearance.primaryMaterial || startingMats[0],
-        secondaryMaterial: appearance.secondaryMaterial || null,
+        primaryMaterials: appearance.primaryMaterials.length ? appearance.primaryMaterials : [startingMats[0]],
+        secondaryMaterials: appearance.secondaryMaterials,
         magicalMaterials: [],
         surfaceTraits: appearance.surfaceTraits || [],
         symbolicTraits: appearance.symbolicTraits || [],
@@ -113,9 +113,15 @@ export default function CharacterCreation() {
       },
       isActive: true,
     };
-    const created = await base44.entities.MimicCharacter.create(charData);
-    setSaving(false);
-    navigate(createPageUrl(`Game?characterId=${created.id}`));
+    try {
+      const created = await db.entities.MimicCharacter.create(charData);
+      navigate(createPageUrl(`Game?characterId=${created.id}`));
+    } catch (err) {
+      console.error("Failed to create character:", err);
+      setSaveError(err?.message || "Unknown error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const stats = origin ? STARTING_STATS[origin] : null;
@@ -309,9 +315,9 @@ export default function CharacterCreation() {
                 {STARTING_MATERIALS[origin || "Minor"].map(mat => (
                   <button
                     key={mat}
-                    onClick={() => toggleMaterial("primaryMaterial", mat)}
+                    onClick={() => toggleMaterial("primaryMaterials", mat)}
                     className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      appearance.primaryMaterial === mat
+                      appearance.primaryMaterials.includes(mat)
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border bg-card text-muted-foreground hover:border-primary/30"
                     }`}
@@ -342,7 +348,7 @@ export default function CharacterCreation() {
               </div>
             </div>
 
-            {!appearance.primaryMaterial && (
+            {appearance.primaryMaterials.length === 0 && (
               <div className="flex items-center gap-2 text-xs text-orange-400 bg-orange-400/10 border border-orange-400/20 rounded p-3">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 Select at least a primary material to continue.
@@ -383,7 +389,7 @@ export default function CharacterCreation() {
                 <div>
                   <p className="text-xs text-muted-foreground font-cinzel uppercase tracking-wide mb-2">Appearance</p>
                   <p className="text-sm text-foreground">
-                    {appearance.primaryMaterial}{appearance.surfaceTraits?.[0] ? `, ${appearance.surfaceTraits[0]}` : ""}
+                    {appearance.primaryMaterials.join(", ")}{appearance.surfaceTraits?.[0] ? `, ${appearance.surfaceTraits[0]}` : ""}
                   </p>
                 </div>
                 <div className="flavor-text text-xs text-muted-foreground/70 italic border-t border-border pt-3">
@@ -422,6 +428,11 @@ export default function CharacterCreation() {
             </Button>
           )}
         </div>
+        {saveError && (
+          <p className="mt-3 text-sm text-destructive text-right">
+            Could not create your mimic: {saveError}
+          </p>
+        )}
       </div>
     </div>
   );

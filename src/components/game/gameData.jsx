@@ -522,6 +522,16 @@ Object.entries(MATERIALS).forEach(([rarity, mats]) => {
   mats.forEach(m => { MATERIAL_RARITY[m] = rarity; });
 });
 
+// Tailwind classes for material badges, keyed by rarity. Add an entry here
+// whenever a new rarity is added to MATERIALS.
+export const MATERIAL_COLORS = {
+  mundane: "border-border text-muted-foreground",
+  valuable: "border-yellow-400/40 text-yellow-400 bg-yellow-400/5",
+  rare: "border-blue-400/40 text-blue-400 bg-blue-400/5",
+  magic: "border-purple-400/40 text-purple-400 bg-purple-400/5",
+  giant: "border-amber-400/40 text-amber-400 bg-amber-400/5",
+};
+
 // ============================================================
 // APPEARANCE LIMITS
 // ============================================================
@@ -1602,7 +1612,10 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 
 // Returns interest score [0-N] without rolling — used for targeting priority
 export function calcAllureInterest(form, currentAppearance, adventurer) {
-  const appearanceMats = [currentAppearance.primaryMaterial, currentAppearance.secondaryMaterial].filter(Boolean);
+  const appearanceMats = [
+    ...(currentAppearance.primaryMaterials || []),
+    ...(currentAppearance.secondaryMaterials || []),
+  ];
   const appearanceTraits = [
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),

@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, TRAITS, APPEARANCE_LIMITS,
+  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
   ADVENTURER_TEMPLATES, STARTING_STATS } from
 "../components/game/gameData";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
 const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"];
@@ -225,12 +224,7 @@ export default function Codex() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     {mats.map((mat) =>
-                <span key={mat} className={`text-xs px-2.5 py-1 rounded border
-                        ${rarity === "mundane" ? "border-border text-muted-foreground" :
-                rarity === "valuable" ? "border-yellow-400/40 text-yellow-400 bg-yellow-400/5" :
-                rarity === "rare" ? "border-purple-400/40 text-purple-400 bg-purple-400/5" :
-                rarity === "giant" ? "border-amber-400/40 text-amber-400 bg-amber-400/5" :
-                "border-primary/40 text-primary bg-primary/5"}`}>
+                <span key={mat} className={`text-xs px-2.5 py-1 rounded border ${MATERIAL_COLORS[rarity] ?? MATERIAL_COLORS.mundane}`}>
                         {mat}
                       </span>
                 )}

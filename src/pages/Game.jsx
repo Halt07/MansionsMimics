@@ -1,20 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/db";
 import {
   MASTER_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
   rollDice, stealthCheck, allureCheck, adhesionCheck, AP_REWARDS, ADVENTURER_MATERIALS,
-  ADVENTURER_TRAITS, calcAllureInterest, TRAITS, APPEARANCE_LIMITS, getRoomDistance, getAdjacentRooms,
-  getValidForms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
+  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  AlertTriangle, Eye, ArrowRight, Zap, RefreshCw, Shield, Home, BookOpen, Layers, Palette, MoveRight
+import { Eye, Zap, RefreshCw, Shield, Home, BookOpen, Layers, Palette, MoveRight
 } from "lucide-react";
 import StatBar from "../components/game/StatBar";
 import SuspicionMeter from "../components/game/SuspicionMeter";
@@ -120,6 +118,7 @@ export default function Game() {
   const characterId = urlParams.get("characterId");
 
   const [character, setCharacter] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [session, setSession] = useState(null);
   const [location, setLocation] = useState(null);
   const [party, setParty] = useState([]);
@@ -150,8 +149,11 @@ export default function Game() {
   const [newFormSelections, setNewFormSelections] = useState([]);
 
   useEffect(() => {
-    if (!characterId) return;
-    base44.entities.MimicCharacter.filter({ id: characterId }).then(res => {
+    if (!characterId) {
+      setLoading(false);
+      return;
+    }
+    db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
       if (res[0]) {
         const char = res[0];
         // Mass decay check: 1 mass per 3 days since last fed
@@ -162,7 +164,7 @@ export default function Game() {
           if (massLost > 0) {
             const newMass = char.mass - massLost;
             char.mass = newMass;
-            base44.entities.MimicCharacter.update(char.id, { mass: newMass });
+            db.entities.MimicCharacter.update(char.id, { mass: newMass });
             decayMessage = `You have been away for ${Math.floor(daysSinceFed)} days without feeding. Your mass has diminished by ${massLost} (now ${newMass}). Hunger gnaws at your form.`;
           }
         }
@@ -171,8 +173,10 @@ export default function Game() {
         if (char.apexPeakReached) setApexPeakAchieved(true);
         if (decayMessage) setMassDecayNotice(decayMessage);
       }
-      setLoading(false);
-    });
+    }).catch(err => {
+      console.error("Failed to load character:", err);
+      setLoadError(err?.message || "Unknown error");
+    }).finally(() => setLoading(false));
   }, [characterId]);
 
   const addEvent = useCallback((type, message) => {
@@ -435,7 +439,7 @@ export default function Game() {
         setRivalMimic(prev => prev ? { ...prev, consumed: true } : prev);
         const updatedChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
         setCharacter(updatedChar);
-        base44.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
+        db.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
         const cfg2 = TIER_CONFIG[character.tier];
         if (updatedChar.assimilationPoints >= cfg2.apToEvolve) {
           addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
@@ -502,7 +506,7 @@ export default function Game() {
             learnedMaterials,
           };
           setCharacter(updatedChar);
-          base44.entities.MimicCharacter.update(character.id, {
+          db.entities.MimicCharacter.update(character.id, {
             assimilationPoints: updatedChar.assimilationPoints,
             learnedMaterials: updatedChar.learnedMaterials,
             lastFedAt: new Date().toISOString(),
@@ -519,7 +523,7 @@ export default function Game() {
               addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
               const finalChar = { ...updatedChar, assimilationPoints: updatedChar.assimilationPoints + 2 };
               setCharacter(finalChar);
-              base44.entities.MimicCharacter.update(character.id, { assimilationPoints: finalChar.assimilationPoints });
+              db.entities.MimicCharacter.update(character.id, { assimilationPoints: finalChar.assimilationPoints });
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
             }
           } else {
@@ -592,7 +596,7 @@ export default function Game() {
         learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
       };
       setCharacter(updatedChar);
-      base44.entities.MimicCharacter.update(character.id, {
+      db.entities.MimicCharacter.update(character.id, {
         assimilationPoints: updatedChar.assimilationPoints,
         learnedMaterials: updatedChar.learnedMaterials,
         learnedTraits: updatedChar.learnedTraits,
@@ -623,7 +627,7 @@ export default function Game() {
       assimilationPoints: (character.assimilationPoints || 0) + creature.ap,
     };
     setCharacter(updatedChar);
-    base44.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
+    db.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
     const cfg = TIER_CONFIG[character.tier];
     if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
       addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
@@ -641,7 +645,7 @@ export default function Game() {
     const formRefs = selectedForms.map(f => ({ formId: f.id, name: f.name, tier: f.tier, learned: true }));
     const updatedChar = { ...character, forms: formRefs, activeFormIndex: 0 };
     setCharacter(updatedChar);
-    await base44.entities.MimicCharacter.update(character.id, { forms: formRefs, activeFormIndex: 0 });
+    await db.entities.MimicCharacter.update(character.id, { forms: formRefs, activeFormIndex: 0 });
     addEvent("info", `You reshape yourself. New forms prepared: ${formRefs.map(f => f.name).join(", ")}.`);
     setPhase("setup");
   };
@@ -649,7 +653,7 @@ export default function Game() {
   const doChangeForm = (formIndex) => {
     const updatedChar = { ...character, activeFormIndex: formIndex };
     setCharacter(updatedChar);
-    base44.entities.MimicCharacter.update(character.id, { activeFormIndex: formIndex });
+    db.entities.MimicCharacter.update(character.id, { activeFormIndex: formIndex });
     const newForm = MASTER_FORMS[character.forms[formIndex]?.tier]?.find(f => f.id === character.forms[formIndex]?.formId);
     addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
     setSuspicion(s => Math.min(s + 1, 10)); // shifting takes time, slight suspicion risk
@@ -659,7 +663,7 @@ export default function Game() {
   const doUpdateAppearance = (newAppearance) => {
     const updatedChar = { ...character, currentAppearance: newAppearance };
     setCharacter(updatedChar);
-    base44.entities.MimicCharacter.update(character.id, { currentAppearance: newAppearance });
+    db.entities.MimicCharacter.update(character.id, { currentAppearance: newAppearance });
     addEvent("info", `You adjust your surface appearance.`);
     setShowAppearancePanel(false);
   };
@@ -799,7 +803,7 @@ export default function Game() {
           if (newMassVal >= 40 && character.mass < 40) {
             addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
             setApexPeakAchieved(true);
-            base44.entities.MimicCharacter.update(character.id, { ...updates, apexPeakReached: true });
+            db.entities.MimicCharacter.update(character.id, { ...updates, apexPeakReached: true });
           }
         }
       }
@@ -819,7 +823,7 @@ export default function Game() {
 
     const updatedChar = { ...character, ...updates };
     setCharacter(updatedChar);
-    await base44.entities.MimicCharacter.update(character.id, updates);
+    await db.entities.MimicCharacter.update(character.id, updates);
 
     // If forms were invalidated on tier-up, force form selection
     if (updates.forms !== undefined) {
@@ -879,7 +883,9 @@ export default function Game() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Character not found.</p>
+          <p className="text-muted-foreground mb-4">
+            {loadError ? `Could not load your character: ${loadError}` : "Character not found."}
+          </p>
           <Button asChild><Link to={createPageUrl("CharacterCreation")}>Create a Mimic</Link></Button>
         </div>
       </div>
@@ -950,7 +956,7 @@ export default function Game() {
               {/* Current appearance summary */}
               {character.currentAppearance && (() => {
                 const app = character.currentAppearance;
-                const mats = [app.primaryMaterial, app.secondaryMaterial, ...(app.magicalMaterials || [])].filter(Boolean);
+                const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || []), ...(app.magicalMaterials || [])];
                 const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || [])];
                 if (mats.length === 0 && traits.length === 0) return null;
                 return (

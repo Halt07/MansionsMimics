@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/db";
 import { TIER_ORDER, TIER_CONFIG } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,11 +14,13 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.MimicCharacter.list("-created_date", 5),
-      base44.entities.MimicCharacter.filter({ apexPeakReached: true }, "-updated_date", 3),
+      db.entities.MimicCharacter.list("-created_date", 5),
+      db.entities.MimicCharacter.filter({ apexPeakReached: true }, "-updated_date", 3),
     ]).then(([chars, peaks]) => {
       setCharacters(chars);
       setPeakMimics(peaks);
+    }).catch(err => {
+      console.error("Failed to load saved mimics:", err);
     }).finally(() => setLoading(false));
   }, []);
 

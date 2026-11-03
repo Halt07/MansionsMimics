@@ -1,16 +1,9 @@
-import { TIER_CONFIG, MASTER_FORMS, TIER_ORDER, MATERIAL_RARITY } from "./gameData";
+import { TIER_CONFIG, MASTER_FORMS, TIER_ORDER, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import StatBar from "./StatBar";
-
-const MATERIAL_COLORS = {
-  mundane: "border-border text-muted-foreground",
-  valuable: "border-yellow-400/40 text-yellow-400 bg-yellow-400/5",
-  rare: "border-purple-400/40 text-purple-400 bg-purple-400/5",
-  magic: "border-primary/40 text-primary bg-primary/5",
-};
 
 export default function CharacterSheet({ character, onClose }) {
   const cfg = TIER_CONFIG[character.tier];
@@ -108,7 +101,7 @@ export default function CharacterSheet({ character, onClose }) {
               {character.learnedMaterials.map(mat => {
                 const rarity = MATERIAL_RARITY?.[mat] || "mundane";
                 return (
-                  <span key={mat} className={`text-[10px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity]}`}>
+                  <span key={mat} className={`text-[10px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity] ?? MATERIAL_COLORS.mundane}`}>
                     {mat}
                   </span>
                 );
@@ -134,11 +127,11 @@ export default function CharacterSheet({ character, onClose }) {
           <div>
             <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Current Appearance</p>
             <div className="text-xs text-muted-foreground space-y-0.5">
-              {character.currentAppearance.primaryMaterial && (
-                <p>Primary: <span className="text-foreground">{character.currentAppearance.primaryMaterial}</span></p>
+              {(character.currentAppearance.primaryMaterials || []).length > 0 && (
+                <p>Primary: <span className="text-foreground">{character.currentAppearance.primaryMaterials.join(", ")}</span></p>
               )}
-              {character.currentAppearance.secondaryMaterial && (
-                <p>Secondary: <span className="text-foreground">{character.currentAppearance.secondaryMaterial}</span></p>
+              {(character.currentAppearance.secondaryMaterials || []).length > 0 && (
+                <p>Secondary: <span className="text-foreground">{character.currentAppearance.secondaryMaterials.join(", ")}</span></p>
               )}
               {(character.currentAppearance.surfaceTraits || []).length > 0 && (
                 <p>Traits: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>

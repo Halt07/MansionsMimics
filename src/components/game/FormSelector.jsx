@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MASTER_FORMS, TIER_ORDER, getValidForms } from "./gameData";
+import { TIER_ORDER, getValidForms } from "./gameData";
 import { Button } from "@/components/ui/button";
 
 const MAX_FORMS = 3;
