@@ -5,36 +5,42 @@
  *   made before a field existed still load correctly.
  * - The objects are strict: unknown keys (e.g. a misspelled field name in an
  *   `update()` call) are rejected rather than silently stored or dropped.
+ * - Tiers, materials, traits and form ids must be real game names (from the game
+ *   vocabulary and form data), so a save can't hold a misspelled or unknown name.
+ * - The TypeScript types below are inferred from the schema; don't write them by hand.
  * - If database tooling needs JSON Schema, generate it with
  *   `z.toJSONSchema(MimicCharacterSchema)` instead of maintaining a second copy.
  */
 import { z } from 'zod';
+import {
+  ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
+} from '@/components/game/vocabulary';
+import { FORM_IDS } from '@/components/game/gameData';
 
-export const TIERS = ['Minor', 'Lesser', 'Standard', 'Greater', 'Grand', 'Apex'];
-export const STARTING_TYPES = ['Minor', 'Lesser'];
+const TierSchema = z.enum(TIER_ORDER);
+const MaterialSchema = z.enum(ALL_MATERIALS);
 
 const FormRefSchema = z.strictObject({
-  formId: z.string(),
+  formId: z.enum(FORM_IDS),
   name: z.string(),
-  tier: z.string(),
+  tier: TierSchema,
   learned: z.boolean().default(true),
 });
 
 // Magic materials go in the primary/secondary slots (the tier's magicalMaterials limit caps
 // how many of them may be magic), so there is no separate magic slot.
 const AppearanceSchema = z.strictObject({
-  primaryMaterials: z.array(z.string()).default([]),
-  secondaryMaterials: z.array(z.string()).default([]),
-  surfaceTraits: z.array(z.string()).default([]),
-  symbolicTraits: z.array(z.string()).default([]),
-  conditionTraits: z.array(z.string()).default([]),
+  primaryMaterials: z.array(MaterialSchema).default([]),
+  secondaryMaterials: z.array(MaterialSchema).default([]),
+  surfaceTraits: z.array(z.enum(TRAITS.surface)).default([]),
+  symbolicTraits: z.array(z.enum(TRAITS.symbolic)).default([]),
+  conditionTraits: z.array(z.enum(TRAITS.condition)).default([]),
 });
-
 
 /** Fields the game controls. Used to validate `create()` input. */
 export const MimicCharacterFieldsSchema = z.strictObject({
   name: z.string().trim().min(1, 'Name is required'),
-  tier: z.enum(TIERS).default('Minor'),
+  tier: TierSchema.default('Minor'),
   startingType: z.enum(STARTING_TYPES).optional(),
   mass: z.number().default(2),
   digestiveCapacity: z.number().default(5),
@@ -45,8 +51,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   baseAllure: z.number().default(2),
   forms: z.array(FormRefSchema).max(3, 'A mimic can hold at most 3 forms').default([]),
   activeFormIndex: z.number().int().min(0).default(0),
-  learnedMaterials: z.array(z.string()).default([]),
-  learnedTraits: z.array(z.string()).default([]),
+  learnedMaterials: z.array(MaterialSchema).default([]),
+  learnedTraits: z.array(z.enum(ALL_TRAITS)).default([]),
   currentAppearance: AppearanceSchema.default(() => AppearanceSchema.parse({})),
   /** True when the mimic has reached mass 40 at Apex tier. */
   apexPeakReached: z.boolean().default(false),
@@ -61,3 +67,12 @@ export const MimicCharacterSchema = MimicCharacterFieldsSchema.extend({
   created_date: z.iso.datetime(),
   updated_date: z.iso.datetime(),
 });
+
+/** A stored character, as read from the data layer (defaults filled in). */
+export type MimicCharacter = z.infer<typeof MimicCharacterSchema>;
+/** What `create()` accepts: game fields, with defaulted ones optional. */
+export type MimicCharacterInput = z.input<typeof MimicCharacterFieldsSchema>;
+/** The character's current look. */
+export type Appearance = MimicCharacter['currentAppearance'];
+/** One of the character's chosen forms. */
+export type FormRef = MimicCharacter['forms'][number];

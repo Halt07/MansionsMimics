@@ -19,7 +19,7 @@ async function run(dbModule, storage, ok) {
 
   const a = await M.create({
     name: '  Chesty ', tier: 'Lesser', startingType: 'Lesser',
-    forms: [{ formId: 'f1', name: 'Chest', tier: 'Lesser', learned: true }],
+    forms: [{ formId: 'lesser_chest', name: 'Chest', tier: 'Lesser', learned: true }],
     currentAppearance: { primaryMaterials: ['Oak'], secondaryMaterials: [], surfaceTraits: [], symbolicTraits: [], conditionTraits: [] },
   });
   ok(a.id && a.created_date && a.mass === 2 && a.isActive === true && a.name === 'Chesty', 'create applies defaults, trims name, adds id/dates');
@@ -65,4 +65,14 @@ async function run(dbModule, storage, ok) {
   const two = await M.update(b.id, { currentAppearance: { primaryMaterials: ['Oak', 'Iron'], secondaryMaterials: ['Cotton', 'Silk'] } });
   ok(two.currentAppearance.primaryMaterials.length === 2 && two.currentAppearance.secondaryMaterials.length === 2, 'multiple primary/secondary materials stored');
   try { await M.update(b.id, { currentAppearance: { magicalMaterials: ['Feywood'] } }); ok(false, 'magicalMaterials'); } catch (e) { ok(e instanceof ValidationError, 'magicalMaterials key rejected (no separate magic slot)'); }
+
+  // Names must be real game names
+  for (const [bad, label] of [
+    [{ forms: [{ formId: 'f1', name: 'Fake', tier: 'Lesser' }] }, 'unknown form id rejected'],
+    [{ learnedMaterials: ['scrap of leather armor'] }, 'unknown material rejected (e.g. old bite scraps)'],
+    [{ learnedTraits: ['Shiny'] }, 'unknown trait rejected'],
+    [{ currentAppearance: { primaryMaterials: ['Oak'], surfaceTraits: ['Cracked'] } }, 'condition trait in the surface slot rejected'],
+  ]) {
+    try { await M.update(b.id, bad); ok(false, label); } catch (e) { ok(e instanceof ValidationError, label); }
+  }
 }

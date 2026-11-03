@@ -17,8 +17,8 @@ Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm test`.
 
 ## Tests
 
-`npm test` runs the checks in `tests/` against the game rules (`src/components/game/gameData.jsx`)
-and the data layer (`src/api/db.js`). Source files are loaded through Vite with the app's own
+`npm test` runs the checks in `tests/` against the game rules (`src/components/game/gameData.ts`)
+and the data layer (`src/api/db.ts`). Source files are loaded through Vite with the app's own
 config, so there is no separate build step.
 
 ```sh
@@ -41,17 +41,17 @@ compare rates). Their margins are wide, but if one fails once, rerun before assu
 
 ## Data storage
 
-There is no backend yet. All game data goes through `src/api/db.js`, which currently
+There is no backend yet. All game data goes through `src/api/db.ts`, which currently
 saves records to the browser's `localStorage` (key `mm_entity_MimicCharacter`).
 Clearing site data in the browser resets all saved characters.
 
-The character schema is defined with zod in `src/api/schemas/mimicCharacter.js`, the
+The character schema is defined with zod in `src/api/schemas/mimicCharacter.ts`, the
 single source of truth for the record's shape. Every create, update and read is validated
 against it, and missing fields are filled with defaults so older saves keep loading.
 If you need JSON Schema (e.g. for database tooling), generate it with
 `z.toJSONSchema(MimicCharacterSchema)`.
 
 To move to a real database, swap the storage adapter in
-`src/api/db.js` (or make the entity methods call your API). The pages only use
+`src/api/db.ts` (or make the entity methods call your API). The pages only use
 `db.entities.MimicCharacter.{list, filter, get, create, update, delete}`, so they won't
 need changes.

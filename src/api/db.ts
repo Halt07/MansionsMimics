@@ -19,20 +19,36 @@
  *     (with a console warning) any stored record that can't be repaired.
  *
  * Storage is pluggable: today records live in the browser's localStorage. To move to
- * a real database, write an adapter with the same methods as `localStorageAdapter`
- * (or replace the entity methods with fetch calls to your API) and pass it to
- * `createEntity` below. Pages don't need to change.
+ * a real database, write a `StorageAdapter` (or replace the entity methods with fetch
+ * calls to your API) and pass it to `createEntity` below. Pages don't need to change.
  */
 import { z } from 'zod';
 import { MimicCharacterFieldsSchema, MimicCharacterSchema } from './schemas/mimicCharacter';
 
+/** Where raw records are kept. Records are untrusted until validated. */
+export interface StorageAdapter {
+  readAll(entityName: string): unknown[];
+  writeAll(entityName: string, records: unknown[]): void;
+  clear(entityName: string): void;
+}
+
+/** Fields every stored record has, managed by the data layer. */
+interface StoredRecord {
+  id: string;
+  created_date: string;
+  updated_date: string;
+}
+
+/** A field to sort by: "name" ascending, "-name" descending. */
+export type SortKey<T> = Extract<keyof T, string> | `-${Extract<keyof T, string>}`;
+
 const STORAGE_PREFIX = 'mm_entity_';
 
-const localStorageAdapter = {
+const localStorageAdapter: StorageAdapter = {
   readAll(entityName) {
     try {
       const raw = window.localStorage.getItem(STORAGE_PREFIX + entityName);
-      const parsed = raw ? JSON.parse(raw) : [];
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
@@ -46,17 +62,21 @@ const localStorageAdapter = {
   },
 };
 
-const newId = () =>
+const newId = (): string =>
   (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`)
     .replace(/-/g, '');
 
-const matches = (record, query = {}) =>
-  Object.entries(query).every(([key, value]) => record[key] === value);
+/** The `id` of a raw stored record, if it has one. */
+const rawId = (raw: unknown): unknown =>
+  raw !== null && typeof raw === 'object' && 'id' in raw ? raw.id : undefined;
 
-const sortRecords = (records, sort) => {
+const matches = <T>(record: T, query: Partial<T> = {}): boolean =>
+  (Object.entries(query) as [keyof T, unknown][]).every(([key, value]) => record[key] === value);
+
+const sortRecords = <T>(records: T[], sort?: SortKey<T>): T[] => {
   if (!sort) return records;
   const desc = sort.startsWith('-');
-  const field = desc ? sort.slice(1) : sort;
+  const field = (desc ? sort.slice(1) : sort) as keyof T;
   return [...records].sort((a, b) => {
     const av = a[field];
     const bv = b[field];
@@ -68,30 +88,51 @@ const sortRecords = (records, sort) => {
   });
 };
 
-const applyLimit = (records, limit) => (limit ? records.slice(0, limit) : records);
+const applyLimit = <T>(records: T[], limit?: number): T[] => (limit ? records.slice(0, limit) : records);
 
 /** Error thrown when data fails schema validation. `issues` holds zod's details. */
 export class ValidationError extends Error {
-  constructor(entityName, zodError) {
+  issues: z.core.$ZodIssue[];
+
+  constructor(entityName: string, zodError: z.ZodError) {
     super(`Invalid ${entityName}:\n${z.prettifyError(zodError)}`);
     this.name = 'ValidationError';
     this.issues = zodError.issues;
   }
 }
 
-function createEntity(name, { fieldsSchema, recordSchema }, adapter = localStorageAdapter) {
-  const validate = (schema, data) => {
+export interface Entity<TRecord extends StoredRecord, TInput> {
+  list(sort?: SortKey<TRecord>, limit?: number): Promise<TRecord[]>;
+  filter(query: Partial<TRecord>, sort?: SortKey<TRecord>, limit?: number): Promise<TRecord[]>;
+  get(id: string): Promise<TRecord>;
+  create(data: TInput): Promise<TRecord>;
+  update(id: string, data: Partial<TInput>): Promise<TRecord>;
+  delete(id: string): Promise<void>;
+}
+
+function createEntity<
+  TFieldsSchema extends z.ZodType,
+  TRecordSchema extends z.ZodType<StoredRecord>,
+>(
+  name: string,
+  schemas: { fieldsSchema: TFieldsSchema; recordSchema: TRecordSchema },
+  adapter: StorageAdapter = localStorageAdapter,
+): Entity<z.output<TRecordSchema>, z.input<TFieldsSchema>> {
+  type TRecord = z.output<TRecordSchema>;
+  const { fieldsSchema, recordSchema } = schemas;
+
+  const validate = <S extends z.ZodType>(schema: S, data: unknown): z.output<S> => {
     const result = schema.safeParse(data);
     if (!result.success) throw new ValidationError(name, result.error);
     return result.data;
   };
 
   /** All stored records, validated and with defaults applied. Unrepairable ones are skipped. */
-  const readValid = () =>
+  const readValid = (): TRecord[] =>
     adapter.readAll(name).flatMap((raw) => {
       const result = recordSchema.safeParse(raw);
       if (result.success) return [result.data];
-      console.warn(`Skipping invalid stored ${name} ${raw?.id ?? '(no id)'}:\n${z.prettifyError(result.error)}`);
+      console.warn(`Skipping invalid stored ${name} ${String(rawId(raw) ?? '(no id)')}:\n${z.prettifyError(result.error)}`);
       return [];
     });
 
@@ -105,7 +146,7 @@ function createEntity(name, { fieldsSchema, recordSchema }, adapter = localStora
     },
 
     async get(id) {
-      const raw = adapter.readAll(name).find((r) => r.id === id);
+      const raw = adapter.readAll(name).find((r) => rawId(r) === id);
       if (!raw) throw new Error(`${name} ${id} not found`);
       return validate(recordSchema, raw);
     },
@@ -113,18 +154,20 @@ function createEntity(name, { fieldsSchema, recordSchema }, adapter = localStora
     async create(data) {
       const fields = validate(fieldsSchema, data);
       const now = new Date().toISOString();
-      const record = validate(recordSchema, { ...fields, id: newId(), created_date: now, updated_date: now });
+      const record = validate(recordSchema, { ...(fields as object), id: newId(), created_date: now, updated_date: now });
       adapter.writeAll(name, [...adapter.readAll(name), record]);
       return record;
     },
 
     async update(id, data) {
       const records = adapter.readAll(name);
-      const index = records.findIndex((r) => r.id === id);
+      const index = records.findIndex((r) => rawId(r) === id);
       if (index === -1) throw new Error(`${name} ${id} not found`);
-      const { id: _id, created_date: _created, updated_date: _updated, ...changes } = data ?? {};
+      // id and timestamps are managed here; ignore them if a caller passes them in
+      const { id: _id, created_date: _created, updated_date: _updated, ...changes } =
+        (data ?? {}) as Partial<StoredRecord> & Record<string, unknown>;
       const updated = validate(recordSchema, {
-        ...records[index],
+        ...(records[index] as object),
         ...changes,
         updated_date: new Date().toISOString(),
       });
@@ -134,7 +177,7 @@ function createEntity(name, { fieldsSchema, recordSchema }, adapter = localStora
     },
 
     async delete(id) {
-      adapter.writeAll(name, adapter.readAll(name).filter((r) => r.id !== id));
+      adapter.writeAll(name, adapter.readAll(name).filter((r) => rawId(r) !== id));
     },
   };
 }

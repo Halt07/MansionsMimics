@@ -1,10 +1,44 @@
 // ============================================================
 // MANSIONS & MIMICS — Core Game Data
+// Forms, adventurers, locations and the rules that use them.
+// The word lists (tiers, materials, traits, tags…) live in ./vocabulary and are
+// re-exported from here, so callers can keep importing everything from gameData.
 // ============================================================
+import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
+import {
+  MATERIALS, TIER_ORDER, isPerceptionSense,
+  type AdventurerType, type BuiltInTrait, type CombatStat, type CompanionType, type FlawType,
+  type GameEventType, type InteractionStyle, type MagicMaterial, type Material, type MaterialRarity,
+  type PerceptionSense, type StartingType, type Tier, type Trait, type UtilityTag,
+} from "./vocabulary";
 
-export const TIER_ORDER = ["Minor", "Lesser", "Standard", "Greater", "Grand", "Apex"];
+export * from "./vocabulary";
 
-export const MASTER_FORMS = {
+// ============================================================
+// FORMS
+// ============================================================
+export interface FlawProfile {
+  readonly type: FlawType;
+  readonly description: string;
+}
+
+interface FormDef {
+  readonly id: string;
+  readonly name: string;
+  readonly tier: Tier;
+  /** [minimum, maximum] mass. The minimum only gates the form when it is above its tier's starting mass (see isFormMassGated). */
+  readonly baseMassRange: readonly [number, number];
+  readonly builtInTraits: readonly BuiltInTrait[];
+  readonly baseAllureModifier: number;
+  readonly plausibilityModifier: number;
+  readonly utilityTags: readonly UtilityTag[];
+  readonly materialSlots: number;
+  readonly digestCapacityRequired: number;
+  readonly description: string;
+  readonly flawProfiles: readonly FlawProfile[];
+}
+
+const FORM_DATA = {
   Minor: [
     {
       id: "minor_pillow", name: "Pillow", tier: "Minor", baseMassRange: [1, 4],
@@ -547,30 +581,34 @@ export const MASTER_FORMS = {
       ],
     },
   ],
-};
+} as const satisfies Record<Tier, readonly FormDef[]>;
+
+/** Every form id in the game, derived from the form data above. */
+export type FormId = (typeof FORM_DATA)[Tier][number]["id"];
+
+export interface Form extends FormDef {
+  readonly id: FormId;
+}
+
+export const MASTER_FORMS: Readonly<Record<Tier, readonly Form[]>> = FORM_DATA;
+export const ALL_FORMS: readonly Form[] = TIER_ORDER.flatMap((tier) => MASTER_FORMS[tier]);
+export const FORM_IDS = ALL_FORMS.map((form) => form.id) as [FormId, ...FormId[]];
 
 // ============================================================
-// MATERIALS
+// MATERIALS (the lists themselves are in ./vocabulary)
 // ============================================================
-export const MATERIALS = {
-  mundane: ["Oak","Pine","Walnut","Birch","Iron","Steel","Brass","Cotton","Wool","Burlap","Linen","Cowhide","Goatskin","Limestone","Clear Glass","Horn"],
-  valuable: ["Mahogany","Silver","Gold","Silk","Velvet","Satin","Deerskin","Tanned Hide","Granite","Marble","Stained Glass"],
-  rare: ["Ebonwood","Ironwood","Mithril","Blacksteel","Boarhide","Obsidian","Basalt","Smoked Glass","Crystal","Bloodoak"],
-  magic: ["Feywood","Shadowwood","Bonesteel","Starforged Iron","Dragonhide","Direwolf Pelt","Spellweave Silk","Gravecloth","Runestone","Void Marble","Soulglass","Aether Crystal"],
-  // ── Giant-realm materials (unlocked via Giant's Castle location) ──
-  giant: ["Giant Oak","Giant Iron","Giant Gold","Giant Marble","Giant Granite","Beanstalk Timber","Beanstalk Leather","Cloud Fleece","Golden Goose Down","Stormforged Iron"],
-};
+export const ALL_MATERIALS_FLAT: readonly Material[] = [
+  ...MATERIALS.mundane, ...MATERIALS.valuable, ...MATERIALS.rare, ...MATERIALS.magic, ...MATERIALS.giant,
+];
 
-export const ALL_MATERIALS_FLAT = [...MATERIALS.mundane, ...MATERIALS.valuable, ...MATERIALS.rare, ...MATERIALS.magic, ...MATERIALS.giant];
-
-export const MATERIAL_RARITY = {};
-Object.entries(MATERIALS).forEach(([rarity, mats]) => {
-  mats.forEach(m => { MATERIAL_RARITY[m] = rarity; });
-});
+export const MATERIAL_RARITY = Object.fromEntries(
+  (Object.entries(MATERIALS) as [MaterialRarity, readonly Material[]][])
+    .flatMap(([rarity, mats]) => mats.map((mat) => [mat, rarity] as const)),
+) as Record<Material, MaterialRarity>;
 
 // Tailwind classes for material badges, keyed by rarity. Add an entry here
 // whenever a new rarity is added to MATERIALS.
-export const MATERIAL_COLORS = {
+export const MATERIAL_COLORS: Record<MaterialRarity, string> = {
   mundane: "border-border text-muted-foreground",
   valuable: "border-yellow-400/40 text-yellow-400 bg-yellow-400/5",
   rare: "border-blue-400/40 text-blue-400 bg-blue-400/5",
@@ -583,24 +621,23 @@ export const MATERIAL_COLORS = {
 // ============================================================
 // magicalMaterials: how many of the primary + secondary materials may be magic.
 // Minor mimics are too inexperienced to mimic magical materials at all.
-export const APPEARANCE_LIMITS = {
+export interface AppearanceLimits {
+  primaryMaterials: number;
+  secondaryMaterials: number;
+  /** How many of the primary + secondary materials may be magic. */
+  magicalMaterials: number;
+  surfaceTraits: number;
+  symbolicTraits: number;
+  conditionTraits: number;
+}
+
+export const APPEARANCE_LIMITS: Record<Tier, AppearanceLimits> = {
   Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
   Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
   Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1 },
   Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2 },
   Grand:    { primaryMaterials: 1, secondaryMaterials: 2, magicalMaterials: 2, surfaceTraits: 3, symbolicTraits: 2, conditionTraits: 2 },
   Apex:     { primaryMaterials: 2, secondaryMaterials: 2, magicalMaterials: 3, surfaceTraits: 4, symbolicTraits: 3, conditionTraits: 3 },
-};
-
-// ============================================================
-// TRAITS
-// ============================================================
-export const TRAITS = {
-  surface:    ["Polished", "Tarnished", "Gilded", "Etched", "Inlaid", "Lacquered", "Rough-Hewn", "Soft", "Wrinkled", "Smooth", "Pitted", "Mossy"],
-  symbolic:   ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
-  condition:  ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence"],
-  structural: ["Reinforced", "Carved", "Ornate", "Minimalist", "Heavy-Lidded", "Iron-Banded", "Upholstered", "Locked", "Rustic", "Arched"],
-  aura:       ["Faint Glow", "Cold to Touch", "Warm to Touch", "Whispering", "Radiant"],
 };
 
 // ============================================================
@@ -614,13 +651,58 @@ export const ADVENTURER_GROUPS = [
   { id: "supernatural", label: "Supernatural & Monstrous", description: "Undead, fey and monstrous things. Most haunt only certain locations, and several have unusual instincts that change how you hunt them." },
   { id: "huntersElites", label: "Hunters & Elites", description: "Specialists who appear once you have grown powerful enough to draw attention. Mimic hunters also form Bounty Hunt parties." },
   { id: "giantKin", label: "Giant-Kin", description: "Only found in giant-realm locations (the Giant's Castle and Cloud Kingdom Outpost). Gated by Apex tier and minimum mass. Giant-kin yield significantly more AP than standard adventurers (up to 12 per kill)." },
-];
+] as const;
+export type AdventurerGroupId = (typeof ADVENTURER_GROUPS)[number]["id"];
+
+/** Qualities an adventurer reacts to: materials and traits on the mimic's look, tags on its form. */
+export interface QualityList {
+  readonly materials?: readonly Material[];
+  readonly traits?: readonly Trait[];
+  readonly tags?: readonly UtilityTag[];
+}
+
+export interface CompanionOption {
+  readonly nameSuffix: string;
+  readonly type: CompanionType;
+  readonly ap: number;
+  readonly discipline: number;
+  readonly constitution: number;
+  readonly description: string;
+}
+
+export interface AdventurerTemplate {
+  readonly name: string;
+  readonly type: AdventurerType;
+  readonly discipline: number;
+  readonly baseSuspicion: number;
+  /** Bonus HP / max hits before fleeing (default 3, tough = 4). */
+  readonly constitution: number;
+  readonly interactionStyle: InteractionStyle;
+  readonly group: AdventurerGroupId;
+  readonly quirks: readonly string[];
+  readonly alluringQualities: Required<QualityList>;
+  readonly repelledBy?: QualityList;
+  readonly perceptionAffinity: Readonly<Record<PerceptionSense, number>>;
+  readonly lootMaterials: readonly Material[];
+  readonly lootTraits: readonly Trait[];
+  /** Flavor text for what a partial bite tears off. */
+  readonly partialLoot: readonly string[];
+  readonly companion?: { readonly chance: number; readonly options: readonly CompanionOption[] };
+  readonly minTier?: Tier;
+  readonly minMass?: number;
+  /** Giant-kin: the mass a mimic needs to swallow them whole (below it, partial bites). */
+  readonly wholeMealMass?: number;
+  readonly isMimicHunter?: boolean;
+  /** Only appears at these locations (any location if omitted). */
+  readonly locations?: readonly LocationId[];
+  readonly behavior?: BehaviorId;
+}
 
 // ============================================================
 // ADVENTURER TEMPLATES
 // constitution: bonus HP / max hits before fleeing (default 3, tough = 4)
 // ============================================================
-export const ADVENTURER_TEMPLATES = [
+export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   // ── Rogues ──
   {
     name: "Greedy Rogue", type: "Rogue", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
@@ -1215,7 +1297,32 @@ export const ADVENTURER_TEMPLATES = [
 // roomGraph: adjacency list — each room connects to others by name
 // distance is computed at runtime via BFS from this graph
 // minTier: minimum mimic tier to access this location (undefined = always available)
-export const LOCATIONS = [
+export interface LocationCreature {
+  readonly id: string;
+  readonly name: string;
+  readonly ap: number;
+  readonly discipline: number;
+  readonly description: string;
+}
+
+interface LocationDef {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly minTier: Tier;
+  readonly minMass?: number;
+  readonly flavorText: string;
+  readonly rooms: readonly string[];
+  readonly roomGraph: Readonly<Record<string, readonly string[]>>;
+  readonly partySize: readonly [number, number];
+  readonly suspicionGrowthRate: number;
+  readonly advantageTags: readonly UtilityTag[];
+  readonly imageHint: string;
+  readonly locationCreatures: readonly LocationCreature[];
+  readonly isGiantRealm?: boolean;
+}
+
+const LOCATION_DATA = [
   {
     id: "manor", name: "Abandoned Manor", description: "A crumbling noble estate on the edge of civilization.", minTier: "Minor",
     flavorText: "Ivy chokes the stone walls. Every visitor seeks something — coin, glory, or forgotten secrets.",
@@ -1573,17 +1680,31 @@ export const LOCATIONS = [
       { id: "adder", name: "Moorland Adder", ap: 1, discipline: 2, description: "A venomous snake basking near the peat stack." },
     ],
   },
-];
+] as const satisfies readonly LocationDef[];
+
+/** Every location id, derived from the location data above. */
+export type LocationId = (typeof LOCATION_DATA)[number]["id"];
+/** Every room name across all locations. */
+export type RoomName = (typeof LOCATION_DATA)[number]["rooms"][number];
+
+/** A hunting ground. (Named HuntLocation to avoid clashing with the browser's Location type.) */
+export interface HuntLocation extends Omit<LocationDef, "id" | "rooms" | "roomGraph"> {
+  readonly id: LocationId;
+  readonly rooms: readonly RoomName[];
+  readonly roomGraph: Readonly<Partial<Record<RoomName, readonly RoomName[]>>>;
+}
+
+export const LOCATIONS: readonly HuntLocation[] = LOCATION_DATA;
 
 // Forms that ARE a room (Grand/Apex tier) — used for duplicate-room plausibility check
-export const ROOM_FORM_IDS = new Set([
+export const ROOM_FORM_IDS: ReadonlySet<FormId> = new Set<FormId>([
   "grand_personal_library", "grand_parlor", "grand_small_outhouse",
   "apex_roadside_inn", "apex_stable", "apex_chapel", "apex_watchtower", "apex_abandoned_cottage",
   "apex_castle_gate", "apex_lighthouse",
 ]);
 
 // Mapping from form id → room type keyword for duplicate detection
-export const FORM_ROOM_TYPE = {
+export const FORM_ROOM_TYPE: Partial<Record<FormId, string>> = {
   grand_personal_library: "library",
   grand_parlor: "parlor",
   grand_small_outhouse: "outhouse",
@@ -1603,7 +1724,19 @@ export const FORM_ROOM_TYPE = {
 // format: { formId: { plausibility?: number, allure?: number, note?: string } }
 // positive = bonus, negative = penalty
 // ============================================================
-export const ROOM_FORM_MODIFIERS = {
+export interface RoomModifier {
+  readonly plausibility?: number;
+  readonly allure?: number;
+  readonly note: string;
+}
+
+export interface RoomContextMod {
+  plausibility: number;
+  allure: number;
+  note?: string;
+}
+
+export const ROOM_FORM_MODIFIERS: Partial<Record<RoomName, Partial<Record<FormId, RoomModifier>>>> = {
   // ── Abandoned Manor ──
   "Library":        { "lesser_bookshelf_small": { plausibility: 1, allure: -1, note: "One bookshelf among many — expected, but unremarkable." },
                       "standard_bookshelf":     { plausibility: 1, allure: -1, note: "Fits naturally, but blends into the other shelves." },
@@ -1666,7 +1799,7 @@ export const ROOM_FORM_MODIFIERS = {
 };
 
 // Get room context modifier for a form in a specific room
-export function getRoomContextMod(formId, roomName) {
+export function getRoomContextMod(formId: FormId, roomName: RoomName): RoomContextMod {
   const roomMods = ROOM_FORM_MODIFIERS[roomName];
   if (!roomMods) return { plausibility: 0, allure: 0 };
   const mod = roomMods[formId];
@@ -1675,14 +1808,14 @@ export function getRoomContextMod(formId, roomName) {
 }
 
 // BFS distance between two rooms using a location's roomGraph
-export function getRoomDistance(location, roomA, roomB) {
+export function getRoomDistance(location: HuntLocation, roomA: RoomName, roomB: RoomName): number {
   if (roomA === roomB) return 0;
   const graph = location.roomGraph;
   if (!graph) return 1;
-  const visited = new Set([roomA]);
-  const queue = [[roomA, 0]];
+  const visited = new Set<RoomName>([roomA]);
+  const queue: [RoomName, number][] = [[roomA, 0]];
   while (queue.length) {
-    const [current, dist] = queue.shift();
+    const [current, dist] = queue.shift()!;
     for (const neighbor of (graph[current] || [])) {
       if (neighbor === roomB) return dist + 1;
       if (!visited.has(neighbor)) {
@@ -1695,14 +1828,23 @@ export function getRoomDistance(location, roomA, roomB) {
 }
 
 // Get adjacent rooms (distance 1) from a given room
-export function getAdjacentRooms(location, room) {
+export function getAdjacentRooms(location: HuntLocation, room: RoomName): readonly RoomName[] {
   return (location.roomGraph?.[room] || []);
 }
 
 // ============================================================
 // STARTING STATS
 // ============================================================
-export const STARTING_STATS = {
+export interface StartingStats {
+  plausibility: number;
+  adhesion: number;
+  patience: number;
+  mass: number;
+  digestiveCapacity: number;
+  baseAllure: number;
+}
+
+export const STARTING_STATS: Record<StartingType, StartingStats> = {
   Minor:  { plausibility: 4, adhesion: 3, patience: 4, mass: 2, digestiveCapacity: 3, baseAllure: 2 },
   Lesser: { plausibility: 2, adhesion: 4, patience: 2, mass: 6, digestiveCapacity: 5, baseAllure: 3 },
 };
@@ -1710,7 +1852,15 @@ export const STARTING_STATS = {
 // ============================================================
 // TIER CONFIG
 // ============================================================
-export const TIER_CONFIG = {
+export interface TierConfig {
+  readonly massRange: readonly [number, number];
+  readonly apToEvolve: number;
+  readonly apToUpgrade: number;
+  readonly description: string;
+  readonly lore: string;
+}
+
+export const TIER_CONFIG: Record<Tier, TierConfig> = {
   Minor:    { massRange: [1, 4],   apToEvolve: 10, apToUpgrade: 3,  description: "Tiny, deceptive, patient",         lore: "A fledgling mimic, barely larger than a hatbox. Dangerous only to the unwary." },
   Lesser:   { massRange: [5, 8],   apToEvolve: 20, apToUpgrade: 5,  description: "Small but deadly",                  lore: "Capable of consuming a full humanoid. Still learning the art of perfect deception." },
   Standard: { massRange: [9, 12],  apToEvolve: 35, apToUpgrade: 8,  description: "Proven predator",                   lore: "A mid-tier mimic has shed its vulnerability. Now a true ambush hunter." },
@@ -1722,7 +1872,7 @@ export const TIER_CONFIG = {
 // ============================================================
 // DICE ENGINE
 // ============================================================
-export function rollDice(numDice) {
+export function rollDice(numDice: number): number {
   let total = 0;
   for (let i = 0; i < numDice; i++) {
     total += Math.floor(Math.random() * 6) + 1;
@@ -1730,8 +1880,8 @@ export function rollDice(numDice) {
   return total;
 }
 
-export function rollDiceVerbose(numDice) {
-  const rolls = [];
+export function rollDiceVerbose(numDice: number): { total: number; rolls: number[] } {
+  const rolls: number[] = [];
   for (let i = 0; i < numDice; i++) {
     rolls.push(Math.floor(Math.random() * 6) + 1);
   }
@@ -1747,30 +1897,30 @@ export function rollDiceVerbose(numDice) {
 // tier above would be unreachable, since a mimic is always below that tier's starting mass.
 // The upper bound of baseMassRange is display/flavor only.
 // ============================================================
-export function isFormMassGated(form) {
+export function isFormMassGated(form: Form): boolean {
   return form.baseMassRange[0] > TIER_CONFIG[form.tier].massRange[0];
 }
 
 // Only one of a mimic's forms may come from the tier above its own.
 export const MAX_FORMS_ABOVE_TIER = 1;
 
-export function isFormAboveTier(form, mimicTier) {
+export function isFormAboveTier(form: Pick<Form, "tier">, mimicTier: Tier): boolean {
   return TIER_ORDER.indexOf(form.tier) === TIER_ORDER.indexOf(mimicTier) + 1;
 }
 
 /** Whether `form` may be added to `selectedForms` without breaking the one-form-above rule. */
-export function canAddForm(selectedForms, form, mimicTier) {
+export function canAddForm(selectedForms: readonly Pick<Form, "tier">[], form: Pick<Form, "tier">, mimicTier: Tier): boolean {
   if (!isFormAboveTier(form, mimicTier)) return true;
   return selectedForms.filter(f => isFormAboveTier(f, mimicTier)).length < MAX_FORMS_ABOVE_TIER;
 }
 
-export function getValidForms(tierStr, massVal) {
+export function getValidForms(tierStr: Tier, massVal: number): Form[] {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];
-  const validForms = [];
+  const validForms: Form[] = [];
   TIER_ORDER.forEach((tier, tierIndex) => {
     if (Math.abs(tierIndex - currentTierIndex) > 1) return;
-    MASTER_FORMS[tier]?.forEach((form) => {
+    MASTER_FORMS[tier].forEach((form) => {
       if (isFormMassGated(form) && massVal < form.baseMassRange[0]) return;
       validForms.push(form);
     });
@@ -1786,7 +1936,8 @@ export function getValidForms(tierStr, massVal) {
 // The cost: every worn magic material gives off arcane residue, an extra "magical"
 // flaw check against adventurers with magical perception 2+ (see stealthCheck).
 // ============================================================
-export const MAGIC_EFFECTS = {
+// Typed as a full Record so adding a magic material without an effect is a compile error.
+export const MAGIC_EFFECTS: Record<MagicMaterial, string> = {
   "Void Marble":     "Muffles you. Banshees' Keen Hearing doesn't trigger, and acoustic flaws can't be spotted.",
   "Direwolf Pelt":   "Masks your scent. Werewolves' Blood Scent doesn't trigger, and environmental flaw checks get –1 die.",
   "Feywood":         "Changing form costs no suspicion, and Changelings' Shape Sense doesn't trigger.",
@@ -1801,34 +1952,35 @@ export const MAGIC_EFFECTS = {
   "Soulglass":       "Reveals which room a hidden rival mimic is lurking in.",
 };
 
+/** Any appearance-shaped object; fields may be missing (e.g. partially built looks). */
+export type AppearanceLike = Partial<Appearance>;
+
 /** All materials currently worn in the appearance (primary and secondary slots). */
-function wornMaterials(appearance) {
+function wornMaterials(appearance: AppearanceLike | undefined): Material[] {
   return [
     ...(appearance?.primaryMaterials || []),
     ...(appearance?.secondaryMaterials || []),
   ];
 }
 
-export function isMagicMaterial(material) {
-  return MATERIALS.magic.includes(material);
+export function isMagicMaterial(material: Material): material is MagicMaterial {
+  return (MATERIALS.magic as readonly Material[]).includes(material);
 }
 
 /** How many magic materials the appearance wears (checked against APPEARANCE_LIMITS[tier].magicalMaterials). */
-export function countMagicMaterials(appearance) {
+export function countMagicMaterials(appearance: AppearanceLike | undefined): number {
   return wornMaterials(appearance).filter(isMagicMaterial).length;
 }
 
 /** True if the appearance is wearing this magic material in any slot. */
-export function hasMagic(appearance, material) {
+export function hasMagic(appearance: AppearanceLike | undefined, material: MagicMaterial): boolean {
   return wornMaterials(appearance).includes(material);
 }
 
 /** The magic materials (with effects) worn in the appearance. */
-export function wornMagic(appearance) {
-  return [...new Set(wornMaterials(appearance).filter(m => MAGIC_EFFECTS[m]))];
+export function wornMagic(appearance: AppearanceLike | undefined): MagicMaterial[] {
+  return [...new Set(wornMaterials(appearance).filter(isMagicMaterial))];
 }
-
-const ACOUSTIC_FLAW_TYPES = ["acoustic", "sound"];
 
 // ============================================================
 // FORM TIER PENALTIES
@@ -1837,7 +1989,7 @@ const ACOUSTIC_FLAW_TYPES = ["acoustic", "sound"];
 // Tier below: more mass crammed into a smaller form, so the mimic is restless
 //   (–1 Patience, applied to everything Patience affects).
 // ============================================================
-export function getFormTierPenalties(formTier, mimicTier) {
+export function getFormTierPenalties(formTier: Tier, mimicTier: Tier): { plausibility: number; patience: number } {
   const delta = TIER_ORDER.indexOf(formTier) - TIER_ORDER.indexOf(mimicTier);
   return {
     plausibility: delta === 1 ? 2 : 0,
@@ -1846,10 +1998,52 @@ export function getFormTierPenalties(formTier, mimicTier) {
 }
 
 // ============================================================
+// PARTY MEMBERS
+// An adventurer (or companion) taking part in a hunt: template fields plus live state.
+// ============================================================
+export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
+  id: string;
+  type: AdventurerType | CompanionType;
+  /** Companions have no group. */
+  group?: AdventurerGroupId;
+  suspicion: number;
+  location: RoomName;
+  isAlive: boolean;
+  isConsumed: boolean;
+  isAttracted: boolean;
+  hitsTaken?: number;
+  fled?: boolean;
+  isDisappeared?: boolean;
+  isCompanion?: boolean;
+};
+
+/** The result of a contested roll (stealth, allure or adhesion). */
+export interface CheckResult {
+  success: boolean;
+  mimicRoll: number;
+  advRoll: number;
+  suspicionChange: number;
+  detectedFlaws: string[];
+  narrative: string;
+}
+
+/** Anything an adventurer can like or dislike. */
+export type Quality = Material | Trait | UtilityTag;
+
+export interface AllureResult extends CheckResult {
+  interestBonus: number;
+  aversion: number;
+  disliked: Quality[];
+}
+
+// ============================================================
 // COMBAT ENGINE
 // ============================================================
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
-export function stealthCheck(plausibility, patience, formTier, mimicTier, form, adventurer, roomContextMod = {}, appearance = {}) {
+export function stealthCheck(
+  plausibility: number, patience: number, formTier: Tier, mimicTier: Tier, form: Form, adventurer: PartyMember,
+  roomContextMod: Partial<RoomContextMod> = {}, appearance: AppearanceLike = {},
+): CheckResult {
   // Gravecloth: undead take the mimic for one of their own
   if (adventurer.type === "Undead" && hasMagic(appearance, "Gravecloth")) {
     return {
@@ -1873,12 +2067,13 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
   if (plausibility <= 2) flawCount = 2;
   else if (plausibility <= 3) flawCount = 1;
 
-  const detectedFlaws = [];
+  const detectedFlaws: string[] = [];
   const shuffled = [...form.flawProfiles].sort(() => Math.random() - 0.5).slice(0, flawCount);
   shuffled.forEach((flaw) => {
     // Void Marble: acoustic flaws can't be spotted
-    if (ACOUSTIC_FLAW_TYPES.includes(flaw.type) && hasMagic(appearance, "Void Marble")) return;
-    const affinityBonus = adventurer.perceptionAffinity[flaw.type] || 0;
+    if (flaw.type === "acoustic" && hasMagic(appearance, "Void Marble")) return;
+    // Flaw types that are also senses get the adventurer's bonus for that sense
+    const affinityBonus = isPerceptionSense(flaw.type) ? adventurer.perceptionAffinity[flaw.type] : 0;
     const scentPenalty = flaw.type === "environmental" && hasMagic(appearance, "Direwolf Pelt") ? 1 : 0;
     const advRollResult = rollDice(Math.max(1, adventurer.discipline + affinityBonus - scentPenalty - hunterPenalty));
     const mimicRollResult = rollDice(stealthDice);
@@ -1913,19 +2108,23 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 // plus the form's built-in traits (structural/aura, e.g. a Chest is Iron-Banded). Tags: the form's utility tags.
 //   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
 //   disliked — each match is -1 allure die (adventurer.repelledBy)
-export function calcAllureBreakdown(form, currentAppearance, adventurer) {
-  const appearanceMats = [
+export function calcAllureBreakdown(
+  form: Pick<Form, "builtInTraits" | "utilityTags">,
+  currentAppearance: AppearanceLike,
+  adventurer: Pick<AdventurerTemplate, "alluringQualities" | "repelledBy">,
+): { liked: Quality[]; disliked: Quality[]; interest: number; aversion: number } {
+  const appearanceMats: Material[] = [
     ...(currentAppearance.primaryMaterials || []),
     ...(currentAppearance.secondaryMaterials || []),
   ];
-  const appearanceTraits = [
+  const appearanceTraits: Trait[] = [
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),
     ...(currentAppearance.conditionTraits || []),
     ...(form.builtInTraits || []),
   ];
-  const formTags = form.utilityTags || [];
-  const matching = (qualities = {}) => [
+  const formTags: readonly UtilityTag[] = form.utilityTags || [];
+  const matching = (qualities: QualityList = {}): Quality[] => [
     ...(qualities.materials || []).filter(mat => appearanceMats.includes(mat)),
     ...(qualities.traits || []).filter(trait => appearanceTraits.includes(trait)),
     ...(qualities.tags || []).filter(tag => formTags.includes(tag)),
@@ -1936,13 +2135,20 @@ export function calcAllureBreakdown(form, currentAppearance, adventurer) {
 }
 
 // Net interest score (likes minus dislikes) without rolling — used for targeting priority
-export function calcAllureInterest(form, currentAppearance, adventurer) {
+export function calcAllureInterest(
+  form: Pick<Form, "builtInTraits" | "utilityTags">,
+  currentAppearance: AppearanceLike,
+  adventurer: Pick<AdventurerTemplate, "alluringQualities" | "repelledBy">,
+): number {
   const { interest, aversion } = calcAllureBreakdown(form, currentAppearance, adventurer);
   return interest - aversion;
 }
 
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
-export function allureCheck(baseAllure, plausibility, form, currentAppearance, adventurer, roomContextMod = {}) {
+export function allureCheck(
+  baseAllure: number, plausibility: number, form: Form, currentAppearance: AppearanceLike, adventurer: PartyMember,
+  roomContextMod: Partial<RoomContextMod> = {},
+): AllureResult {
   // Base mimic allure dice = baseAllure + form modifier + room context
   let allureDice = baseAllure + (form.baseAllureModifier || 0) + (roomContextMod.allure || 0);
 
@@ -1972,7 +2178,7 @@ export function allureCheck(baseAllure, plausibility, form, currentAppearance, a
   };
 }
 
-export function adhesionCheck(adhesion, form, adventurer) {
+export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember): CheckResult {
   const mimicRoll = rollDice(adhesion);
   const advRoll = rollDice(adventurer.discipline);
   const success = mimicRoll >= advRoll;
@@ -1985,7 +2191,9 @@ export function adhesionCheck(adhesion, form, adventurer) {
 }
 
 // AP rewards per adventurer type
-export const AP_REWARDS = {
+export type ApRewardKey = AdventurerType | CompanionType | "Giant";
+
+export const AP_REWARDS: Record<ApRewardKey, number> = {
   Rogue: 4, Cleric: 5, Bard: 3, Wizard: 5, Warrior: 3, Ranger: 4, Paladin: 5, Artificer: 4,
   Druid: 4, Assassin: 5, Hunter: 8, Commoner: 2, Nobility: 6, Undead: 5, AnimalCompanion: 2, Familiar: 3,
   Fey: 5, Construct: 6, Beast: 6,
@@ -1994,7 +2202,7 @@ export const AP_REWARDS = {
 
 // AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
 // their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
-export function getApReward(adventurer) {
+export function getApReward(adventurer: Pick<PartyMember, "group" | "type">): number {
   if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
   return AP_REWARDS[adventurer.type] || 3;
 }
@@ -2006,18 +2214,20 @@ export function getApReward(adventurer) {
 // ============================================================
 export const BITE_MATERIAL_CHANCE = 0.35; // chance a held bite teaches one of the target's loot materials
 
-export function needsPartialBites(character, target) {
+export function needsPartialBites(
+  character: Pick<MimicCharacter, "tier" | "mass">, target: Pick<PartyMember, "wholeMealMass">,
+): boolean {
   if (character.tier === "Minor") return true;
   return !!target.wholeMealMass && (character.mass ?? 0) < target.wholeMealMass;
 }
 
 /** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
-export function getBiteAp(target) {
+export function getBiteAp(target: Pick<PartyMember, "group">): number {
   return target.group === "giantKin" ? 2 + Math.floor(Math.random() * 2) : 1;
 }
 
 /** Maybe learn a real material from a bite. Returns a material name or null. */
-export function rollBiteMaterial(target) {
+export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Material | null {
   const mats = target.lootMaterials || [];
   if (mats.length === 0 || Math.random() >= BITE_MATERIAL_CHANCE) return null;
   return mats[Math.floor(Math.random() * mats.length)];
@@ -2027,7 +2237,9 @@ export function rollBiteMaterial(target) {
 // PARTY ELIGIBILITY
 // Whether a template may appear in a party at this location for this mimic.
 // ============================================================
-export function isTemplateEligible(template, location, mimicTier, mimicMass) {
+export function isTemplateEligible(
+  template: AdventurerTemplate, location: HuntLocation, mimicTier: Tier | undefined, mimicMass: number | undefined,
+): boolean {
   const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
   if (template.minTier && TIER_ORDER.indexOf(template.minTier) > tierIdx) return false;
   if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
@@ -2047,6 +2259,11 @@ export function isTemplateEligible(template, location, mimicTier, mimicMass) {
 //   "formChange" — mimic shifted to another form
 //   "feed"       — mimic bit or consumed a party member
 // ============================================================
+export interface BehaviorInfo {
+  readonly label: string;
+  readonly description: string;
+}
+
 export const BEHAVIORS = {
   keenHearing: {
     label: "Keen Hearing",
@@ -2068,17 +2285,47 @@ export const BEHAVIORS = {
     label: "Blood Scent",
     description: "When you feed on a party member, it stalks one room toward you, growing more suspicious as it comes.",
   },
-};
+} as const satisfies Record<string, BehaviorInfo>;
+export type BehaviorId = keyof typeof BEHAVIORS;
+
+/** Mimic actions that behaviors can react to. */
+export type BehaviorTrigger = "relocate" | "strike" | "formChange" | "feed";
+
+/** Changes to one party member. suspicionDelta is added to their current suspicion. */
+export interface PartyMemberPatch {
+  location?: RoomName;
+  isAttracted?: boolean;
+  suspicionDelta?: number;
+}
+
+export interface BehaviorReactions {
+  patches: Record<string, PartyMemberPatch>;
+  /** Party-wide suspicion to add. */
+  suspicion: number;
+  events: { type: GameEventType; text: string }[];
+  /** Adventurers who moved into the mimic's room (they need stealth checks). */
+  arrivals: PartyMember[];
+}
+
+export interface BehaviorContext {
+  party: readonly PartyMember[];
+  location: HuntLocation | null | undefined;
+  mimicRoom: RoomName | null | undefined;
+  fromRoom?: RoomName | null;
+  excludeIds?: readonly string[];
+  /** Lets magic materials suppress behaviors. */
+  appearance?: AppearanceLike;
+}
 
 /** Adventurers with this behavior never wander on their own. */
-export function isStationary(adventurer) {
+export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean {
   return adventurer.behavior === "stoneWatch";
 }
 
-const isActive = (adv) => adv.isAlive && !adv.isConsumed && !adv.fled;
+const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
 
 /** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
-function stepToward(location, fromRoom, targetRoom) {
+function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
   if (fromRoom === targetRoom) return fromRoom;
   const options = getAdjacentRooms(location, fromRoom);
   if (options.length === 0) return fromRoom;
@@ -2091,18 +2338,15 @@ function stepToward(location, fromRoom, targetRoom) {
  * Work out how party members with behaviors react to a mimic action.
  * Pure: returns changes for the caller to apply.
  *
- * ctx: { party, location, mimicRoom, fromRoom?, excludeIds?, appearance? } — appearance lets magic materials suppress behaviors
- * returns {
- *   patches:  { [advId]: { location?, isAttracted?, suspicionDelta? } },
- *   suspicion: number,          // party-wide suspicion to add
- *   events:   [{ type, text }], // event log lines
- *   arrivals: [adventurer],     // adventurers who moved into the mimic's room (need stealth checks)
- * }
+ * See BehaviorContext and BehaviorReactions for the shapes.
  */
-export function getBehaviorReactions(trigger, { party, location, mimicRoom, fromRoom, excludeIds = [], appearance = {} }) {
-  const result = { patches: {}, suspicion: 0, events: [], arrivals: [] };
+export function getBehaviorReactions(
+  trigger: BehaviorTrigger,
+  { party, location, mimicRoom, fromRoom, excludeIds = [], appearance = {} }: BehaviorContext,
+): BehaviorReactions {
+  const result: BehaviorReactions = { patches: {}, suspicion: 0, events: [], arrivals: [] };
   if (!location || !mimicRoom) return result;
-  const dist = (a, b) => getRoomDistance(location, a, b);
+  const dist = (a: RoomName, b: RoomName) => getRoomDistance(location, a, b);
 
   party.forEach((adv) => {
     if (!adv.behavior || !isActive(adv) || excludeIds.includes(adv.id)) return;
@@ -2162,8 +2406,11 @@ export function getBehaviorReactions(trigger, { party, location, mimicRoom, from
         if (arrived && moved) result.arrivals.push({ ...adv, location: newRoom });
         return;
       }
-      default:
-        return;
+      default: {
+        // Compile-time check that every behavior is handled above
+        const unhandled: never = adv.behavior;
+        return unhandled;
+      }
     }
   });
 
@@ -2175,18 +2422,18 @@ export function getBehaviorReactions(trigger, { party, location, mimicRoom, from
 // Returns true if the current hunt should be a Bounty Hunt (mimic hunters specifically targeting the mimic)
 // Chance scales with mass. At mass 30+ it becomes possible; at 36+ it is more common.
 // ============================================================
-export function shouldTriggerBountyHunt(mass) {
+export function shouldTriggerBountyHunt(mass: number): boolean {
   if (mass < 30) return false;
   if (mass >= 36) return Math.random() < 0.50; // 50% chance at mass 36+
   return Math.random() < 0.25; // 25% chance at mass 30-35
 }
 
 // Build a Bounty Hunt party — all members are mimic hunter variants
-export function generateBountyParty(location, mimicMass) {
+export function generateBountyParty(location: HuntLocation, mimicMass: number): PartyMember[] {
   const hunterTemplates = ADVENTURER_TEMPLATES.filter(t => t.isMimicHunter);
   const size = mimicMass >= 36 ? 4 : 3;
   const shuffled = [...hunterTemplates].sort(() => Math.random() - 0.5);
-  const members = [];
+  const members: PartyMember[] = [];
   for (let i = 0; i < size; i++) {
     const t = shuffled[i % shuffled.length];
     const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
@@ -2205,7 +2452,7 @@ export function generateBountyParty(location, mimicMass) {
 
 // Materials / traits learned from FULL consumption — pulled directly from adventurer template now
 // These are fallback values if template lootMaterials is missing
-export const ADVENTURER_MATERIALS = {
+export const ADVENTURER_MATERIALS: Partial<Record<ApRewardKey, readonly Material[]>> = {
   Rogue: ["Tanned Hide", "Steel", "Goatskin"],
   Cleric: ["Gold", "Silver", "Cotton"],
   Bard: ["Silk", "Velvet", "Mahogany"],
@@ -2226,7 +2473,7 @@ export const ADVENTURER_MATERIALS = {
 };
 
 // Traits learned from full consumption (by type)
-export const ADVENTURER_TRAITS = {
+export const ADVENTURER_TRAITS: Partial<Record<ApRewardKey, readonly Trait[]>> = {
   Rogue: [],
   Cleric: ["Sacred Symbol"],
   Bard: ["Gilded"],
@@ -2251,7 +2498,15 @@ export const ADVENTURER_TRAITS = {
 // Triggers when all 3 combat stats (plausibility, adhesion, patience) are at cap (6).
 // 20% chance per hunt to contract one sickness for the duration of the hunt only.
 // ============================================================
-export const SICKNESSES = [
+export interface Sickness {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly flavorText: string;
+  readonly penalties: Readonly<Partial<Record<CombatStat, number>>>;
+}
+
+export const SICKNESSES: readonly Sickness[] = [
   {
     id: "mimic_pox",
     name: "Mimic Pox",
@@ -2297,7 +2552,7 @@ export const SICKNESSES = [
 ];
 
 // Returns a sickness if all stats are capped and the random roll hits (20% chance)
-export function rollForSickness(character) {
+export function rollForSickness(character: Pick<MimicCharacter, CombatStat>): Sickness | null {
   const STAT_CAP = 6;
   const allCapped = character.plausibility >= STAT_CAP &&
                     character.adhesion >= STAT_CAP &&
