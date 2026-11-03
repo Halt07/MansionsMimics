@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, STARTING_STATS } from
+  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, STARTING_STATS } from
 "../components/game/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
+
+const LOCATION_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
 
 const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"];
 
@@ -343,6 +345,20 @@ export default function Codex() {
                       <ul className="space-y-0.5 text-xs text-muted-foreground">
                         {adv.quirks.map((q) => <li key={q}>• {q}</li>)}
                       </ul>
+                      {BEHAVIORS[adv.behavior] && (
+                        <div className="mt-3">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Instinct: <span className="text-purple-400">{BEHAVIORS[adv.behavior].label}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">{BEHAVIORS[adv.behavior].description}</p>
+                        </div>
+                      )}
+                      {adv.locations && (
+                        <div className="mt-3">
+                          <p className="text-xs text-muted-foreground mb-1">Found Only In</p>
+                          <p className="text-xs text-foreground">{adv.locations.map((id) => LOCATION_NAMES[id] ?? id).join(", ")}</p>
+                        </div>
+                      )}
                       {adv.companion && (
                         <div className="mt-3">
                           <p className="text-xs text-muted-foreground mb-1">Companion ({Math.round(adv.companion.chance * 100)}% chance)</p>

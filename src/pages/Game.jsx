@@ -4,9 +4,10 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
   MASTER_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, stealthCheck, allureCheck, adhesionCheck, AP_REWARDS, ADVENTURER_MATERIALS,
+  rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
-  shouldTriggerBountyHunt, generateBountyParty, rollForSickness
+  shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
+  isTemplateEligible, getBehaviorReactions, isStationary
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,24 +26,13 @@ function generateParty(location, mimicTier, mimicMass) {
   const [min, max] = location.partySize;
   const size = min + Math.floor(Math.random() * (max - min + 1));
   const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
-  const isGiantRealm = !!location.isGiantRealm;
 
-  // In giant realm: use giant-kin adventurers; outside: exclude them
-  const common = ADVENTURER_TEMPLATES.filter(t => {
-    if (t.minTier) return false; // elite/minTier templates handled separately
-    return true;
-  });
-  const elite = ADVENTURER_TEMPLATES.filter(t => {
-    if (!t.minTier) return false;
-    if (TIER_ORDER.indexOf(t.minTier) > tierIdx) return false;
-    const meetsMinMass = !t.minMass || (mimicMass ?? 0) >= t.minMass;
-    if (!meetsMinMass) return false;
-    // Giant-kin only appear in giant realm locations
-    const isGiantKin = t.group === "giantKin";
-    if (isGiantKin && !isGiantRealm) return false;
-    if (!isGiantKin && isGiantRealm && tierIdx < TIER_ORDER.indexOf("Apex")) return false;
-    return true;
-  });
+  // Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
+  // Everyone else — including tier-gated monsters — fills the common slots.
+  const ELITE_GROUPS = ["huntersElites", "giantKin"];
+  const eligible = ADVENTURER_TEMPLATES.filter(t => isTemplateEligible(t, location, mimicTier, mimicMass));
+  const common = eligible.filter(t => !ELITE_GROUPS.includes(t.group));
+  const elite = eligible.filter(t => ELITE_GROUPS.includes(t.group));
 
   const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
   const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
@@ -319,6 +309,31 @@ export default function Game() {
     return totalSuspicionChange;
   };
 
+  // Let adventurers with special behaviors (see BEHAVIORS in gameData) react to an action.
+  // ctx may override mimicRoom (e.g. while relocating) and pass fromRoom / excludeIds.
+  const applyBehaviorReactions = (trigger, ctx = {}) => {
+    const roomNow = ctx.mimicRoom ?? mimicRoom;
+    const reactions = getBehaviorReactions(trigger, { party, location, mimicRoom: roomNow, ...ctx });
+    reactions.events.forEach(e => addEvent(e.type, e.text));
+    if (Object.keys(reactions.patches).length > 0) {
+      setParty(prev => prev.map(a => {
+        const patch = reactions.patches[a.id];
+        if (!patch || !a.isAlive || a.isConsumed) return a;
+        const { suspicionDelta = 0, ...rest } = patch;
+        return { ...a, ...rest, suspicion: a.suspicion + suspicionDelta };
+      }));
+    }
+    let suspDelta = reactions.suspicion;
+    if (reactions.arrivals.length > 0) suspDelta += runStealthChecks(reactions.arrivals, roomNow);
+    if (suspDelta > 0) {
+      setSuspicion(s => {
+        const next = Math.min(s + suspDelta, 10);
+        if (next >= 10) triggerHuntEnd();
+        return next;
+      });
+    }
+  };
+
   // Relocate to an adjacent empty room (+1 suspicion cost)
   const doRelocate = (targetRoom) => {
     if (!character || !location) return;
@@ -346,6 +361,7 @@ export default function Game() {
       if (next >= 10) triggerHuntEnd();
       return next;
     });
+    applyBehaviorReactions("relocate", { mimicRoom: targetRoom, fromRoom: mimicRoom });
     checkActionLimit(newCount);
   };
 
@@ -477,6 +493,7 @@ export default function Game() {
     }));
     scored.sort((a, b) => a.dist - b.dist || b.interest - a.interest);
     const target = scored[0].adv;
+    applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
     // Minor mimics: partial bites, track hit count
     if (character.tier === "Minor") {
@@ -497,6 +514,7 @@ export default function Game() {
           const scrap = partialLoot[Math.floor(Math.random() * partialLoot.length)];
           const apGained = 1;
           addEvent("consume", `You tear free with a ${scrap}! +${apGained} AP. ${target.name} staggers back. (${hitsSoFar}/${maxHits} hits taken)`);
+          applyBehaviorReactions("feed", { excludeIds: [target.id] });
           setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
           // Learn the scrap as a material if not already known
           const learnedMaterials = [...new Set([...(character.learnedMaterials || []), scrap])];
@@ -565,7 +583,7 @@ export default function Game() {
     addEvent(result.success ? "attack" : "escape", result.narrative);
 
     if (result.success) {
-      const apGained = AP_REWARDS[target.type] || 3;
+      const apGained = getApReward(target);
       const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
       const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
       // Variable learning: learn 1–all materials randomly (at least 1 if any exist)
@@ -583,6 +601,7 @@ export default function Game() {
       // +1 suspicion — a party member vanished
       setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
       addEvent("alert", `One of the party has vanished — the others grow uneasy. (+1 suspicion)`);
+      applyBehaviorReactions("feed", { excludeIds: [target.id] });
       if (learnedNewMats.length > 0) addEvent("evolve", `New materials absorbed: ${learnedNewMats.join(", ")}!`);
       if (learnedNewTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learnedNewTraits.join(", ")}!`);
       if (learnedNewMats.length === 0 && learnedNewTraits.length === 0 && (matsToLearn.length > 0 || traitsToLearn.length > 0)) {
@@ -657,6 +676,7 @@ export default function Game() {
     const newForm = MASTER_FORMS[character.forms[formIndex]?.tier]?.find(f => f.id === character.forms[formIndex]?.formId);
     addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
     setSuspicion(s => Math.min(s + 1, 10)); // shifting takes time, slight suspicion risk
+    applyBehaviorReactions("formChange");
     setShowFormPanel(false);
   };
 
@@ -700,6 +720,7 @@ export default function Game() {
     const newlyArrived = [];
     const updatedParty = currentParty.map(adv => {
       if (!adv.isAlive || adv.isConsumed) return adv;
+      if (isStationary(adv)) return adv;
       if (Math.random() < 0.5) return adv;
       const adjacent = getAdjacentRooms(location, adv.location);
       const candidates = adjacent.length > 0 ? adjacent : location.rooms;

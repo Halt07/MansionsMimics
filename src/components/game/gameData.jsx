@@ -563,7 +563,7 @@ export const TRAITS = {
 export const ADVENTURER_GROUPS = [
   { id: "common", label: "Common Adventurers", description: "The everyday dungeon-delvers. They appear in parties at any tier." },
   { id: "commoners", label: "Commoners & Nobility", description: "Non-combatants and escort targets. Easy prey, but nobles rarely travel unguarded." },
-  { id: "supernatural", label: "Supernatural & Monstrous", description: "Undead and monstrous wanderers who can turn up in any party." },
+  { id: "supernatural", label: "Supernatural & Monstrous", description: "Undead, fey and monstrous things. Most haunt only certain locations, and several have unusual instincts that change how you hunt them." },
   { id: "huntersElites", label: "Hunters & Elites", description: "Specialists who appear once you have grown powerful enough to draw attention. Mimic hunters also form Bounty Hunt parties." },
   { id: "giantKin", label: "Giant-Kin", description: "Only found in giant-realm locations (the Giant's Castle and Cloud Kingdom Outpost). Gated by Apex tier and minimum mass. Giant-kin yield significantly more AP than standard adventurers (up to 12 per kill)." },
 ];
@@ -961,6 +961,7 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
     group: "supernatural",
+    locations: ["noble_estate", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     quirks: ["Drawn to bloodstained objects", "Cannot enter without invitation — waits at thresholds", "Hypersensitive to magical auras"],
     alluringQualities: { materials: ["Gold", "Silver", "Silk", "Gravecloth", "Bloodoak"], traits: ["Bloodstained", "Tarnished", "Gilded"], tags: ["Valuable", "Comfort", "Religious"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 1, magical: 3, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 4 },
@@ -981,12 +982,77 @@ export const ADVENTURER_TEMPLATES = [
   {
     name: "Cursed Revenant", type: "Undead", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
+    locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
     quirks: ["Fixated on objects from their past life", "Ignores most things unless they trigger recognition", "Slow but relentless — its body is intact, unlike a zombie"],
     alluringQualities: { materials: ["Oak", "Linen", "Iron"], traits: ["Bloodstained", "Worn", "Cracked", "Dusty"], tags: ["Comfort", "Structural"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 2 },
     lootMaterials: ["Gravecloth", "Iron", "Linen", "Cowhide"],
     lootTraits: ["Bloodstained", "Worn"],
     partialLoot: ["strip of burial shroud", "a rusted iron clasp", "scrap of grave-dirt-stained wool", "torn leather boot from its past life"],
+  },
+
+  {
+    name: "Wailing Banshee", type: "Undead", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "supernatural",
+    locations: ["haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
+    behavior: "keenHearing",
+    quirks: ["A gaunt, grave-pale crone — flesh and bone, whatever the stories say", "Turns toward every creak and footstep", "Keens softly when something nearby moves"],
+    alluringQualities: { materials: ["Gravecloth", "Soulglass", "Silver"], traits: ["Tarnished", "Etched"], tags: ["Religious"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 1, acoustic: 4, presence: 3 },
+    lootMaterials: ["Gravecloth", "Soulglass"],
+    lootTraits: ["Tarnished"],
+    partialLoot: ["a lock of grave-white hair", "strip of tattered burial veil", "a cracked, yellowed fingernail"],
+  },
+  {
+    name: "Ghoul", type: "Undead", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
+    group: "supernatural",
+    locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
+    behavior: "carrionScent",
+    quirks: ["Sniffs at cupboards and larders", "Gnaws on anything that smells of meat", "Follows the scent of a fresh kill"],
+    alluringQualities: { materials: ["Bonesteel", "Cowhide"], traits: ["Pitted"], tags: ["Dining", "Storage"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 3, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 1, presence: 1 },
+    lootMaterials: ["Bonesteel", "Cowhide"],
+    lootTraits: ["Bloodstained"],
+    partialLoot: ["strip of grave-soiled rags", "a gnawed knucklebone", "a clump of matted hair"],
+  },
+  {
+    name: "Fey Changeling", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
+    minTier: "Standard",
+    group: "supernatural",
+    locations: ["wizard_tower", "noble_estate", "hidden_grove", "crossroads"],
+    behavior: "shapeSense",
+    quirks: ["Its face never quite settles on one shape", "Feels the moment anything nearby changes its form", "Cannot resist pretty, delicate things"],
+    alluringQualities: { materials: ["Feywood", "Silk"], traits: ["Mossy", "Inlaid"], tags: ["Decor", "Comfort"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 1, magical: 2, social: 3, spatial: 1, environmental: 1, acoustic: 1, presence: 3 },
+    lootMaterials: ["Feywood", "Spellweave Silk"],
+    lootTraits: ["Mossy"],
+    partialLoot: ["a lock of shifting, silver hair", "scrap of dew-damp silk", "a petal-shaped scale"],
+  },
+  {
+    name: "Gargoyle", type: "Construct", discipline: 3, baseSuspicion: 2, constitution: 6, interactionStyle: "sight",
+    minTier: "Standard",
+    group: "supernatural",
+    locations: ["wizard_tower", "noble_estate", "cursed_chapel", "ruined_city", "abandoned_castle"],
+    behavior: "stoneWatch",
+    quirks: ["Never moves from its perch", "Memorizes where every object in sight sits", "Watches without blinking for hours"],
+    alluringQualities: { materials: ["Marble", "Granite", "Basalt"], traits: ["Etched", "Pitted", "Sacred Symbol"], tags: ["Structural", "Religious"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 4, environmental: 1, acoustic: 0, presence: 1 },
+    lootMaterials: ["Basalt", "Runestone"],
+    lootTraits: ["Etched"],
+    partialLoot: ["a chip of weathered stone", "a broken stone talon", "grit from a cracked wing"],
+  },
+  {
+    name: "Werewolf", type: "Beast", discipline: 5, baseSuspicion: 2, constitution: 6, interactionStyle: "touch",
+    minTier: "Greater",
+    group: "supernatural",
+    locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor"],
+    behavior: "bloodScent",
+    quirks: ["Follows the smell of blood through walls", "Paces restlessly between rooms", "Snarls at anything that smells wrong"],
+    alluringQualities: { materials: ["Direwolf Pelt", "Oak"], traits: ["Mossy", "Rough-Hewn"], tags: ["Rural"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 4, acoustic: 2, presence: 2 },
+    lootMaterials: ["Direwolf Pelt", "Boarhide"],
+    lootTraits: ["Rough-Hewn"],
+    partialLoot: ["a tuft of coarse grey fur", "a cracked claw", "strip of torn, half-shifted hide"],
   },
 
   // ── Giant-kin (Apex only, minMass gated) ──
@@ -1726,8 +1792,160 @@ export function adhesionCheck(adhesion, form, adventurer) {
 export const AP_REWARDS = {
   Rogue: 4, Cleric: 5, Bard: 3, Wizard: 5, Warrior: 3, Ranger: 4, Paladin: 5, Artificer: 4,
   Druid: 4, Assassin: 5, Hunter: 8, Commoner: 2, Nobility: 6, Undead: 5, AnimalCompanion: 2, Familiar: 3,
-  Giant: 12, // Giant-kin yield significantly more AP
+  Fey: 5, Construct: 6, Beast: 6,
+  Giant: 12, // Giant-kin yield significantly more AP (applied by group, see getApReward)
 };
+
+// AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
+// their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
+export function getApReward(adventurer) {
+  if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
+  return AP_REWARDS[adventurer.type] || 3;
+}
+
+// ============================================================
+// PARTY ELIGIBILITY
+// Whether a template may appear in a party at this location for this mimic.
+// ============================================================
+export function isTemplateEligible(template, location, mimicTier, mimicMass) {
+  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
+  if (template.minTier && TIER_ORDER.indexOf(template.minTier) > tierIdx) return false;
+  if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
+  if (template.locations && !template.locations.includes(location.id)) return false;
+  // Giant-kin only appear in giant-realm locations
+  if (template.group === "giantKin" && !location.isGiantRealm) return false;
+  return true;
+}
+
+// ============================================================
+// ADVENTURER BEHAVIORS
+// Special instincts some adventurers have. A template opts in with `behavior: "<id>"`.
+// The game calls getBehaviorReactions() when the mimic does something a behavior
+// can react to:
+//   "relocate"   — mimic moved rooms (ctx.fromRoom → ctx.mimicRoom)
+//   "strike"     — mimic attacked a party member (hit or miss)
+//   "formChange" — mimic shifted to another form
+//   "feed"       — mimic bit or consumed a party member
+// ============================================================
+export const BEHAVIORS = {
+  keenHearing: {
+    label: "Keen Hearing",
+    description: "Hears you move and strike from up to 2 rooms away. Each time, its suspicion and the party's suspicion rise.",
+  },
+  carrionScent: {
+    label: "Carrion Scent",
+    description: "When you feed on a party member, it shambles one room toward you — and arrives already drawn in, ready to be struck.",
+  },
+  shapeSense: {
+    label: "Shape Sense",
+    description: "Feels you change form from up to 2 rooms away. Changing form near it raises suspicion sharply.",
+  },
+  stoneWatch: {
+    label: "Stone Watch",
+    description: "Never leaves its perch. If you move out of, into, or past a room next to it, it notices the change.",
+  },
+  bloodScent: {
+    label: "Blood Scent",
+    description: "When you feed on a party member, it stalks one room toward you, growing more suspicious as it comes.",
+  },
+};
+
+/** Adventurers with this behavior never wander on their own. */
+export function isStationary(adventurer) {
+  return adventurer.behavior === "stoneWatch";
+}
+
+const isActive = (adv) => adv.isAlive && !adv.isConsumed && !adv.fled;
+
+/** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
+function stepToward(location, fromRoom, targetRoom) {
+  if (fromRoom === targetRoom) return fromRoom;
+  const options = getAdjacentRooms(location, fromRoom);
+  if (options.length === 0) return fromRoom;
+  return options.reduce((best, room) =>
+    getRoomDistance(location, room, targetRoom) < getRoomDistance(location, best, targetRoom) ? room : best
+  );
+}
+
+/**
+ * Work out how party members with behaviors react to a mimic action.
+ * Pure: returns changes for the caller to apply.
+ *
+ * ctx: { party, location, mimicRoom, fromRoom?, excludeIds? }
+ * returns {
+ *   patches:  { [advId]: { location?, isAttracted?, suspicionDelta? } },
+ *   suspicion: number,          // party-wide suspicion to add
+ *   events:   [{ type, text }], // event log lines
+ *   arrivals: [adventurer],     // adventurers who moved into the mimic's room (need stealth checks)
+ * }
+ */
+export function getBehaviorReactions(trigger, { party, location, mimicRoom, fromRoom, excludeIds = [] }) {
+  const result = { patches: {}, suspicion: 0, events: [], arrivals: [] };
+  if (!location || !mimicRoom) return result;
+  const dist = (a, b) => getRoomDistance(location, a, b);
+
+  party.forEach((adv) => {
+    if (!adv.behavior || !isActive(adv) || excludeIds.includes(adv.id)) return;
+
+    switch (adv.behavior) {
+      case "keenHearing": {
+        if (trigger !== "relocate" && trigger !== "strike") return;
+        if (dist(adv.location, mimicRoom) > 2) return;
+        result.patches[adv.id] = { suspicionDelta: 1 };
+        result.suspicion += 1;
+        result.events.push({ type: "alert", text: `${adv.name}'s head snaps toward the sound from the ${mimicRoom}. (+1 suspicion)` });
+        return;
+      }
+      case "shapeSense": {
+        if (trigger !== "formChange") return;
+        if (dist(adv.location, mimicRoom) > 2) return;
+        result.patches[adv.id] = { suspicionDelta: 2 };
+        result.suspicion += 2;
+        result.events.push({ type: "alert", text: `${adv.name} shivers — something nearby just changed its shape. (+2 suspicion)` });
+        return;
+      }
+      case "stoneWatch": {
+        if (trigger !== "relocate" || !fromRoom) return;
+        const saw = dist(adv.location, fromRoom) <= 1 || dist(adv.location, mimicRoom) <= 1;
+        if (!saw) return;
+        result.patches[adv.id] = { suspicionDelta: 1 };
+        result.suspicion += 2;
+        result.events.push({ type: "alert", text: `${adv.name}'s stone eyes track the change — something in the ${fromRoom} is no longer where it was. (+2 suspicion)` });
+        return;
+      }
+      case "carrionScent":
+      case "bloodScent": {
+        if (trigger !== "feed") return;
+        const newRoom = stepToward(location, adv.location, mimicRoom);
+        const arrived = newRoom === mimicRoom;
+        const moved = newRoom !== adv.location;
+        if (adv.behavior === "carrionScent") {
+          result.patches[adv.id] = { location: newRoom, isAttracted: arrived };
+          result.events.push({
+            type: arrived ? "allure" : "info",
+            text: arrived
+              ? `${adv.name} catches the scent of the kill and shambles into the ${mimicRoom}, drawn to the meal.`
+              : `${adv.name} catches the scent of the kill and shambles toward the ${newRoom}.`,
+          });
+        } else {
+          result.patches[adv.id] = { location: newRoom, suspicionDelta: 1 };
+          result.events.push({
+            type: "alert",
+            text: moved
+              ? `${adv.name} smells blood and stalks into the ${newRoom}, hackles raised.`
+              : `${adv.name} smells blood. Its hackles rise.`,
+          });
+        }
+        if (arrived && moved) result.arrivals.push({ ...adv, location: newRoom });
+        return;
+      }
+      default:
+        return;
+    }
+  });
+
+  return result;
+}
 
 // ============================================================
 // LEGENDARY REPUTATION
@@ -1778,6 +1996,9 @@ export const ADVENTURER_MATERIALS = {
   Commoner: ["Wool", "Linen", "Burlap"],
   Nobility: ["Gold", "Silk", "Velvet"],
   Undead: ["Gravecloth", "Iron", "Linen"],
+  Fey: ["Feywood", "Spellweave Silk"],
+  Construct: ["Basalt", "Granite", "Runestone"],
+  Beast: ["Direwolf Pelt", "Boarhide"],
   Giant: ["Giant Oak", "Giant Iron", "Giant Gold", "Beanstalk Leather", "Giant Granite"],
 };
 
@@ -1796,6 +2017,9 @@ export const ADVENTURER_TRAITS = {
   Commoner: [],
   Nobility: ["Gilded", "Heraldic Crest"],
   Undead: ["Bloodstained"],
+  Fey: ["Mossy"],
+  Construct: ["Etched"],
+  Beast: ["Rough-Hewn"],
   Giant: ["Rough-Hewn", "Iron-Banded"],
 };
 
