@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
-  STARTING_STATS, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER
+  STARTING_STATS, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER, canAddForm, MAX_FORMS_ABOVE_TIER
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,7 @@ export default function CharacterCreation() {
   const toggleForm = (form) => {
     if (selectedForms.find(f => f.id === form.id)) {
       setSelectedForms(selectedForms.filter(f => f.id !== form.id));
-    } else if (selectedForms.length < 2) {
+    } else if (selectedForms.length < 2 && canAddForm(selectedForms, form, startingTier)) {
       setSelectedForms([...selectedForms, { ...form, learned: true }]);
     }
   };
@@ -238,7 +238,7 @@ export default function CharacterCreation() {
               Choose <strong className="text-foreground">2 starting forms</strong>. You may adopt up to 3 forms later as you grow.
             </p>
             <p className="text-center text-xs text-muted-foreground/60 mb-2 flavor-text italic">
-              Forms from your tier, plus one tier above or below.
+              Forms from your tier, plus one tier above or below. Only {MAX_FORMS_ABOVE_TIER} may come from the tier above.
             </p>
             <div className="flex gap-2 justify-center mb-4 text-[10px] text-muted-foreground">
               <span className="px-2 py-0.5 rounded border border-border">Same tier: no penalty</span>
@@ -248,7 +248,8 @@ export default function CharacterCreation() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {availableForms.map(form => {
                 const isSelected = selectedForms.find(f => f.id === form.id);
-                const disabled = !isSelected && selectedForms.length >= 2;
+                const blockedByAboveRule = !isSelected && !canAddForm(selectedForms, form, startingTier);
+                const disabled = !isSelected && (selectedForms.length >= 2 || blockedByAboveRule);
                 const formTierIdx = TIER_ORDER.indexOf(form.tier);
                 const myTierIdx = TIER_ORDER.indexOf(startingTier);
                 const tierDiff = formTierIdx - myTierIdx;
@@ -272,6 +273,9 @@ export default function CharacterCreation() {
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
+                      {blockedByAboveRule && selectedForms.length < 2 && (
+                        <p className="text-[10px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="text-[10px] border-primary/20 text-primary bg-primary/5">
                           +{form.baseAllureModifier} Allure

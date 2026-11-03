@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TIER_ORDER, getValidForms } from "./gameData";
+import { TIER_ORDER, getValidForms, canAddForm, MAX_FORMS_ABOVE_TIER } from "./gameData";
 import { Button } from "@/components/ui/button";
 
 const MAX_FORMS = 3;
@@ -9,18 +9,19 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
   // Include all forms from tier-1, current tier, and tier+1
   const validForms = getValidForms(character.tier, character.mass);
 
+  // Start from the current forms, keeping within the form limit and the one-form-above rule
   const [selected, setSelected] = useState(() => {
     return (character.forms || [])
       .map(ref => validForms.find(f => f.id === ref.formId))
       .filter(Boolean)
-      .slice(0, MAX_FORMS);
+      .reduce((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, character.tier) ? [...acc, form] : acc), []);
   });
 
   const toggle = (form) => {
     setSelected(prev => {
       const exists = prev.find(f => f.id === form.id);
       if (exists) return prev.filter(f => f.id !== form.id);
-      if (prev.length >= MAX_FORMS) return prev;
+      if (prev.length >= MAX_FORMS || !canAddForm(prev, form, character.tier)) return prev;
       return [...prev, form];
     });
   };
@@ -37,7 +38,7 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
   const tierLabel = (tier) => {
     const idx = TIER_ORDER.indexOf(tier);
     if (idx === currentTierIdx - 1) return `${tier} Tier (Below — simpler forms, –1 Patience)`;
-    if (idx === currentTierIdx + 1) return `${tier} Tier (Above — ambitious forms, –2 Plausibility)`;
+    if (idx === currentTierIdx + 1) return `${tier} Tier (Above — ambitious forms, –2 Plausibility, max ${MAX_FORMS_ABOVE_TIER})`;
     return `${tier} Tier (Current)`;
   };
 
@@ -65,7 +66,8 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {forms.map(form => {
               const isSelected = !!selected.find(f => f.id === form.id);
-              const isDisabled = !isSelected && selected.length >= MAX_FORMS;
+              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, character.tier);
+              const isDisabled = !isSelected && (selected.length >= MAX_FORMS || blockedByAboveRule);
               return (
                 <button
                   key={form.id}
@@ -88,6 +90,9 @@ export default function FormSelector({ character, onConfirm, onSkip }) {
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground">{form.description}</p>
+                  {blockedByAboveRule && selected.length < MAX_FORMS && (
+                    <p className="text-[9px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
+                  )}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {form.utilityTags.map(tag => (
                       <span key={tag} className="text-[9px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>

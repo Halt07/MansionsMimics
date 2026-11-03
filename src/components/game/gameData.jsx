@@ -1751,6 +1751,19 @@ export function isFormMassGated(form) {
   return form.baseMassRange[0] > TIER_CONFIG[form.tier].massRange[0];
 }
 
+// Only one of a mimic's forms may come from the tier above its own.
+export const MAX_FORMS_ABOVE_TIER = 1;
+
+export function isFormAboveTier(form, mimicTier) {
+  return TIER_ORDER.indexOf(form.tier) === TIER_ORDER.indexOf(mimicTier) + 1;
+}
+
+/** Whether `form` may be added to `selectedForms` without breaking the one-form-above rule. */
+export function canAddForm(selectedForms, form, mimicTier) {
+  if (!isFormAboveTier(form, mimicTier)) return true;
+  return selectedForms.filter(f => isFormAboveTier(f, mimicTier)).length < MAX_FORMS_ABOVE_TIER;
+}
+
 export function getValidForms(tierStr, massVal) {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];

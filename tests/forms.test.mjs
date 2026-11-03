@@ -3,6 +3,7 @@
 export default async function (ctx) {
   await availability(ctx);
   await penalties(ctx);
+  await oneFormAbove(ctx);
 }
 
 async function availability({ gameData: m, ok, log }) {
@@ -56,4 +57,16 @@ async function penalties({ gameData: m, ok }) {
   const own = rate(standardForm);
   const lower = rate(lesserForm);
   ok(Math.abs(own - lower) < 0.03, `same Plausibility for own-tier and lower-tier forms when Patience is equal (${(own * 100).toFixed(0)}% vs ${(lower * 100).toFixed(0)}%)`);
+}
+
+// Only one form may come from the tier above
+async function oneFormAbove({ gameData: m, ok }) {
+  const greater = m.MASTER_FORMS.Greater;
+  const standardForm = m.MASTER_FORMS.Standard[0];
+  const lesserForm = m.MASTER_FORMS.Lesser[0];
+  ok(m.MAX_FORMS_ABOVE_TIER === 1, 'limit is 1 form from the tier above');
+  ok(m.canAddForm([], greater[0], 'Standard'), 'first form from the tier above is allowed');
+  ok(!m.canAddForm([greater[0]], greater[1], 'Standard'), 'second form from the tier above is refused');
+  ok(m.canAddForm([greater[0]], standardForm, 'Standard') && m.canAddForm([greater[0]], lesserForm, 'Standard'), 'own-tier and lower-tier forms are still allowed alongside it');
+  ok(m.canAddForm([greater[0]], greater[1], 'Greater'), 'after evolving, those forms are no longer "above" and the limit no longer applies to them');
 }
