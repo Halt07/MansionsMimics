@@ -200,6 +200,9 @@ export default function Codex() {
                         {form.utilityTags.map((t) =>
                     <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{t}</span>
                     )}
+                        {(form.builtInTraits || []).map((t) =>
+                    <span key={t} title="Built-in trait" className="text-[9px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{t}</span>
+                    )}
                       </div>
                       <div className="border-t border-border pt-2 mt-2">
                         <p className="text-[10px] text-muted-foreground font-cinzel uppercase tracking-wide mb-1">Potential Flaws</p>
@@ -309,7 +312,7 @@ export default function Codex() {
                 {`${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
                 {adv.minTier && (
                   <span className="ml-2 align-middle text-[10px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
-                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{adv.wholeMealMass ? ` · Whole at ${adv.wholeMealMass}` : ""}
+                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{adv.wholeMealMass ? ` · Consumed whole at ${adv.wholeMealMass}` : ""}
                   </span>
                 )}
               </>}>
@@ -415,7 +418,7 @@ export default function Codex() {
               <Collapsible title="Allure Check">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>Lure rolls <span className="text-foreground">Base Allure + form modifier + room context d6</span> vs. the adventurer's <span className="text-foreground">Discipline + Suspicion/2 d6</span>. Success draws them into your room.</p>
-                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials, surface traits, symbolic traits, condition traits and your form's tags all count.</p>
+                  <p>Your look is compared against what each adventurer is <span className="text-yellow-400">attracted to</span> and <span className="text-red-400">put off by</span>. Materials, surface traits, symbolic traits, condition traits, your form's tags and your form's built-in traits (e.g. a Chest is always Iron-Banded and Heavy-Lidded) all count.</p>
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• Each quality they like: <span className="text-green-400">+1 die</span>, up to your Plausibility. Going over that cap is too good to be true: <span className="text-red-400">+1 suspicion</span>.</li>
                     <li>• Each quality they dislike: <span className="text-red-400">–1 die</span>, with no cap. A King won't be tempted by anything Cracked or Dusty.</li>
@@ -580,7 +583,7 @@ export default function Codex() {
                   </ul>
                   <p>Giant-kin adventurers yield <span className="text-foreground font-semibold">12 AP</span> when consumed — roughly double to triple normal adventurer rewards.</p>
                   <p className="font-semibold text-foreground mt-2">Too big to swallow</p>
-                  <p>Each giant can only be swallowed whole once your mass is <span className="text-foreground">8 above the mass it first appears at</span> (shown as "Whole at" on its Codex entry — e.g. a Half-Giant Mercenary at mass 36). Until then you take <span className="text-foreground">partial bites</span>, like a Minor mimic: each bite that holds is worth <span className="text-foreground">2–3 AP</span> and may teach one of the giant's materials, and a giant worn down by enough bites collapses for a final <span className="text-foreground">+2 AP</span>.</p>
+                  <p>Each giant can only be swallowed whole once your mass is <span className="text-foreground">8 above the mass it first appears at</span> (shown as "Consumed whole at" on its Codex entry — e.g. a Half-Giant Mercenary at mass 36). Until then you take <span className="text-foreground">partial bites</span>, like a Minor mimic: each bite that holds is worth <span className="text-foreground">2–3 AP</span> and may teach one of the giant's materials, and a giant worn down by enough bites collapses for a final <span className="text-foreground">+2 AP</span>.</p>
                 </div>
               </Collapsible>
             </div>

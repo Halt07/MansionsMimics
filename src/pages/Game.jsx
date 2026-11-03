@@ -988,6 +988,11 @@ export default function Game() {
               {activeForm && (
                 <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
               )}
+              {activeForm?.builtInTraits?.length > 0 && (
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  Built-in: <span className="text-primary">{activeForm.builtInTraits.join(", ")}</span>
+                </p>
+              )}
               {/* Current appearance summary */}
               {character.currentAppearance && (() => {
                 const app = character.currentAppearance;

@@ -8,6 +8,7 @@ export const MASTER_FORMS = {
   Minor: [
     {
       id: "minor_pillow", name: "Pillow", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Minimalist", "Warm to Touch"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Comfort", "Bedroom"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Soft, inviting, often overlooked.",
       flawProfiles: [
@@ -18,6 +19,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_goblet", name: "Goblet", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Valuable", "Dining"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Tempting when gilded.",
       flawProfiles: [
@@ -28,6 +30,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_boot", name: "Boot", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Minimalist"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Wearable"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Requires close contact to be effective.",
       flawProfiles: [
@@ -38,6 +41,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_book", name: "Book", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Highly effective on scholars.",
       flawProfiles: [
@@ -48,6 +52,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_jewelry_box", name: "Jewelry Box", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Ornate", "Heavy-Lidded"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Storage"],
       materialSlots: 3, digestCapacityRequired: 2, description: "Extremely tempting if ornate.",
       flawProfiles: [
@@ -58,6 +63,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_teapot", name: "Teapot", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Dining"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Common in civilized spaces.",
       flawProfiles: [
@@ -68,6 +74,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_candlestick", name: "Candlestick", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Attractive if silver or gold.",
       flawProfiles: [
@@ -78,6 +85,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "minor_brick", name: "Brick", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Minimalist"],
       baseAllureModifier: 0, plausibilityModifier: 1, utilityTags: ["Structural"],
       materialSlots: 1, digestCapacityRequired: 1, description: "Low allure, high plausibility.",
       flawProfiles: [
@@ -91,6 +99,7 @@ export const MASTER_FORMS = {
   Lesser: [
     {
       id: "lesser_chest", name: "Chest", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Iron-Banded", "Heavy-Lidded"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 3, description: "Classic treasure lure.",
       flawProfiles: [
@@ -101,6 +110,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Iron-Banded"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Common in cellars and cargo holds.",
       flawProfiles: [
@@ -111,6 +121,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_crate", name: "Crate", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Reinforced", "Minimalist"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Stacked and overlooked in storage rooms.",
       flawProfiles: [
@@ -121,6 +132,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_chair", name: "Chair", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Seating"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Invites close and prolonged contact.",
       flawProfiles: [
@@ -131,6 +143,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_painting", name: "Painting", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Valuable", "Decor"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Decorative and plausibly ignored.",
       flawProfiles: [
@@ -141,6 +154,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_statuette", name: "Statuette", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Valuable"],
       materialSlots: 2, digestCapacityRequired: 2, description: "Small but enticingly valuable.",
       flawProfiles: [
@@ -151,6 +165,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "lesser_bookshelf_small", name: "Small Bookshelf", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Knowledge", "Storage"],
       materialSlots: 3, digestCapacityRequired: 3, description: "Blends into studies and libraries.",
       flawProfiles: [
@@ -164,6 +179,7 @@ export const MASTER_FORMS = {
   Standard: [
     {
       id: "standard_wardrobe", name: "Wardrobe", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Storage"],
       materialSlots: 3, digestCapacityRequired: 4, description: "Tall and imposing storage, ideal for ambush.",
       flawProfiles: [
@@ -174,6 +190,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_bookshelf", name: "Bookshelf", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 4, description: "A scholar's temptation.",
       flawProfiles: [
@@ -184,6 +201,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_writing_desk", name: "Writing Desk", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 3, digestCapacityRequired: 4, description: "Invites prolonged interaction.",
       flawProfiles: [
@@ -194,6 +212,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_dining_table", name: "Dining Table", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Carved", "Reinforced"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Dining"],
       materialSlots: 3, digestCapacityRequired: 4, description: "Central to gathering spaces.",
       flawProfiles: [
@@ -204,6 +223,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_door", name: "Door", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Reinforced", "Iron-Banded"],
       baseAllureModifier: 1, plausibilityModifier: 1, utilityTags: ["Structural"],
       materialSlots: 2, digestCapacityRequired: 4, description: "Blends seamlessly into architecture.",
       flawProfiles: [
@@ -214,6 +234,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "standard_grand_chair", name: "Grand Chair", tier: "Standard", baseMassRange: [9, 12],
+      builtInTraits: ["Ornate", "Carved"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Seating", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 4, description: "Ornate and commanding.",
       flawProfiles: [
@@ -227,6 +248,7 @@ export const MASTER_FORMS = {
   Greater: [
     {
       id: "greater_statue", name: "Statue", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Carved"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 5, description: "Imposing and monumental.",
       flawProfiles: [
@@ -237,6 +259,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "greater_piano", name: "Piano", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Ornate", "Heavy-Lidded"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment"],
       materialSlots: 4, digestCapacityRequired: 5, description: "Elegant, complex, and sonically dangerous.",
       flawProfiles: [
@@ -247,6 +270,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "greater_wall", name: "Wall Section", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Reinforced"],
       baseAllureModifier: 0, plausibilityModifier: 2, utilityTags: ["Structural"],
       materialSlots: 2, digestCapacityRequired: 5, description: "Blends into architecture seamlessly.",
       flawProfiles: [
@@ -257,6 +281,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "greater_throne", name: "Throne", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Ornate", "Carved"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Valuable", "Authority"],
       materialSlots: 4, digestCapacityRequired: 5, description: "Symbol of power and temptation.",
       flawProfiles: [
@@ -267,6 +292,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "greater_bed", name: "Bed", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Carved", "Warm to Touch"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Comfort"],
       materialSlots: 3, digestCapacityRequired: 5, description: "Invites vulnerability.",
       flawProfiles: [
@@ -280,6 +306,7 @@ export const MASTER_FORMS = {
   Grand: [
     {
       id: "grand_personal_library", name: "Personal Library", tier: "Grand", baseMassRange: [17, 25],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Structural", "Knowledge"],
       materialSlots: 6, digestCapacityRequired: 6, description: "An enclosed sanctuary of scholarship.",
       flawProfiles: [
@@ -291,6 +318,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_parlor", name: "Parlor", tier: "Grand", baseMassRange: [17, 25],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Structural", "Social"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Designed for comfort, conversation, and subtle entrapment.",
       flawProfiles: [
@@ -302,6 +330,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_carriage", name: "Carriage", tier: "Grand", baseMassRange: [17, 25],
+      builtInTraits: ["Reinforced", "Iron-Banded"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Transport"],
       materialSlots: 5, digestCapacityRequired: 6, description: "Elegant transport with predatory patience.",
       flawProfiles: [
@@ -313,6 +342,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_chandelier", name: "Chandelier", tier: "Grand", baseMassRange: [17, 25],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A glittering centerpiece suspended above prey.",
       flawProfiles: [
@@ -324,6 +354,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_vault", name: "Vault", tier: "Grand", baseMassRange: [17, 25],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Massive, secure, and hungry.",
       flawProfiles: [
@@ -335,6 +366,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "grand_small_outhouse", name: "Small Outhouse", tier: "Grand", baseMassRange: [17, 22],
+      builtInTraits: ["Minimalist"],
       baseAllureModifier: 1, plausibilityModifier: 2, utilityTags: ["Structural"],
       materialSlots: 4, digestCapacityRequired: 6, description: "Unassuming, isolated, and rarely questioned.",
       flawProfiles: [
@@ -349,6 +381,7 @@ export const MASTER_FORMS = {
   Apex: [
     {
       id: "apex_roadside_inn", name: "Roadside Inn", tier: "Apex", baseMassRange: [26, 40],
+      builtInTraits: ["Reinforced"],
       baseAllureModifier: 5, plausibilityModifier: 1, utilityTags: ["Structural", "Social", "Hospitality"],
       materialSlots: 8, digestCapacityRequired: 8, description: "Warm lights, soft beds, and a hunger behind every wall.",
       flawProfiles: [
@@ -360,6 +393,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_stable", name: "Stable", tier: "Apex", baseMassRange: [24, 35],
+      builtInTraits: ["Minimalist", "Reinforced"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Agricultural"],
       materialSlots: 7, digestCapacityRequired: 8, description: "Warm hay, heavy beams, and the quiet patience of a trap.",
       flawProfiles: [
@@ -371,6 +405,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_chapel", name: "Chapel", tier: "Apex", baseMassRange: [28, 45],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Religious"],
       materialSlots: 8, digestCapacityRequired: 9, description: "Sanctuary to some. Sanctuary from none.",
       flawProfiles: [
@@ -382,6 +417,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_watchtower", name: "Watchtower", tier: "Apex", baseMassRange: [25, 38],
+      builtInTraits: ["Reinforced", "Iron-Banded"],
       baseAllureModifier: 2, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive"],
       materialSlots: 7, digestCapacityRequired: 8, description: "A solitary sentinel with a view — and an appetite.",
       flawProfiles: [
@@ -393,6 +429,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_abandoned_cottage", name: "Abandoned Cottage", tier: "Apex", baseMassRange: [22, 34],
+      builtInTraits: ["Minimalist"],
       baseAllureModifier: 3, plausibilityModifier: 3, utilityTags: ["Structural", "Rural"],
       materialSlots: 7, digestCapacityRequired: 8, description: "Lonely, quiet, and patiently waiting.",
       flawProfiles: [
@@ -405,6 +442,7 @@ export const MASTER_FORMS = {
     // ── Mass-gated Apex forms ──
     {
       id: "apex_castle_gate", name: "Castle Gate", tier: "Apex", baseMassRange: [35, 99],
+      builtInTraits: ["Reinforced", "Iron-Banded"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive", "Authority"],
       materialSlots: 9, digestCapacityRequired: 10, description: "Imposing, inevitable, and patient as stone.",
       flawProfiles: [
@@ -417,6 +455,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "apex_lighthouse", name: "Lighthouse", tier: "Apex", baseMassRange: [38, 99],
+      builtInTraits: ["Reinforced"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Coastal", "Lighting"],
       materialSlots: 9, digestCapacityRequired: 10, description: "A beacon in the dark. A trap for the hopeful.",
       flawProfiles: [
@@ -430,6 +469,7 @@ export const MASTER_FORMS = {
     // ── Giant's Castle forms (mass 28+, giant-realm only) ──
     {
       id: "giant_pillow", name: "Giant Pillow", tier: "Apex", baseMassRange: [28, 99],
+      builtInTraits: ["Warm to Touch"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Comfort", "Bedroom"],
       materialSlots: 4, digestCapacityRequired: 6, description: "Enormous, soft, and utterly inviting to giant-folk seeking rest.",
       flawProfiles: [
@@ -440,6 +480,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_goblet", name: "Giant Goblet", tier: "Apex", baseMassRange: [28, 99],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Dining"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A goblet the size of a barrel — gleaming with giant's gold.",
       flawProfiles: [
@@ -450,6 +491,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_chest", name: "Giant Chest", tier: "Apex", baseMassRange: [30, 99],
+      builtInTraits: ["Iron-Banded", "Heavy-Lidded"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 5, digestCapacityRequired: 8, description: "A treasure chest large enough to swallow a horse — and hungry for giants.",
       flawProfiles: [
@@ -460,6 +502,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_book", name: "Giant Tome", tier: "Apex", baseMassRange: [30, 99],
+      builtInTraits: ["Ornate"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A tome taller than a man — giants read standing up.",
       flawProfiles: [
@@ -470,6 +513,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_barrel", name: "Giant Barrel", tier: "Apex", baseMassRange: [28, 99],
+      builtInTraits: ["Iron-Banded"],
       baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage"],
       materialSlots: 4, digestCapacityRequired: 7, description: "A barrel that could hold a whole tavern's supply — and something far more dangerous.",
       flawProfiles: [
@@ -480,6 +524,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_throne", name: "Giant Throne", tier: "Apex", baseMassRange: [35, 99],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Valuable", "Authority"],
       materialSlots: 6, digestCapacityRequired: 10, description: "A seat of giant power — carved from beanstalk timber and inlaid with gold. Nothing is more tempting to a giant lord.",
       flawProfiles: [
@@ -491,6 +536,7 @@ export const MASTER_FORMS = {
     },
     {
       id: "giant_bed", name: "Giant Bed", tier: "Apex", baseMassRange: [33, 99],
+      builtInTraits: ["Warm to Touch", "Carved"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Comfort"],
       materialSlots: 5, digestCapacityRequired: 9, description: "Piled with golden goose down and cloud fleece — the most vulnerable moment for any giant.",
       flawProfiles: [
@@ -536,7 +582,7 @@ export const MATERIAL_COLORS = {
 // APPEARANCE LIMITS
 // ============================================================
 export const APPEARANCE_LIMITS = {
-  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 0 },
+  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
   Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
   Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1 },
   Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2 },
@@ -1756,7 +1802,8 @@ export function stealthCheck(plausibility, patience, formTier, mimicTier, form, 
 }
 
 // Which of an adventurer's liked and disliked qualities the mimic's current look matches.
-// Materials: primary + secondary. Traits: surface, symbolic and condition. Tags: the form's utility tags.
+// Materials: primary + secondary. Traits: surface, symbolic and condition traits from the appearance,
+// plus the form's built-in traits (structural/aura, e.g. a Chest is Iron-Banded). Tags: the form's utility tags.
 //   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
 //   disliked — each match is -1 allure die (adventurer.repelledBy)
 export function calcAllureBreakdown(form, currentAppearance, adventurer) {
@@ -1768,6 +1815,7 @@ export function calcAllureBreakdown(form, currentAppearance, adventurer) {
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),
     ...(currentAppearance.conditionTraits || []),
+    ...(form.builtInTraits || []),
   ];
   const formTags = form.utilityTags || [];
   const matching = (qualities = {}) => [
