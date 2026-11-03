@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -121,6 +121,11 @@ export default function Game() {
   const [acting, setActing] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   const [evolveChoice, setEvolveChoice] = useState(null);
+  // One purchase per visit to the upgrade screen; reset each time the screen opens
+  const upgradeChosenRef = useRef(false);
+  useEffect(() => {
+    if (phase === "evolve") upgradeChosenRef.current = false;
+  }, [phase]);
   const [showFormPanel, setShowFormPanel] = useState(false);
   const [showAppearancePanel, setShowAppearancePanel] = useState(false);
   const [smallCreatures, setSmallCreatures] = useState([]);
@@ -155,7 +160,8 @@ export default function Game() {
           if (massLost > 0) {
             const newMass = char.mass - massLost;
             char.mass = newMass;
-            db.entities.MimicCharacter.update(char.id, { mass: newMass });
+            db.entities.MimicCharacter.update(char.id, { mass: newMass })
+              .catch(err => console.error("Failed to save mass decay:", err));
             decayMessage = `You have been away for ${Math.floor(daysSinceFed)} days without feeding. Your mass has diminished by ${massLost} (now ${newMass}). Hunger gnaws at your form.`;
           }
         }
@@ -173,6 +179,14 @@ export default function Game() {
   const addEvent = useCallback((type, message) => {
     setEvents(prev => [...prev, { turn: prev.length + 1, type, message }]);
   }, []);
+
+  // Save changes to the character. The game never waits on this; a failed save is
+  // reported in the event log instead of silently disappearing.
+  const persist = (updates) =>
+    db.entities.MimicCharacter.update(character.id, updates).catch(err => {
+      console.error("Failed to save character:", err);
+      addEvent("alert", `⚠ Your progress could not be saved: ${String(err?.message || err).split("\n")[0]}`);
+    });
 
   const FALLBACK_CREATURES = [
     { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
@@ -465,7 +479,7 @@ export default function Game() {
         setRivalMimic(prev => prev ? { ...prev, consumed: true } : prev);
         const updatedChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
         setCharacter(updatedChar);
-        db.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
+        persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
         const cfg2 = TIER_CONFIG[character.tier];
         if (updatedChar.assimilationPoints >= cfg2.apToEvolve) {
           addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
@@ -553,7 +567,7 @@ export default function Game() {
             learnedMaterials,
           };
           setCharacter(updatedChar);
-          db.entities.MimicCharacter.update(character.id, {
+          persist({
             assimilationPoints: updatedChar.assimilationPoints,
             learnedMaterials: updatedChar.learnedMaterials,
             lastFedAt: new Date().toISOString(),
@@ -569,7 +583,7 @@ export default function Game() {
               addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
               const finalChar = { ...updatedChar, assimilationPoints: updatedChar.assimilationPoints + 2 };
               setCharacter(finalChar);
-              db.entities.MimicCharacter.update(character.id, { assimilationPoints: finalChar.assimilationPoints });
+              persist({ assimilationPoints: finalChar.assimilationPoints });
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
             }
           } else {
@@ -647,7 +661,7 @@ export default function Game() {
         learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
       };
       setCharacter(updatedChar);
-      db.entities.MimicCharacter.update(character.id, {
+      persist({
         assimilationPoints: updatedChar.assimilationPoints,
         learnedMaterials: updatedChar.learnedMaterials,
         learnedTraits: updatedChar.learnedTraits,
@@ -679,7 +693,7 @@ export default function Game() {
       assimilationPoints: (character.assimilationPoints || 0) + creature.ap,
     };
     setCharacter(updatedChar);
-    db.entities.MimicCharacter.update(character.id, { assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
+    persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
     const cfg = TIER_CONFIG[character.tier];
     if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
       addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
@@ -692,12 +706,12 @@ export default function Game() {
     setPhase("formSelect");
   };
 
-  const confirmFormSelections = async (selectedForms) => {
+  const confirmFormSelections = (selectedForms) => {
     // selectedForms: array of form objects (up to 3)
     const formRefs = selectedForms.map(f => ({ formId: f.id, name: f.name, tier: f.tier, learned: true }));
     const updatedChar = { ...character, forms: formRefs, activeFormIndex: 0 };
     setCharacter(updatedChar);
-    await db.entities.MimicCharacter.update(character.id, { forms: formRefs, activeFormIndex: 0 });
+    persist({ forms: formRefs, activeFormIndex: 0 });
     addEvent("info", `You reshape yourself. New forms prepared: ${formRefs.map(f => f.name).join(", ")}.`);
     setPhase("setup");
   };
@@ -705,7 +719,7 @@ export default function Game() {
   const doChangeForm = (formIndex) => {
     const updatedChar = { ...character, activeFormIndex: formIndex };
     setCharacter(updatedChar);
-    db.entities.MimicCharacter.update(character.id, { activeFormIndex: formIndex });
+    persist({ activeFormIndex: formIndex });
     const newForm = MASTER_FORMS[character.forms[formIndex]?.tier]?.find(f => f.id === character.forms[formIndex]?.formId);
     if (hasMagic(character.currentAppearance, "Feywood")) {
       addEvent("info", `You flow seamlessly into the form of a ${newForm?.name || "new shape"} — the Feywood makes the shift effortless.`);
@@ -720,7 +734,7 @@ export default function Game() {
   const doUpdateAppearance = (newAppearance) => {
     const updatedChar = { ...character, currentAppearance: newAppearance };
     setCharacter(updatedChar);
-    db.entities.MimicCharacter.update(character.id, { currentAppearance: newAppearance });
+    persist({ currentAppearance: newAppearance });
     addEvent("info", `You adjust your surface appearance.`);
     const soulglassNew = hasMagic(newAppearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
     if (soulglassNew && phase === "hunt" && rivalMimic && !rivalMimic.consumed && !rivalMimic.revealed) {
@@ -819,8 +833,10 @@ export default function Game() {
 
   const STAT_CAP = 6;
 
-  const handleEvolution = async (choice) => {
-    if (!character) return;
+  // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
+  // to upgrade again you have to reach the AP threshold again.
+  const handleEvolution = (choice) => {
+    if (!character || upgradeChosenRef.current) return;
     let updates = {};
     const cfg = TIER_CONFIG[character.tier];
 
@@ -866,7 +882,7 @@ export default function Game() {
           if (newMassVal >= 40 && character.mass < 40) {
             addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
             setApexPeakAchieved(true);
-            db.entities.MimicCharacter.update(character.id, { ...updates, apexPeakReached: true });
+            updates.apexPeakReached = true;
           }
         }
       }
@@ -884,17 +900,18 @@ export default function Game() {
       addEvent("evolve", `Your patience increases to ${character.patience + 1}.`);
     }
 
+    upgradeChosenRef.current = true;
     const updatedChar = { ...character, ...updates };
     setCharacter(updatedChar);
-    await db.entities.MimicCharacter.update(character.id, updates);
 
-    // If forms were invalidated on tier-up, force form selection
+    // Leave the upgrade screen right away. If forms were invalidated on tier-up, force form selection.
     if (updates.forms !== undefined) {
       setPhase("formSelect");
     } else if (phase === "evolve") {
       setPhase("hunt");
     }
     setEvolveChoice(null);
+    persist(updates);
   };
 
   const activeAdventurers = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
@@ -1467,6 +1484,9 @@ export default function Game() {
               <h2 className="font-cinzel text-2xl text-primary mb-2">Assimilation Threshold Reached</h2>
               <p className="flavor-text text-muted-foreground mb-6 italic">
                 Your body strains with absorbed essence. Spend your assimilation — grow, or refine.
+              </p>
+              <p className="text-xs text-muted-foreground -mt-4 mb-6">
+                Choose one. To upgrade again, you&apos;ll need to reach the threshold again ({character.assimilationPoints} / {cfg?.apToEvolve} AP).
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
