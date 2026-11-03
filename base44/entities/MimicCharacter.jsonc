@@ -1,0 +1,147 @@
+{
+  "name": "MimicCharacter",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The mimic's name"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "Minor",
+        "Lesser",
+        "Standard",
+        "Greater",
+        "Grand",
+        "Apex"
+      ],
+      "default": "Minor"
+    },
+    "startingType": {
+      "type": "string",
+      "enum": [
+        "Minor",
+        "Lesser"
+      ],
+      "description": "Starting choice at character creation"
+    },
+    "mass": {
+      "type": "number",
+      "default": 2
+    },
+    "digestiveCapacity": {
+      "type": "number",
+      "default": 5
+    },
+    "patience": {
+      "type": "number",
+      "default": 3
+    },
+    "adhesion": {
+      "type": "number",
+      "default": 3
+    },
+    "plausibility": {
+      "type": "number",
+      "default": 3
+    },
+    "assimilationPoints": {
+      "type": "number",
+      "default": 0
+    },
+    "baseAllure": {
+      "type": "number",
+      "default": 2
+    },
+    "forms": {
+      "type": "array",
+      "description": "Up to 3 chosen forms",
+      "items": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "learned": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "activeFormIndex": {
+      "type": "number",
+      "default": 0
+    },
+    "learnedMaterials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "learnedTraits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "currentAppearance": {
+      "type": "object",
+      "properties": {
+        "primaryMaterial": {
+          "type": "string"
+        },
+        "secondaryMaterial": {
+          "type": "string"
+        },
+        "magicalMaterials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "surfaceTraits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "symbolicTraits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conditionTraits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "apexPeakReached": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the mimic has reached mass 40 at Apex tier"
+    },
+    "lastFedAt": {
+      "type": "string",
+      "description": "ISO timestamp of the last time the mimic consumed something (used for mass decay)"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "tier"
+  ]
+}

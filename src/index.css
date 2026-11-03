@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 260 20% 8%;
+  --foreground: 45 30% 90%;
+
+  --card: 260 18% 12%;
+  --card-foreground: 45 30% 90%;
+
+  --popover: 260 18% 12%;
+  --popover-foreground: 45 30% 90%;
+
+  --primary: 45 70% 55%;
+  --primary-foreground: 260 20% 8%;
+
+  --secondary: 270 25% 20%;
+  --secondary-foreground: 45 30% 90%;
+
+  --muted: 260 15% 18%;
+  --muted-foreground: 260 10% 55%;
+
+  --accent: 280 40% 30%;
+  --accent-foreground: 45 30% 90%;
+
+  --destructive: 0 65% 50%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 260 20% 20%;
+  --input: 260 20% 20%;
+  --ring: 45 70% 55%;
+
+  --radius: 0.75rem;
+
+  --chart-1: 45 70% 55%;
+  --chart-2: 280 40% 45%;
+  --chart-3: 160 40% 40%;
+  --chart-4: 20 70% 55%;
+  --chart-5: 200 50% 50%;
+
+  --sidebar-background: 260 20% 10%;
+  --sidebar-foreground: 45 30% 90%;
+  --sidebar-primary: 45 70% 55%;
+  --sidebar-primary-foreground: 260 20% 8%;
+  --sidebar-accent: 280 40% 30%;
+  --sidebar-accent-foreground: 45 30% 90%;
+  --sidebar-border: 260 20% 20%;
+  --sidebar-ring: 45 70% 55%;
+}
+
+.dark {
+  --background: 260 20% 6%;
+  --foreground: 45 30% 90%;
+
+  --card: 260 18% 10%;
+  --card-foreground: 45 30% 90%;
+
+  --popover: 260 18% 10%;
+  --popover-foreground: 45 30% 90%;
+
+  --primary: 45 70% 55%;
+  --primary-foreground: 260 20% 8%;
+
+  --secondary: 270 25% 18%;
+  --secondary-foreground: 45 30% 90%;
+
+  --muted: 260 15% 15%;
+  --muted-foreground: 260 10% 50%;
+
+  --accent: 280 40% 28%;
+  --accent-foreground: 45 30% 90%;
+
+  --destructive: 0 65% 50%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 260 20% 18%;
+  --input: 260 20% 18%;
+  --ring: 45 70% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(260, 20%, 8%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(260, 20%, 25%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(45, 70%, 55%);
+}
+
+/* Parchment texture effect for cards */
+.parchment {
+  background: linear-gradient(
+    135deg,
+    hsl(260, 18%, 12%) 0%,
+    hsl(260, 15%, 14%) 50%,
+    hsl(260, 18%, 11%) 100%
+  );
+}
+
+/* Gold text glow */
+.gold-glow {
+  text-shadow: 0 0 10px hsla(45, 70%, 55%, 0.3), 0 0 20px hsla(45, 70%, 55%, 0.1);
+}
+
+/* Subtle pulse animation */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* Crimson text for lore/flavor */
+.flavor-text {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+}
