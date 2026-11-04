@@ -44,6 +44,11 @@ interface LocationDef {
   readonly rare?: boolean;
   /** Adventurers (template names) guaranteed a place in every party here. */
   readonly alwaysIncludes?: readonly string[];
+  /**
+   * A nest of rival mimics, one of them the Elder: [min, max] mimics in total, Elder included.
+   * Devouring the Elder ends the hunt; losing every adventurer does not.
+   */
+  readonly rivalNest?: readonly [number, number];
 }
 
 const LOCATION_DATA = [
@@ -433,6 +438,32 @@ const LOCATION_DATA = [
     rare: true,
     exclusiveRoster: true,
     alwaysIncludes: ["Wide-Eyed Pilgrim"],
+  },
+  {
+    id: "mimic_nest", name: "The Mimic Nest", minTier: "Greater",
+    description: "A derelict dockside warehouse where cargo shifts on its own and porters stop coming back. Your kind has nested here — and one of them is very old.",
+    flavorText: "Too many crates. Too many chests. Some of them are breathing.",
+    rooms: ["Loading Dock", "Crate Stacks", "Foreman's Office", "Cold Storage", "Rope Loft", "Bonded Vault"],
+    roomGraph: {
+      "Loading Dock":     ["Crate Stacks", "Foreman's Office"],
+      "Crate Stacks":     ["Loading Dock", "Cold Storage", "Rope Loft"],
+      "Foreman's Office": ["Loading Dock", "Bonded Vault"],
+      "Cold Storage":     ["Crate Stacks"],
+      "Rope Loft":        ["Crate Stacks"],
+      "Bonded Vault":     ["Foreman's Office"],
+    },
+    partySize: [2, 3], suspicionGrowthRate: 1,
+    advantageTags: ["Storage", "Coastal", "Transport"],
+    imageHint: "dim dockside warehouse crammed with crates and chests, some of them slightly ajar",
+    locationCreatures: [
+      { id: "dock_rat", name: "Dock Rat", ap: 1, discipline: 1, description: "Bold, fat, and strangely nervous around the crates." },
+      { id: "gull", name: "Harbor Gull", ap: 1, discipline: 1, description: "Wandered in through a broken skylight." },
+      { id: "warehouse_cat", name: "Warehouse Cat", ap: 2, discipline: 2, description: "Hisses at certain crates and won't say why." },
+      { id: "eel", name: "Bilge Eel", ap: 2, discipline: 1, description: "Slithering through the flooded corner of the dock." },
+    ],
+    rare: true,
+    exclusiveRoster: true,
+    rivalNest: [3, 4],
   },
 ] as const satisfies readonly LocationDef[];
 

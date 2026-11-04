@@ -12,6 +12,7 @@ import {
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
+  placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -39,14 +40,6 @@ interface SmallCreature extends LocationCreature {
   uid: string;
   isConsumed: boolean;
   location: RoomName;
-}
-
-/** Another mimic hunting the same location. */
-interface RivalMimic {
-  room: RoomName;
-  revealed: boolean;
-  consumed: boolean;
-  clueGiven: boolean;
 }
 
 const ACTION_LIMIT = 50;
@@ -172,7 +165,8 @@ export default function Game() {
   const [hatboxToLegendAchieved, setHatboxToLegendAchieved] = useState(false);
   const [isBountyHunt, setIsBountyHunt] = useState(false);
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
-  const [rivalMimic, setRivalMimic] = useState<RivalMimic | null>(null);
+  // Rival mimics hiding in the location: none, a lone rival, or a whole nest
+  const [rivals, setRivals] = useState<RivalMimic[]>([]);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
   // Where form selection returns to: the hunting-ground screen normally, or straight back
@@ -234,7 +228,7 @@ export default function Game() {
     setEvents([]);
     setMimicRoom(null);
     setIsBountyHunt(false);
-    setRivalMimic(null);
+    setRivals([]);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -248,13 +242,10 @@ export default function Game() {
     const tierIdx = TIER_ORDER.indexOf(character?.tier ?? "Minor");
     const canHaveRival = !bounty && !loc.rare && tierIdx >= TIER_ORDER.indexOf("Greater");
     const hasRival = canHaveRival && Math.random() < (1/7);
-    let rivalData: RivalMimic | null = null;
-    if (hasRival) {
-      // Pick a room other than the player's starting room
-      const otherRooms = loc.rooms.filter(r => r !== room);
-      const rivalRoom = otherRooms[Math.floor(Math.random() * otherRooms.length)];
-      rivalData = { room: rivalRoom, revealed: false, consumed: false, clueGiven: false };
-    }
+    // The Mimic Nest always holds its nest (Elder included); elsewhere maybe a lone rival
+    const newRivals = loc.rivalNest
+      ? placeRivals(loc, room, rollNestKinds(loc))
+      : hasRival ? placeRivals(loc, room, ["lone"]) : [];
 
     const newParty = bounty
       ? generateBountyParty(loc, character?.mass ?? 26)
@@ -264,7 +255,7 @@ export default function Game() {
     setParty(newParty);
     setSmallCreatures(creatures);
     setIsBountyHunt(bounty);
-    setRivalMimic(rivalData);
+    setRivals(newRivals);
     setActionCount(0);
     setRoomSelecting(false);
     // Roll for sickness (only when all stats are capped)
@@ -284,11 +275,16 @@ export default function Game() {
     if (sickness) {
       addEvent("alert", `⚠ You are afflicted with ${sickness.name}: ${sickness.description} ${Object.entries(sickness.penalties).map(([k, v]) => `–${v} ${k}`).join(", ")} this hunt.`);
     }
-    if (rivalData) {
+    if (loc.rivalNest) {
+      addEvent("alert", `The air is thick with hunger. Others of your kind nest here — and one of them is old. Very old.`);
+      addEvent("alert", `Find the Elder Mimic and devour it. Watch where the adventurers vanish: something hungry hides there.`);
+    } else if (newRivals.length > 0) {
       addEvent("alert", `Something feels wrong. Another predator lurks within these walls — and it is not you.`);
-      if (hasMagic(character?.currentAppearance, "Soulglass")) {
-        addEvent("alert", `Your Soulglass hums faintly. The intruder hides in the ${rivalData.room}.`);
-      }
+    }
+    // Soulglass senses the strongest presence: the Elder if there is one
+    const sensed = newRivals.find(r => r.kind === "elder") ?? newRivals[0];
+    if (sensed && hasMagic(character?.currentAppearance, "Soulglass")) {
+      addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
     newParty.forEach(a => addEvent("info", `${a.name} (${a.type}) — currently in the ${a.location}.`));
@@ -392,11 +388,19 @@ export default function Game() {
     addEvent("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
     setMimicRoom(targetRoom);
 
-    // Rival mimic reveal: entering the rival's room exposes it
-    if (rivalMimic && !rivalMimic.consumed && targetRoom === rivalMimic.room) {
-      addEvent("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
-      addEvent("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
-      setRivalMimic(prev => prev ? { ...prev, revealed: true } : prev);
+    // Rival mimic reveal: entering a rival's room exposes it
+    const found = rivalInRoom(rivals, targetRoom);
+    if (found && !found.revealed) {
+      if (found.kind === "elder") {
+        addEvent("alert", `The whole room seems to lean toward you. Something vast and patient has been waiting in the ${targetRoom} — the Elder Mimic.`);
+        addEvent("alert", `It is older and stronger than anything you have faced. Strike to devour it, and the nest is yours.`);
+      } else if (found.kind === "nest") {
+        addEvent("alert", `A young mimic is nested here in the ${targetRoom}, gorged and sluggish. It is not the Elder, but it will feed you. Strike!`);
+      } else {
+        addEvent("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
+        addEvent("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
+      }
+      setRivals(prev => prev.map(r => r.id === found.id ? { ...r, revealed: true } : r));
     }
 
     // Increment action count
@@ -472,8 +476,9 @@ export default function Game() {
 
     if (!anyInRange) {
       // If the rival is revealed and in the same room, give flavor instead of generic message
-      if (rivalMimic?.revealed && !rivalMimic?.consumed && rivalMimic?.room === mimicRoom) {
-        addEvent("alert", `The rival mimic does not respond to your lure — it knows your tricks. You must Strike directly!`);
+      const rivalHere = rivalInRoom(rivals, mimicRoom);
+      if (rivalHere?.revealed) {
+        addEvent("alert", `The ${RIVAL_STATS[rivalHere.kind].name} does not respond to your lure — it knows your tricks. You must Strike directly!`);
       } else {
         addEvent("info", `No adventurers are within lure range (${range} rooms). Wait for them to wander closer.`);
       }
@@ -500,16 +505,24 @@ export default function Game() {
     // Bonesteel: +1 die on strike rolls
     const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
 
-    // Check if rival mimic can be struck (revealed + in same room)
-    if (rivalMimic && rivalMimic.revealed && !rivalMimic.consumed && rivalMimic.room === mimicRoom) {
+    // Check if a rival mimic can be struck (revealed + in same room)
+    const rivalTarget = rivalInRoom(rivals, mimicRoom);
+    if (rivalTarget?.revealed && mimicRoom) {
       setActing(true);
       setActionCount(0); // Strike resets action counter
+      const stats = RIVAL_STATS[rivalTarget.kind];
       const roll = rollDice(strikeAdhesion);
-      const rivalRoll = rollDice(3); // rival resists with 3 dice
+      const rivalRoll = rollDice(stats.dice);
       if (roll >= rivalRoll) {
-        const apGained = 12;
-        addEvent("consume", `You overwhelm the rival mimic! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
-        setRivalMimic(prev => prev ? { ...prev, consumed: true } : prev);
+        const apGained = stats.ap;
+        const updatedRivals = rivals.map(r => r.id === rivalTarget.id ? { ...r, consumed: true } : r);
+        if (rivalTarget.kind === "elder") {
+          addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${apGained} AP.`);
+          addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+        } else {
+          addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
+        }
+        setRivals(updatedRivals);
         const updatedChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
         setCharacter(updatedChar);
         persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
@@ -519,14 +532,11 @@ export default function Game() {
           setPhase("evolve");
         }
       } else {
-        addEvent("escape", `The rival mimic slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
-        // Rival escapes to another room
-        const otherRooms = location.rooms.filter(r => r !== mimicRoom);
-        if (otherRooms.length > 0) {
-          const newRoom = otherRooms[Math.floor(Math.random() * otherRooms.length)];
-          setRivalMimic(prev => prev ? { ...prev, revealed: false, room: newRoom } : prev);
-          addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
-        }
+        addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
+        // The rival escapes to a room away from you and the other rivals
+        const newRoom = rivalEscapeRoom(location, rivals, rivalTarget, mimicRoom);
+        setRivals(prev => prev.map(r => r.id === rivalTarget.id ? { ...r, revealed: false, room: newRoom } : r));
+        addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
         setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
       }
       setActing(false);
@@ -863,8 +873,10 @@ export default function Game() {
     persist({ currentAppearance: newAppearance });
     addEvent("info", `You adjust your surface appearance.`);
     const soulglassNew = hasMagic(newAppearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
-    if (soulglassNew && phase === "hunt" && rivalMimic && !rivalMimic.consumed && !rivalMimic.revealed) {
-      addEvent("alert", `Your Soulglass hums faintly. The rival mimic hides in the ${rivalMimic.room}.`);
+    const hidden = rivals.filter(r => !r.consumed && !r.revealed);
+    const sensed = hidden.find(r => r.kind === "elder") ?? hidden[0];
+    if (soulglassNew && phase === "hunt" && sensed) {
+      addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : `The ${RIVAL_STATS[sensed.kind].name}`} hides in the ${sensed.room}.`);
     }
     setShowAppearancePanel(false);
   };
@@ -901,7 +913,7 @@ export default function Game() {
     // Compute adventurer movement SYNCHRONOUSLY before any setState
     const currentParty = party;
     const currentMimicRoom = mimicRoom;
-    const currentRival = rivalMimic;
+    const currentRivals = rivals;
 
     const newlyArrived: PartyMember[] = [];
     const updatedParty = currentParty.map(adv => {
@@ -913,7 +925,8 @@ export default function Game() {
       const newRoom = candidates[Math.floor(Math.random() * candidates.length)];
       if (newRoom !== adv.location) {
         // Rival mimic: silently consume this adventurer if they move into the rival's room
-        if (currentRival && !currentRival.consumed && newRoom === currentRival.room) {
+        const lurker = rivalInRoom(currentRivals, newRoom);
+        if (lurker) {
           // The rival eats them — adventurer silently vanishes with a cryptic message
           const crypticMessages = [
             `${adv.name} heads toward the ${newRoom}... and does not emerge.`,
@@ -923,7 +936,7 @@ export default function Game() {
             `Something in the ${newRoom} has ${adv.name}'s attention. They do not return.`,
           ];
           addEvent("alert", crypticMessages[Math.floor(Math.random() * crypticMessages.length)]);
-          setRivalMimic(prev => prev ? { ...prev, clueGiven: true } : prev);
+          setRivals(prev => prev.map(r => r.id === lurker.id ? { ...r, clueGiven: true } : r));
           return { ...adv, isAlive: false, isConsumed: false, isDisappeared: true, location: newRoom };
         }
         addEvent("info", `${adv.name} moves from the ${adv.location} to the ${newRoom}.`);
@@ -1048,6 +1061,11 @@ export default function Game() {
   };
 
   const activeAdventurers = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
+  // A nest hunt ends when its Elder is devoured (not when the adventurers run out);
+  // any other hunt ends when no adventurers remain. Either way, wait for a ceremony to finish.
+  const isNest = !!location?.rivalNest;
+  const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
+    (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
   const consumedCount = party.filter(a => a.isConsumed).length;
 
   // Mass-below-tier plausibility penalty
@@ -1232,23 +1250,37 @@ export default function Game() {
             </CardContent>
           </Card>
 
-          {/* Rival Mimic status */}
-          {phase === "hunt" && rivalMimic && !rivalMimic.consumed && (
-            <Card className={`border ${rivalMimic.revealed ? "border-orange-400/50 bg-orange-400/5" : "border-purple-400/20 bg-card"}`}>
-              <CardContent className="p-3">
-                <p className="font-cinzel text-xs mb-1 text-orange-400/90">⚠ Rival Mimic</p>
-                {rivalMimic.clueGiven && !rivalMimic.revealed && (
-                  <p className="text-[10px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to find it.</p>
-                )}
-                {rivalMimic.revealed && (
-                  <p className="text-[10px] text-orange-400/80">Exposed in the <span className="font-bold">{rivalMimic.room}</span>. Move there and Strike to devour it!</p>
-                )}
-                {!rivalMimic.clueGiven && !rivalMimic.revealed && (
-                  <p className="text-[10px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Rival mimic / nest status */}
+          {phase === "hunt" && !huntOver && rivals.some(r => !r.consumed) && (() => {
+            const remaining = rivals.filter(r => !r.consumed);
+            const exposed = remaining.filter(r => r.revealed);
+            const tracked = remaining.some(r => r.clueGiven && !r.revealed);
+            const devoured = rivals.filter(r => r.consumed).length;
+            const elder = remaining.find(r => r.kind === "elder");
+            return (
+              <Card className={`border ${exposed.length > 0 ? "border-orange-400/50 bg-orange-400/5" : "border-purple-400/20 bg-card"}`}>
+                <CardContent className="p-3 space-y-1">
+                  <p className="font-cinzel text-xs text-orange-400/90">{isNest ? "🕸 The Nest" : "⚠ Rival Mimic"}</p>
+                  {isNest && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Mimics devoured: {devoured}{elder && !elder.revealed ? " · The Elder still hides." : ""}
+                    </p>
+                  )}
+                  {exposed.map(r => (
+                    <p key={r.id} className="text-[10px] text-orange-400/80">
+                      {r.kind === "elder" ? "The Elder Mimic" : `A ${RIVAL_STATS[r.kind].name}`} is exposed in the <span className="font-bold">{r.room}</span>. Strike to devour it!
+                    </p>
+                  ))}
+                  {tracked && (
+                    <p className="text-[10px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to where they vanished.</p>
+                  )}
+                  {!tracked && exposed.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Action counter warning */}
           {phase === "hunt" && actionCount >= 30 && (
@@ -1524,7 +1556,7 @@ export default function Game() {
                     setShowFormPanel(false);
                     setShowAppearancePanel(false);
                   }}
-                  disabled={acting || activeAdventurers.some(a => a.location === mimicRoom)}
+                  disabled={acting || huntOver || activeAdventurers.some(a => a.location === mimicRoom)}
                   variant="outline"
                   className="h-auto py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
                 >
@@ -1534,7 +1566,7 @@ export default function Game() {
                 </Button>
                 <Button
                   onClick={doAllureTurn}
-                  disabled={acting || activeAdventurers.length === 0}
+                  disabled={acting || huntOver || activeAdventurers.length === 0}
                   variant="outline"
                   className="h-auto py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
                 >
@@ -1544,7 +1576,7 @@ export default function Game() {
                 </Button>
                 <Button
                   onClick={doStrikeTurn}
-                  disabled={acting || (!party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) && !(rivalMimic?.revealed && !rivalMimic?.consumed && rivalMimic?.room === mimicRoom))}
+                  disabled={acting || huntOver || (!party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) && !rivalInRoom(rivals, mimicRoom)?.revealed)}
                   className="h-auto py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
                   variant="ghost"
                 >
@@ -1554,7 +1586,7 @@ export default function Game() {
                 </Button>
                 <Button
                   onClick={doWaitTurn}
-                  disabled={acting}
+                  disabled={acting || huntOver}
                   variant="outline"
                   className="h-auto py-3 flex-col gap-1 border-border hover:border-purple-400/30"
                 >
@@ -1590,12 +1622,13 @@ export default function Game() {
                 );
               })()}
 
-              {activeAdventurers.length === 0 && party.length > 0 && !ceremonyRunning && (
+              {huntOver && (
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
                   <p className="text-primary font-cinzel mb-2">The hunt is over.</p>
                   <p className="text-xs text-muted-foreground mb-3">
                     {party.filter(a => a.isConsumed).length} consumed · {party.filter(a => a.fled).length} fled
                     {party.some(a => a.isConverted) && ` · ${party.filter(a => a.isConverted).length} converted`}
+                    {isNest && ` · ${rivals.filter(r => r.consumed).length} mimics devoured`}
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">

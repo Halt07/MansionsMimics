@@ -524,6 +524,74 @@ export function rollOfferings(location: HuntLocation, random: () => number = Mat
 }
 
 // ============================================================
+// RIVAL MIMICS
+// A lone rival can lurk in an ordinary hunt; the Mimic Nest holds several, one of
+// them the Elder. Rivals hide in separate rooms, eat adventurers who wander in, and
+// are exposed when the mimic moves into their room.
+// ============================================================
+export type RivalKind = "lone" | "nest" | "elder";
+
+export interface RivalMimic {
+  id: string;
+  kind: RivalKind;
+  room: RoomName;
+  revealed: boolean;
+  consumed: boolean;
+  /** It has eaten someone, so the player knows it's out there. */
+  clueGiven: boolean;
+}
+
+/** Dice a rival resists a Strike with, the AP it's worth, and what the log calls it. */
+export const RIVAL_STATS: Record<RivalKind, { dice: number; ap: number; name: string }> = {
+  lone:  { dice: 3, ap: 12, name: "rival mimic" },
+  nest:  { dice: 3, ap: 6,  name: "nest mimic" },
+  elder: { dice: 5, ap: 18, name: "Elder Mimic" },
+};
+
+/** The kinds of rival in a nest: the Elder plus 2–3 younger mimics (per the location's range). */
+export function rollNestKinds(location: HuntLocation, random: () => number = Math.random): RivalKind[] {
+  if (!location.rivalNest) return [];
+  const [min, max] = location.rivalNest;
+  const count = min + Math.floor(random() * (max - min + 1));
+  return ["elder", ...Array.from({ length: count - 1 }, (): RivalKind => "nest")];
+}
+
+/** Hides rivals in separate rooms, never the mimic's starting room. */
+export function placeRivals(
+  location: HuntLocation, startRoom: RoomName, kinds: readonly RivalKind[], random: () => number = Math.random,
+): RivalMimic[] {
+  const rooms = location.rooms.filter(r => r !== startRoom);
+  for (let i = rooms.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [rooms[i], rooms[j]] = [rooms[j], rooms[i]];
+  }
+  return kinds.slice(0, rooms.length).map((kind, i) => ({
+    id: `rival_${i}`, kind, room: rooms[i], revealed: false, consumed: false, clueGiven: false,
+  }));
+}
+
+/** Where a rival that slipped a Strike hides next: away from the mimic and the other rivals. */
+export function rivalEscapeRoom(
+  location: HuntLocation, rivals: readonly RivalMimic[], escapee: RivalMimic, mimicRoom: RoomName,
+  random: () => number = Math.random,
+): RoomName {
+  const taken = new Set(rivals.filter(r => r.id !== escapee.id && !r.consumed).map(r => r.room));
+  const free = location.rooms.filter(r => r !== mimicRoom && !taken.has(r));
+  const options = free.length > 0 ? free : location.rooms.filter(r => r !== mimicRoom);
+  return options.length > 0 ? options[Math.floor(random() * options.length)] : escapee.room;
+}
+
+/** The uneaten rival hiding in a room, if any. */
+export function rivalInRoom(rivals: readonly RivalMimic[], room: RoomName | null | undefined): RivalMimic | undefined {
+  return rivals.find(r => !r.consumed && r.room === room);
+}
+
+/** Whether a nest hunt has been won (its Elder devoured). */
+export function isNestCleared(rivals: readonly RivalMimic[]): boolean {
+  return rivals.some(r => r.kind === "elder" && r.consumed);
+}
+
+// ============================================================
 // PARTY ELIGIBILITY
 // Whether a template may appear in a party at this location for this mimic.
 // ============================================================

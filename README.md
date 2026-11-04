@@ -53,6 +53,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
 | `tests/achievements.test.mjs` | From Hatbox to Legend eligibility |
 | `tests/rareLocations.test.mjs` | Rare locations opening/expiring, the Hollow Reliquary roster, Devotion and offerings |
+| `tests/mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

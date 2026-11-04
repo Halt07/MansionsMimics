@@ -586,6 +586,59 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["an ink-stained cuff", "a page of skeptical notes", "a broken reading lens"],
   },
 
+  // ── The Mimic Nest (rare location) ──
+  {
+    name: "Warehouse Watchman", type: "Warrior", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "common",
+    locations: ["mimic_nest"],
+    quirks: ["Walks the same round every hour, lantern held high", "Swears the crates were stacked differently yesterday", "Won't sit on anything in here anymore"],
+    alluringQualities: { materials: ["Oak", "Iron"], traits: ["Locked", "Iron-Banded"], tags: ["Storage", "Seating"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
+    lootMaterials: ["Iron", "Wool"],
+    lootTraits: ["Iron-Banded"],
+    partialLoot: ["a cracked lantern shutter", "a ring of warehouse keys", "a strip of oilskin coat"],
+  },
+  {
+    name: "Cargo Assessor", type: "Artificer", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "touch",
+    group: "common",
+    repelledBy: { traits: ["Cracked", "Worn"] },
+    locations: ["mimic_nest"],
+    quirks: ["Counts every crate against the manifest — there is always one too many", "Taps lids to judge what's inside", "Sent by the insurers, and furious about it"],
+    alluringQualities: { materials: ["Mahogany", "Brass"], traits: ["Locked", "Lacquered", "Polished"], tags: ["Storage", "Valuable"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 3, text: 2, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 1, presence: 0 },
+    lootMaterials: ["Brass", "Linen"],
+    lootTraits: ["Lacquered"],
+    partialLoot: ["a page of the cargo manifest", "a brass measuring rule", "an ink-stained cuff"],
+  },
+  {
+    name: "Rat-Catcher", type: "Ranger", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
+    group: "commoners",
+    locations: ["mimic_nest"],
+    quirks: ["Hired to deal with \"the rat problem\" — has seen no rats", "Lays traps in every corner", "Talks to their terrier as if it understands"],
+    alluringQualities: { materials: ["Burlap", "Pine"], traits: ["Worn", "Dusty", "Weathered"], tags: ["Storage", "Coastal"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
+    lootMaterials: ["Burlap", "Goatskin"],
+    lootTraits: ["Weathered"],
+    partialLoot: ["a sprung rat trap", "a leather glove, bitten through", "a sack smelling of bait"],
+    companion: {
+      chance: 0.50,
+      options: [
+        { nameSuffix: "'s Terrier", type: "AnimalCompanion", ap: 1, discipline: 2, constitution: 2, description: "A wiry terrier that growls at the crates, and is right to." },
+      ],
+    },
+  },
+  {
+    name: "Missing Porter's Sister", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["mimic_nest"],
+    quirks: ["Calls her brother's name into every room", "Opens every chest big enough to hide a person", "Refuses to leave until she finds him"],
+    alluringQualities: { materials: ["Pine", "Cotton"], traits: ["Worn", "Heavy-Lidded"], tags: ["Storage", "Comfort"] },
+    perceptionAffinity: { material: 0, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
+    lootMaterials: ["Cotton", "Linen"],
+    lootTraits: ["Worn"],
+    partialLoot: ["a hand-drawn portrait of her brother", "a frayed shawl corner", "a porter's tin token"],
+  },
+
   // ── Supernatural / Monster types ──
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",

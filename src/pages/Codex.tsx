@@ -607,6 +607,8 @@ export default function Codex() {
                   <p>Some hunting grounds aren't always within reach. After each hunt there's a <span className="text-foreground">15% chance</span> that word reaches you of a rare location for which you qualify. It appears on the hunting-ground screen with a <span className="text-amber-400">✦ gold border</span> and stays for <span className="text-foreground">2 hunts elsewhere</span>, or until you hunt there. Only one rare location is open at a time. Rare locations have their own adventurers, and no bounty hunters or rival mimics follow you there.</p>
                   <p className="font-semibold text-foreground">The Hollow Reliquary <span className="text-muted-foreground font-normal">(Standard+)</span></p>
                   <p>A half-ruined shrine built around a sacred chest that once "consumed the unworthy." The chest is long gone, but pilgrims still come, and some of them have never stopped believing it will return.</p>
+                  <p className="font-semibold text-foreground">The Mimic Nest <span className="text-muted-foreground font-normal">(Greater+)</span></p>
+                  <p>A dockside warehouse where your kind has nested: 3–4 rival mimics hide in its rooms, and one of them is the <span className="text-foreground">Elder Mimic</span> (5 dice to resist, 18 AP). Younger nest mimics are easier prey (3 dice, 6 AP). The few adventurers sent to investigate are your best guides — whatever eats them is hiding where they vanished. <span className="text-foreground">Devouring the Elder ends the hunt</span>; running out of adventurers does not.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Giant Realm (Apex — Mass 28+)">
