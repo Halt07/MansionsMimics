@@ -4,6 +4,7 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { TIER_ORDER, TIER_CONFIG } from "../components/game/gameData";
+import { AchievementBadges } from "../components/game/Achievements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye, BookOpen, Sword, User, Trophy } from "lucide-react";
@@ -109,9 +110,7 @@ export default function Home() {
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors">{char.name}</h3>
                       <div className="flex items-center gap-1">
-                        {char.hatboxToLegendReached && <span title="From Hatbox to Legend">📦</span>}
-                        {char.apexPeakReached && <span title="Peak of the Apex">🏆</span>}
-                        {char.titanicFeastReached && <span title="Titanic Feast">🍖</span>}
+                        <AchievementBadges character={char} />
                         <span className="text-xs px-2 py-0.5 rounded border border-primary/30 bg-primary/5 text-primary font-cinzel">
                           {char.tier}
                         </span>

@@ -12,6 +12,7 @@ import {
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
+  CULT_CONVERSIONS, CANNIBAL_MIMICS,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
@@ -29,6 +30,7 @@ import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
+import { AchievementBanners } from "../components/game/Achievements";
 
 // ── Game-screen state types ──
 type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
@@ -160,9 +162,6 @@ export default function Game() {
   const [mimicRoom, setMimicRoom] = useState<RoomName | null>(null);
   const [roomSelecting, setRoomSelecting] = useState(false);
   const [showMovePanel, setShowMovePanel] = useState(false);
-  const [apexPeakAchieved, setApexPeakAchieved] = useState(false);
-  const [titanicFeastAchieved, setTitanicFeastAchieved] = useState(false);
-  const [hatboxToLegendAchieved, setHatboxToLegendAchieved] = useState(false);
   const [isBountyHunt, setIsBountyHunt] = useState(false);
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   // Rival mimics hiding in the location: none, a lone rival, or a whole nest
@@ -196,9 +195,6 @@ export default function Game() {
         }
         setCharacter(char);
         setPhase("setup");
-        if (char.apexPeakReached) setApexPeakAchieved(true);
-        if (char.titanicFeastReached) setTitanicFeastAchieved(true);
-        if (char.hatboxToLegendReached) setHatboxToLegendAchieved(true);
         if (decayMessage) setMassDecayNotice(decayMessage);
       }
     }).catch(err => {
@@ -523,9 +519,20 @@ export default function Game() {
           addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
         }
         setRivals(updatedRivals);
-        const updatedChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
+        const updatedChar = {
+          ...character,
+          assimilationPoints: (character.assimilationPoints || 0) + apGained,
+          mimicsConsumed: character.mimicsConsumed + 1,
+        };
         setCharacter(updatedChar);
-        persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
+        persist({
+          assimilationPoints: updatedChar.assimilationPoints,
+          mimicsConsumed: updatedChar.mimicsConsumed,
+          lastFedAt: new Date().toISOString(),
+        });
+        if (updatedChar.mimicsConsumed === CANNIBAL_MIMICS) {
+          addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
+        }
         const cfg2 = TIER_CONFIG[character.tier];
         if (updatedChar.assimilationPoints >= cfg2.apToEvolve) {
           addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
@@ -735,7 +742,6 @@ export default function Game() {
       }
       if (feastNowComplete) {
         addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
-        setTitanicFeastAchieved(true);
       }
 
       const updatedChar = {
@@ -810,6 +816,10 @@ export default function Game() {
       : a));
     setCeremonyRunning(true);
     setActing(true);
+    // Counted straight away, so leaving mid-ceremony can't lose it
+    const conversions = character.conversions + 1;
+    setCharacter(prev => prev ? { ...prev, conversions } : prev);
+    persist({ conversions });
 
     const steps: (() => void)[] = [
       () => addEvent("evolve", `${devotee.name} stares at the empty places where their companions stood… then falls to their knees before you. "It is real. It has come back."`),
@@ -823,6 +833,9 @@ export default function Game() {
         addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`);
         const total = character.assimilationPoints + apGained;
         persist({ assimilationPoints: total, lastFedAt: new Date().toISOString() });
+        if (conversions === CULT_CONVERSIONS) {
+          addEvent("evolve", `🕯️ Cult of Personality! ${CULT_CONVERSIONS} souls now worship you. The faithful are growing in number.`);
+        }
         setCeremonyRunning(false);
         setActing(false);
         if (total >= TIER_CONFIG[character.tier].apToEvolve) {
@@ -996,7 +1009,6 @@ export default function Game() {
         addEvent("evolve", `🌟 You have evolved to ${nextTier} tier!`);
         if (earnsHatboxToLegend(character, nextTier)) {
           addEvent("evolve", `📦 From Hatbox to Legend! You began as a Minor mimic and have risen all the way to Apex.`);
-          setHatboxToLegendAchieved(true);
           updates.hatboxToLegendReached = true;
         }
         // On tier evolution: reduce the highest stat by 1 (min 1)
@@ -1027,7 +1039,6 @@ export default function Game() {
           const newMassVal = updates.mass ?? character.mass + 2;
           if (newMassVal >= 40 && character.mass < 40) {
             addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
-            setApexPeakAchieved(true);
             updates.apexPeakReached = true;
           }
         }
@@ -1725,38 +1736,8 @@ export default function Game() {
             </div>
           )}
 
-          {/* Apex Peak Achievement Banner */}
-          {apexPeakAchieved && (
-            <div className="p-4 bg-primary/10 border border-primary/40 rounded-lg text-center">
-              <div className="text-3xl mb-1">🏆</div>
-              <p className="font-cinzel text-primary text-sm font-bold">Peak of the Apex</p>
-              <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
-                "{character.name} has consumed entire roads. Cartographers have stopped trying."
-              </p>
-            </div>
-          )}
-
-          {/* From Hatbox to Legend Achievement Banner */}
-          {hatboxToLegendAchieved && (
-            <div className="p-4 bg-sky-500/10 border border-sky-500/40 rounded-lg text-center">
-              <div className="text-3xl mb-1">📦</div>
-              <p className="font-cinzel text-sky-400 text-sm font-bold">From Hatbox to Legend</p>
-              <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
-                "{character.name} was once small enough to overlook. No one makes that mistake anymore."
-              </p>
-            </div>
-          )}
-
-          {/* Titanic Feast Achievement Banner */}
-          {titanicFeastAchieved && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/40 rounded-lg text-center">
-              <div className="text-3xl mb-1">🍖</div>
-              <p className="font-cinzel text-amber-400 text-sm font-bold">Titanic Feast</p>
-              <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
-                "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out."
-              </p>
-            </div>
-          )}
+          {/* Achievement banners */}
+          {character && <AchievementBanners character={character} />}
 
           {/* Event log */}
           {phase !== "setup" && (

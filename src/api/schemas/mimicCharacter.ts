@@ -65,6 +65,10 @@ export const MimicCharacterFieldsSchema = z.strictObject({
     id: z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]),
     huntsLeft: z.number().int().min(1),
   }).nullable().default(null),
+  /** How many devotees have converted to this mimic's worship (Cult of Personality). */
+  conversions: z.number().int().min(0).default(0),
+  /** How many rival mimics this mimic has devoured (Cannibal). */
+  mimicsConsumed: z.number().int().min(0).default(0),
   /** True once every Cloud Kingdom giant has been consumed whole. */
   titanicFeastReached: z.boolean().default(false),
   /** ISO timestamp of the last time the mimic consumed something (used for mass decay). */

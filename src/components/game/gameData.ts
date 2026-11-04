@@ -609,6 +609,63 @@ export function isTemplateEligible(
 }
 
 // ============================================================
+// ACHIEVEMENTS
+// The single list the Home badges, in-game banners and Codex all read from.
+// Each is earned from the saved character, so nothing else needs to track it.
+// ============================================================
+export const CULT_CONVERSIONS = 3;
+export const CANNIBAL_MIMICS = 10;
+
+export type AchievementId = "hatboxToLegend" | "apexPeak" | "titanicFeast" | "cultOfPersonality" | "cannibal";
+
+type AchievementProgress = Pick<MimicCharacter,
+  "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "conversions" | "mimicsConsumed">;
+
+export interface Achievement {
+  id: AchievementId;
+  name: string;
+  icon: string;
+  /** How to earn it (Codex). */
+  description: string;
+  /** Banner flavor text for a mimic that has earned it. */
+  flavor: (mimicName: string) => string;
+  isEarned: (character: AchievementProgress) => boolean;
+}
+
+export const ACHIEVEMENTS: readonly Achievement[] = [
+  {
+    id: "hatboxToLegend", name: "From Hatbox to Legend", icon: "📦",
+    description: "Begin as a Minor mimic and evolve all the way to the Apex tier. Mimics that started at Lesser don't qualify.",
+    flavor: (n) => `${n} was once small enough to overlook. No one makes that mistake anymore.`,
+    isEarned: (c) => c.hatboxToLegendReached,
+  },
+  {
+    id: "apexPeak", name: "Peak of the Apex", icon: "🏆",
+    description: "Reach mass 40 at the Apex tier.",
+    flavor: (n) => `${n} has consumed entire roads. Cartographers have stopped trying.`,
+    isEarned: (c) => c.apexPeakReached,
+  },
+  {
+    id: "titanicFeast", name: "Titanic Feast", icon: "🍖",
+    description: "Consume all five Cloud Kingdom giants whole — finishing one off with bites doesn't count.",
+    flavor: () => "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out.",
+    isEarned: (c) => c.titanicFeastReached,
+  },
+  {
+    id: "cultOfPersonality", name: "Cult of Personality", icon: "🕯️",
+    description: `Convert ${CULT_CONVERSIONS} devotees to your worship at The Hollow Reliquary.`,
+    flavor: (n) => `Candles burn for ${n} in three different hands now. The faithful are learning the hymns.`,
+    isEarned: (c) => c.conversions >= CULT_CONVERSIONS,
+  },
+  {
+    id: "cannibal", name: "Cannibal", icon: "🦷",
+    description: `Devour ${CANNIBAL_MIMICS} other mimics — nest mimics, Elders and lone rivals all count.`,
+    flavor: (n) => `${n} has eaten its own kind ${CANNIBAL_MIMICS} times over. The others have learned to hide from it.`,
+    isEarned: (c) => c.mimicsConsumed >= CANNIBAL_MIMICS,
+  },
+];
+
+// ============================================================
 // FROM HATBOX TO LEGEND
 // Achievement for a mimic that began as a Minor and evolved all the way to Apex.
 // Starting at Lesser doesn't count, and reaching Apex is enough (Peak of the Apex

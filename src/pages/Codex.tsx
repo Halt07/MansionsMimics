@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
+  ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
   isMagicMaterial, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
+import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
@@ -635,9 +636,9 @@ export default function Codex() {
               </Collapsible>
               <Collapsible title="Achievements">
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p><span className="text-sky-400 font-semibold">📦 From Hatbox to Legend:</span> begin as a <span className="text-foreground">Minor</span> mimic and evolve all the way to the <span className="text-foreground">Apex</span> tier. Mimics that started at Lesser don't qualify.</p>
-                  <p><span className="text-primary font-semibold">🏆 Peak of the Apex:</span> reach <span className="text-foreground">mass 40</span> at the Apex tier.</p>
-                  <p><span className="text-amber-400 font-semibold">🍖 Titanic Feast:</span> consume all five Cloud Kingdom giants <span className="text-foreground">whole</span> — finishing one off with bites doesn't count.</p>
+                  {ACHIEVEMENTS.map(a => (
+                    <p key={a.id}><span className={`${ACHIEVEMENT_STYLES[a.id].text} font-semibold`}>{a.icon} {a.name}:</span> {a.description}</p>
+                  ))}
                   <p>Earned achievements appear as badges beside your mimic on the home screen.</p>
                 </div>
               </Collapsible>
