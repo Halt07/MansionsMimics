@@ -10,6 +10,7 @@ import {
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
+  TITANIC_FEAST_GIANTS, isTitanicFeastComplete,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -65,6 +66,11 @@ function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: numbe
   const common = eligible.filter(t => !ELITE_GROUPS.includes(t.group));
   const elite = eligible.filter(t => ELITE_GROUPS.includes(t.group));
 
+  // Exclusive-roster locations draw only from their own adventurers, with no elite/common split
+  if (location.exclusiveRoster) {
+    common.push(...elite);
+    elite.length = 0;
+  }
   const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
   const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
   const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
@@ -156,6 +162,7 @@ export default function Game() {
   const [roomSelecting, setRoomSelecting] = useState(false);
   const [showMovePanel, setShowMovePanel] = useState(false);
   const [apexPeakAchieved, setApexPeakAchieved] = useState(false);
+  const [titanicFeastAchieved, setTitanicFeastAchieved] = useState(false);
   const [isBountyHunt, setIsBountyHunt] = useState(false);
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   const [rivalMimic, setRivalMimic] = useState<RivalMimic | null>(null);
@@ -189,6 +196,7 @@ export default function Game() {
         setCharacter(char);
         setPhase("setup");
         if (char.apexPeakReached) setApexPeakAchieved(true);
+        if (char.titanicFeastReached) setTitanicFeastAchieved(true);
         if (decayMessage) setMassDecayNotice(decayMessage);
       }
     }).catch(err => {
@@ -684,17 +692,35 @@ export default function Game() {
         addEvent("info", `The prey yields nothing new — you already know these materials.`);
       }
 
+      // Titanic Feast: track Cloud Kingdom giants consumed whole
+      const isFeastGiant = !target.isCompanion && TITANIC_FEAST_GIANTS.includes(target.name);
+      const giantsConsumedWhole = isFeastGiant && !character.giantsConsumedWhole.includes(target.name)
+        ? [...character.giantsConsumedWhole, target.name]
+        : character.giantsConsumedWhole;
+      const feastNowComplete = !character.titanicFeastReached && isTitanicFeastComplete(giantsConsumedWhole);
+      if (isFeastGiant && giantsConsumedWhole !== character.giantsConsumedWhole && !feastNowComplete) {
+        addEvent("evolve", `Giant consumed whole: ${giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
+      }
+      if (feastNowComplete) {
+        addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
+        setTitanicFeastAchieved(true);
+      }
+
       const updatedChar = {
         ...character,
         assimilationPoints: (character.assimilationPoints || 0) + apGained,
         learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...matsToLearn])],
         learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
+        giantsConsumedWhole,
+        titanicFeastReached: character.titanicFeastReached || feastNowComplete,
       };
       setCharacter(updatedChar);
       persist({
         assimilationPoints: updatedChar.assimilationPoints,
         learnedMaterials: updatedChar.learnedMaterials,
         learnedTraits: updatedChar.learnedTraits,
+        giantsConsumedWhole: updatedChar.giantsConsumedWhole,
+        titanicFeastReached: updatedChar.titanicFeastReached,
         lastFedAt: new Date().toISOString(),
       });
 
@@ -1597,6 +1623,17 @@ export default function Game() {
               <p className="font-cinzel text-primary text-sm font-bold">Peak of the Apex</p>
               <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
                 "{character.name} has consumed entire roads. Cartographers have stopped trying."
+              </p>
+            </div>
+          )}
+
+          {/* Titanic Feast Achievement Banner */}
+          {titanicFeastAchieved && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/40 rounded-lg text-center">
+              <div className="text-3xl mb-1">🍖</div>
+              <p className="font-cinzel text-amber-400 text-sm font-bold">Titanic Feast</p>
+              <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
+                "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out."
               </p>
             </div>
           )}

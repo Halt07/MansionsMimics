@@ -56,6 +56,10 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   currentAppearance: AppearanceSchema.default(() => AppearanceSchema.parse({})),
   /** True when the mimic has reached mass 40 at Apex tier. */
   apexPeakReached: z.boolean().default(false),
+  /** Names of the Cloud Kingdom giants this mimic has consumed whole (for Titanic Feast). */
+  giantsConsumedWhole: z.array(z.string()).default([]),
+  /** True once every Cloud Kingdom giant has been consumed whole. */
+  titanicFeastReached: z.boolean().default(false),
   /** ISO timestamp of the last time the mimic consumed something (used for mass decay). */
   lastFedAt: z.iso.datetime().optional(),
   isActive: z.boolean().default(true),

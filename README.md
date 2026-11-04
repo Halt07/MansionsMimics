@@ -42,6 +42,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/dice.test.mjs` | Dice odds helpers and the Wait action's minimum success chance |
 | `tests/suspicion.test.mjs` | Suspicion from consuming a party member in front of witnesses |
 | `tests/companions.test.mjs` | Companion stats/AP wiring, per-companion overrides, Changeling familiars, Goose-Keeper geese |
+| `tests/giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

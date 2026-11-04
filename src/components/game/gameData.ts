@@ -1305,7 +1305,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     name: "Cloud Giant Scout", type: "Warrior", discipline: 5, baseSuspicion: 2, constitution: 9, interactionStyle: "touch",
     group: "giantKin",
     repelledBy: { traits: ["Cracked", "Dusty"] },
-    minTier: "Apex", minMass: 35, wholeMealMass: 43,
+    minTier: "Apex", minMass: 38, wholeMealMass: 43,
+    locations: ["cloud_kingdom"],
     quirks: ["Everything is too small — they break things accidentally", "Listens at walls with ear to stone", "Attracted to gold and goose-feather items"],
     alluringQualities: { materials: ["Giant Gold", "Golden Goose Down", "Giant Marble"], traits: ["Gilded", "Polished", "Inlaid"], tags: ["Valuable", "Comfort", "Authority"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 5, text: 0, magical: 1, social: 0, spatial: 3, environmental: 2, acoustic: 3, presence: 1 },
@@ -1316,13 +1317,66 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Storm Giant Wanderer", type: "Warrior", discipline: 6, baseSuspicion: 2, constitution: 12, interactionStyle: "touch",
     group: "giantKin",
-    minTier: "Apex", minMass: 40, wholeMealMass: 48,
+    minTier: "Apex", minMass: 38, wholeMealMass: 48,
+    locations: ["cloud_kingdom"],
     quirks: ["Shakes the ground when walking", "Can sense electrical charge — mimic bio-electricity makes them cautious", "Attracted to enormous structural objects"],
     alluringQualities: { materials: ["Stormforged Iron", "Giant Granite", "Beanstalk Timber"], traits: ["Iron-Banded", "Rough-Hewn", "Carved"], tags: ["Structural", "Defensive"] },
     perceptionAffinity: { material: 3, structure: 5, weight: 5, text: 0, magical: 2, social: 0, spatial: 3, environmental: 3, acoustic: 4, presence: 2 },
     lootMaterials: ["Stormforged Iron", "Giant Granite", "Beanstalk Timber"],
     lootTraits: ["Iron-Banded"],
     partialLoot: ["a stormforged iron rivet", "shard of giant granite block", "length of beanstalk rope"],
+  },
+  {
+    name: "Giant Lord", type: "Nobility", discipline: 6, baseSuspicion: 3, constitution: 14, interactionStyle: "sight",
+    group: "giantKin",
+    repelledBy: { traits: ["Tarnished", "Cracked", "Dusty", "Rustic"] },
+    minTier: "Apex", minMass: 38, wholeMealMass: 52,
+    locations: ["cloud_kingdom"],
+    quirks: ["Holds court from whatever seat is grandest", "Knows exactly where everything in its hall belongs", "Never hurries — the whole outpost moves around it"],
+    alluringQualities: { materials: ["Giant Gold", "Giant Marble", "Stormforged Iron"], traits: ["Gilded", "Ornate", "Heraldic Crest", "Inlaid"], tags: ["Authority", "Valuable", "Seating"] },
+    perceptionAffinity: { material: 3, structure: 3, weight: 4, text: 2, magical: 2, social: 4, spatial: 4, environmental: 2, acoustic: 2, presence: 3 },
+    lootMaterials: ["Giant Gold", "Stormforged Iron", "Giant Marble"],
+    lootTraits: ["Ornate", "Heraldic Crest"],
+    partialLoot: ["a signet ring the size of a shield", "strip of storm-dyed royal mantle", "a chip of crown-gold"],
+  },
+  {
+    name: "Cloud Forge Smith", type: "Artificer", discipline: 5, baseSuspicion: 2, constitution: 10, interactionStyle: "touch",
+    group: "giantKin",
+    repelledBy: { traits: ["Cracked", "Pitted"] },
+    minTier: "Apex", minMass: 38, wholeMealMass: 45,
+    locations: ["cloud_kingdom"],
+    quirks: ["Raps on metal to hear how it rings", "Can't pass an iron fitting without checking the rivets", "Hums over the roar of the forge"],
+    alluringQualities: { materials: ["Stormforged Iron", "Giant Iron", "Giant Granite"], traits: ["Iron-Banded", "Reinforced", "Etched"], tags: ["Structural", "Storage", "Defensive"] },
+    perceptionAffinity: { material: 5, structure: 4, weight: 3, text: 1, magical: 2, social: 0, spatial: 1, environmental: 2, acoustic: 4, presence: 1 },
+    lootMaterials: ["Stormforged Iron", "Giant Iron"],
+    lootTraits: ["Iron-Banded"],
+    partialLoot: ["a scorched leather apron strap", "a hammer-head the size of an anvil", "a coil of lightning-tempered wire"],
+  },
+  {
+    name: "Cloud Eagle Rider", type: "Ranger", discipline: 5, baseSuspicion: 3, constitution: 9, interactionStyle: "sight",
+    group: "giantKin",
+    repelledBy: { traits: ["Lacquered", "Gilded"] },
+    minTier: "Apex", minMass: 38, wholeMealMass: 42,
+    locations: ["cloud_kingdom"],
+    quirks: ["Surveys every room from the highest perch available", "Whistles signals to its mount", "Notices anything that wasn't there on the last pass"],
+    alluringQualities: { materials: ["Cloud Fleece", "Beanstalk Leather", "Giant Oak"], traits: ["Weathered", "Rustic"], tags: ["Transport", "Structural"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 0, magical: 1, social: 0, spatial: 4, environmental: 3, acoustic: 2, presence: 2 },
+    lootMaterials: ["Cloud Fleece", "Beanstalk Leather"],
+    lootTraits: ["Weathered"],
+    partialLoot: ["a strip of saddle leather", "a long grey flight feather", "a wind-burned riding glove"],
+    companion: {
+      chance: 0.60,
+      options: [
+        {
+          nameSuffix: "'s Roc", type: "AnimalCompanion", ap: 6, discipline: 4, constitution: 5,
+          description: "A storm-grey roc broad enough to carry a giant, circling the outpost's high places.",
+          group: "giantKin", wholeMealMass: 40,
+          perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 3, environmental: 2, acoustic: 2, presence: 1 },
+          lootMaterials: ["Cloud Fleece"],
+          partialLoot: ["a flight feather longer than a spear", "a hooked talon", "a tuft of storm-grey down"],
+        },
+      ],
+    },
   },
   {
     name: "Giant's Goose-Keeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 5, interactionStyle: "sight",
@@ -1412,6 +1466,8 @@ interface LocationDef {
   readonly imageHint: string;
   readonly locationCreatures: readonly LocationCreature[];
   readonly isGiantRealm?: boolean;
+  /** Only adventurers that list this location in their `locations` can appear here. */
+  readonly exclusiveRoster?: boolean;
 }
 
 const LOCATION_DATA = [
@@ -1717,7 +1773,7 @@ const LOCATION_DATA = [
     advantageTags: ["Structural", "Valuable", "Comfort", "Authority"],
     imageHint: "enormous giant castle interior with oversized furniture and golden light",
     locationCreatures: [
-      { id: "giant_goose", name: "Golden Goose", ap: 5, discipline: 2, description: "A fat, enchanted goose that lays golden eggs — and weighs as much as a pony." },
+      { id: "cloud_gosling", name: "Cloud Gosling", ap: 5, discipline: 2, description: "A downy gosling the size of a pony, strayed from the giant's flock." },
       { id: "cloud_sprite", name: "Cloud Sprite", ap: 3, discipline: 2, description: "A wispy spirit of condensed cloud-magic, drifting through the upper halls." },
       { id: "giant_rat", name: "Castle Rat (Giant-Sized)", ap: 3, discipline: 2, description: "As large as a dog, nesting in the kitchen stores." },
       { id: "giant_cat", name: "Giant's Cat", ap: 4, discipline: 3, description: "The giant's pet — the size of a lion, with a lion's temperament." },
@@ -1741,10 +1797,11 @@ const LOCATION_DATA = [
     partySize: [2, 3], suspicionGrowthRate: 2,
     advantageTags: ["Structural", "Defensive", "Authority", "Valuable"],
     imageHint: "floating cloud fortress with storm giant throne room and lightning-lit sky",
+    exclusiveRoster: true,
     locationCreatures: [
-      { id: "storm_elemental", name: "Storm Elemental", ap: 6, discipline: 3, description: "A crackling elemental of living lightning — restless and territorial." },
+      { id: "storm_elemental", name: "Storm Elemental", ap: 2, discipline: 3, description: "A restless knot of wind and lightning. Edible, technically — though it fills you about as much as a gulp of air." },
       { id: "cloud_eagle", name: "Cloud Eagle", ap: 4, discipline: 3, description: "A vast raptor that nests in the high rafters — even giants give it space." },
-      { id: "giant_goose", name: "Golden Goose", ap: 5, discipline: 2, description: "Another enchanted goose, fattened on cloud-grain." },
+      { id: "cloud_gosling", name: "Cloud Gosling", ap: 5, discipline: 2, description: "A fluffy cloud gosling, fattened on cloud-grain." },
       { id: "beanstalk_beetle", name: "Stormwood Beetle", ap: 3, discipline: 2, description: "Crackling faintly with static charge." },
     ],
     isGiantRealm: true,
@@ -2408,9 +2465,23 @@ export function isTemplateEligible(
   if (template.minTier && TIER_ORDER.indexOf(template.minTier) > tierIdx) return false;
   if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
   if (template.locations && !template.locations.includes(location.id)) return false;
+  if (location.exclusiveRoster && !template.locations?.includes(location.id)) return false;
   // Giant-kin only appear in giant-realm locations
   if (template.group === "giantKin" && !location.isGiantRealm) return false;
   return true;
+}
+
+// ============================================================
+// TITANIC FEAST
+// Achievement for consuming every giant of the Cloud Kingdom Outpost whole
+// (finishing one off with bites doesn't count).
+// ============================================================
+export const TITANIC_FEAST_GIANTS: readonly string[] = ADVENTURER_TEMPLATES
+  .filter(t => t.group === "giantKin" && t.locations?.includes("cloud_kingdom"))
+  .map(t => t.name);
+
+export function isTitanicFeastComplete(consumedWhole: readonly string[]): boolean {
+  return TITANIC_FEAST_GIANTS.every(name => consumedWhole.includes(name));
 }
 
 // ============================================================
