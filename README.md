@@ -51,6 +51,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/suspicion.test.mjs` | Suspicion from consuming a party member in front of witnesses |
 | `tests/companions.test.mjs` | Companion stats/AP wiring, per-companion overrides, Changeling familiars, Goose-Keeper geese |
 | `tests/giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
+| `tests/achievements.test.mjs` | From Hatbox to Legend eligibility |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

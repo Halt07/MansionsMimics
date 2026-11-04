@@ -463,6 +463,18 @@ export function isTemplateEligible(
 }
 
 // ============================================================
+// FROM HATBOX TO LEGEND
+// Achievement for a mimic that began as a Minor and evolved all the way to Apex.
+// Starting at Lesser doesn't count, and reaching Apex is enough (Peak of the Apex
+// separately rewards reaching mass 40).
+// ============================================================
+export function earnsHatboxToLegend(
+  character: Pick<MimicCharacter, "startingType" | "hatboxToLegendReached">, newTier: Tier,
+): boolean {
+  return newTier === "Apex" && character.startingType === "Minor" && !character.hatboxToLegendReached;
+}
+
+// ============================================================
 // TITANIC FEAST
 // Achievement for consuming every giant of the Cloud Kingdom Outpost whole
 // (finishing one off with bites doesn't count).

@@ -10,7 +10,7 @@ import {
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
-  TITANIC_FEAST_GIANTS, isTitanicFeastComplete,
+  TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -163,6 +163,7 @@ export default function Game() {
   const [showMovePanel, setShowMovePanel] = useState(false);
   const [apexPeakAchieved, setApexPeakAchieved] = useState(false);
   const [titanicFeastAchieved, setTitanicFeastAchieved] = useState(false);
+  const [hatboxToLegendAchieved, setHatboxToLegendAchieved] = useState(false);
   const [isBountyHunt, setIsBountyHunt] = useState(false);
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   const [rivalMimic, setRivalMimic] = useState<RivalMimic | null>(null);
@@ -197,6 +198,7 @@ export default function Game() {
         setPhase("setup");
         if (char.apexPeakReached) setApexPeakAchieved(true);
         if (char.titanicFeastReached) setTitanicFeastAchieved(true);
+        if (char.hatboxToLegendReached) setHatboxToLegendAchieved(true);
         if (decayMessage) setMassDecayNotice(decayMessage);
       }
     }).catch(err => {
@@ -913,6 +915,11 @@ export default function Game() {
 
       if (shouldEvolve) {
         addEvent("evolve", `🌟 You have evolved to ${nextTier} tier!`);
+        if (earnsHatboxToLegend(character, nextTier)) {
+          addEvent("evolve", `📦 From Hatbox to Legend! You began as a Minor mimic and have risen all the way to Apex.`);
+          setHatboxToLegendAchieved(true);
+          updates.hatboxToLegendReached = true;
+        }
         // On tier evolution: reduce the highest stat by 1 (min 1)
         const stats: Record<CombatStat, number> = { plausibility: character.plausibility, adhesion: character.adhesion, patience: character.patience };
         const maxVal = Math.max(stats.plausibility, stats.adhesion, stats.patience);
@@ -1623,6 +1630,17 @@ export default function Game() {
               <p className="font-cinzel text-primary text-sm font-bold">Peak of the Apex</p>
               <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
                 "{character.name} has consumed entire roads. Cartographers have stopped trying."
+              </p>
+            </div>
+          )}
+
+          {/* From Hatbox to Legend Achievement Banner */}
+          {hatboxToLegendAchieved && (
+            <div className="p-4 bg-sky-500/10 border border-sky-500/40 rounded-lg text-center">
+              <div className="text-3xl mb-1">📦</div>
+              <p className="font-cinzel text-sky-400 text-sm font-bold">From Hatbox to Legend</p>
+              <p className="text-xs text-muted-foreground mt-1 flavor-text italic">
+                "{character.name} was once small enough to overlook. No one makes that mistake anymore."
               </p>
             </div>
           )}

@@ -617,7 +617,15 @@ export default function Codex() {
                   </ul>
                   <p>Giant-kin adventurers yield <span className="text-foreground font-semibold">12 AP</span> when consumed — roughly double to triple normal adventurer rewards.</p>
                   <p className="font-semibold text-foreground mt-2">Too big to swallow</p>
-                  <p>Each giant can only be swallowed whole once your mass is <span className="text-foreground">8 above the mass it first appears at</span> (shown as "Consumed whole at" on its Codex entry — e.g. a Half-Giant Mercenary at mass 36). Until then you take <span className="text-foreground">partial bites</span>, like a Minor mimic: each bite that holds is worth <span className="text-foreground">2–3 AP</span> and may teach one of the giant's materials, and a giant worn down by enough bites collapses for a final <span className="text-foreground">+2 AP</span>.</p>
+                  <p>Each giant can only be swallowed whole once your mass reaches its <span className="text-foreground">"Consumed whole at"</span> value on its Codex entry (e.g. a Half-Giant Mercenary at mass 36, the Giant Lord at 52). Until then you take <span className="text-foreground">partial bites</span>, like a Minor mimic: each bite that holds is worth <span className="text-foreground">2–3 AP</span> and may teach one of the giant's materials, and a giant worn down by enough bites collapses for a final <span className="text-foreground">+2 AP</span>.</p>
+                </div>
+              </Collapsible>
+              <Collapsible title="Achievements">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p><span className="text-sky-400 font-semibold">📦 From Hatbox to Legend:</span> begin as a <span className="text-foreground">Minor</span> mimic and evolve all the way to the <span className="text-foreground">Apex</span> tier. Mimics that started at Lesser don't qualify.</p>
+                  <p><span className="text-primary font-semibold">🏆 Peak of the Apex:</span> reach <span className="text-foreground">mass 40</span> at the Apex tier.</p>
+                  <p><span className="text-amber-400 font-semibold">🍖 Titanic Feast:</span> consume all five Cloud Kingdom giants <span className="text-foreground">whole</span> — finishing one off with bites doesn't count.</p>
+                  <p>Earned achievements appear as badges beside your mimic on the home screen.</p>
                 </div>
               </Collapsible>
             </div>
