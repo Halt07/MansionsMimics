@@ -26,15 +26,15 @@ export default async function ({ gameData: m, ok, log }) {
   const box = captain.treasure;
   const prizes = new Set();
   for (let i = 0; i < 300; i++) { const p = m.pickTreasurePrize(box, [], []); prizes.add(`${p.kind}:${p.name}`); }
-  ok([...prizes].sort().join() === 'material:Crystal,material:Gold,material:Silver,trait:Gilded,trait:Ornate', `a fresh mimic can win any of the five (${[...prizes].join(', ')})`);
+  ok([...prizes].sort().join() === 'material:Crystal,material:Gold,material:Silver,trait:Guild Mark,trait:Heraldic Crest', `a fresh mimic can win any of the five (${[...prizes].join(', ')})`);
   let neverKnown = true;
   for (let i = 0; i < 300; i++) {
-    const p = m.pickTreasurePrize(box, ['Gold', 'Silver'], ['Ornate']);
-    if (!p || ['Gold', 'Silver', 'Ornate'].includes(p.name)) neverKnown = false;
+    const p = m.pickTreasurePrize(box, ['Gold', 'Silver'], ['Guild Mark']);
+    if (!p || ['Gold', 'Silver', 'Guild Mark'].includes(p.name)) neverKnown = false;
   }
   ok(neverKnown, 'it never awards something the mimic already knows');
-  ok(m.pickTreasurePrize(box, ['Gold', 'Silver', 'Crystal'], ['Gilded'])?.name === 'Ornate', 'with one unknown left, that one is guaranteed');
-  ok(m.pickTreasurePrize(box, ['Gold', 'Silver', 'Crystal'], ['Gilded', 'Ornate']) === null, 'knowing them all yields no prize (the game shows a flavor line instead)');
+  ok(m.pickTreasurePrize(box, ['Gold', 'Silver', 'Crystal'], ['Heraldic Crest'])?.name === 'Guild Mark', 'with one unknown left, that one is guaranteed');
+  ok(m.pickTreasurePrize(box, ['Gold', 'Silver', 'Crystal'], ['Heraldic Crest', 'Guild Mark']) === null, 'knowing them all yields no prize (the game shows a flavor line instead)');
 
   // Down With the Ship
   const ach = m.ACHIEVEMENTS.find((a) => a.id === 'downWithTheShip');

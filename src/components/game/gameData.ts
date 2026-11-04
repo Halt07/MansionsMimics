@@ -469,7 +469,7 @@ export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Ma
 // qualifies for opens. It stays on the map for RARE_LOCATION_HUNTS hunts (or until
 // visited), and only one can be open at a time.
 // ============================================================
-export const RARE_LOCATION_CHANCE = 1;//0.15;
+export const RARE_LOCATION_CHANCE = 0.15;
 export const RARE_LOCATION_HUNTS = 2;
 
 /** The rare location currently open for a mimic, and how many more hunts it stays. */

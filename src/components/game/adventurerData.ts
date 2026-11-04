@@ -660,7 +660,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     behavior: "elusive",
     treasure: {
       ap: 8, description: "the ship's strongbox, still clutched to their chest",
-      materials: ["Gold", "Silver", "Crystal"], traits: ["Gilded", "Ornate"],
+      materials: ["Gold", "Silver", "Crystal"], traits: ["Heraldic Crest", "Guild Mark"],
     },
     quirks: ["Refuses to abandon ship without the strongbox", "Barks orders at anything that moves", "Knows every inch of this hull — and that one chest wasn't in the manifest"],
     alluringQualities: { materials: ["Brass", "Mahogany", "Gold"], traits: ["Locked", "Iron-Banded", "Polished"], tags: ["Storage", "Valuable", "Authority"] },
