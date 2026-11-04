@@ -54,4 +54,30 @@ export default async function ({ gameData: m, ok, log }) {
   const share = counts.golden / 6000;
   ok(share > 0.28 && share < 0.39, `Golden Goose appears about 1/3 of the time (${(share * 100).toFixed(1)}%)`);
   log(`goose picks: ${counts.giant} giant / ${counts.golden} golden`);
+
+  // Elite hunters' companions: less common, but stronger than the King's Hunting Hound
+  const hound = T.flatMap((t) => t.companion?.options ?? []).find((o) => o.nameSuffix === "'s Hunting Hound");
+  for (const name of ['Mimic Hunter', 'Orcish Tracker']) {
+    const t = T.find((x) => x.name === name);
+    ok(t.companion && t.companion.chance >= 0.3 && t.companion.chance <= 0.4, `${name} has a 30–40% companion chance`);
+    for (const o of t.companion.options) {
+      ok(o.ap > hound.ap && o.discipline > hound.discipline && o.constitution > hound.constitution,
+        `${name}${o.nameSuffix} out-classes the Hunting Hound`);
+    }
+  }
+
+  // The Bloodhound only sometimes has Blood Scent (~30%)
+  const hunter = T.find((x) => x.name === 'Mimic Hunter');
+  const bloodhound = hunter.companion.options.find((o) => o.nameSuffix === "'s Bloodhound");
+  let scented = 0;
+  for (let i = 0; i < 5000; i++) {
+    const b = m.createCompanion(hunter, bloodhound, 'c4', 'Hall');
+    if (b.behavior === 'bloodScent') scented++;
+    else if (b.behavior !== undefined) { ok(false, `unexpected behavior ${b.behavior}`); break; }
+  }
+  const rate = scented / 5000;
+  ok(rate > 0.26 && rate < 0.34, `Bloodhound has Blood Scent about 30% of the time (${(rate * 100).toFixed(1)}%)`);
+  // Options without behaviorChance always get their behavior
+  const goose = m.createCompanion(keeper, giant, 'c5', 'Hall');
+  ok(goose.behavior === 'keenHearing', 'geese always have Keen Hearing');
 }

@@ -504,6 +504,7 @@ export default function Codex() {
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• <span className="text-foreground">Rangers</span> have a chance to bring an animal companion: Bear, Hound, or Lynx.</li>
                     <li>• <span className="text-foreground">Warlocks</span> may be accompanied by a bound Imp or Felhound.</li>
+                    <li>• Some elites bring trained beasts of their own: the <span className="text-foreground">Mimic Hunter</span>'s Bloodhound (some are trained in Blood Scent), or the <span className="text-foreground">Orcish Tracker</span>'s War Boar or Warg. They are rarer, but sharper and tougher than ordinary companions.</li>
                     <li>• <span className="text-foreground">Fey Changelings</span> are often trailed by a Pixie or Thorn Sprite.</li>
                     <li>• <span className="text-foreground">Giant's Goose-Keepers</span> rarely go anywhere without a Giant Goose — or, if you're lucky, the Golden Goose itself. Geese hear everything.</li>
                   </ul>

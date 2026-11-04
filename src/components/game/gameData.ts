@@ -681,6 +681,8 @@ export interface CompanionOption {
   readonly group?: AdventurerGroupId;
   readonly wholeMealMass?: number;
   readonly behavior?: BehaviorId;
+  /** Chance (0–1) that a spawned companion actually has `behavior` (default 1: always). */
+  readonly behaviorChance?: number;
 }
 
 export interface AdventurerTemplate {
@@ -954,6 +956,21 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Blacksteel", "Mithril", "Dragonhide"],
     lootTraits: ["Reinforced"],
     partialLoot: ["vial of mimic acid", "a silver detection rod shard", "strip of warded leather coat"],
+    // Elite companions: stronger than ordinary ones, and less common
+    companion: {
+      chance: 0.35,
+      options: [
+        {
+          nameSuffix: "'s Bloodhound", type: "AnimalCompanion", ap: 5, discipline: 4, constitution: 4,
+          description: "A mimic-hunting bloodhound, trained to bay at anything that smells of digestion.",
+          perceptionAffinity: { material: 2, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 2, presence: 2 },
+          // Only some bloodhounds are trained on the scent of a mimic's meals
+          behavior: "bloodScent", behaviorChance: 0.30,
+          lootMaterials: ["Tanned Hide"],
+          partialLoot: ["a drooping ear tip", "a strip of warded leather collar", "a fold of loose jowl"],
+        },
+      ],
+    },
   },
   {
     name: "Draconic Bounty Hunter", type: "Hunter", discipline: 5, baseSuspicion: 4, constitution: 5, interactionStyle: "spell",
@@ -988,6 +1005,25 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Boarhide", "Iron", "Horn"],
     lootTraits: ["Reinforced"],
     partialLoot: ["strip of studded hide armor", "a bone talisman shard", "torn tusk-leather belt"],
+    companion: {
+      chance: 0.40,
+      options: [
+        {
+          nameSuffix: "'s War Boar", type: "AnimalCompanion", ap: 5, discipline: 3, constitution: 5,
+          description: "A tusked war boar in a spiked harness. It roots through rooms snout-first.",
+          perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 1 },
+          lootMaterials: ["Boarhide", "Horn"],
+          partialLoot: ["a chipped tusk", "a tuft of bristly hide", "a spike from its harness"],
+        },
+        {
+          nameSuffix: "'s Warg", type: "AnimalCompanion", ap: 6, discipline: 4, constitution: 4,
+          description: "A hulking, red-eyed warg that hunts in silence at its master's side.",
+          perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 1, social: 0, spatial: 2, environmental: 3, acoustic: 2, presence: 2 },
+          lootMaterials: ["Direwolf Pelt"],
+          partialLoot: ["a hank of coarse black fur", "a broken fang", "a torn ear"],
+        },
+      ],
+    },
   },
   {
     name: "Tiefling Hexblade", type: "Hunter", discipline: 5, baseSuspicion: 4, constitution: 4, interactionStyle: "spell",
@@ -2133,7 +2169,7 @@ export function createCompanion(
     lootTraits: option.lootTraits ?? [],
     partialLoot: option.partialLoot ?? ["scruff of fur", "a claw", "patch of hide"],
     wholeMealMass: option.wholeMealMass,
-    behavior: option.behavior,
+    behavior: option.behavior && Math.random() < (option.behaviorChance ?? 1) ? option.behavior : undefined,
     apReward: option.ap,
     id,
     isAlive: true,
