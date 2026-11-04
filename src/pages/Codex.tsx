@@ -242,11 +242,6 @@ export default function Codex() {
                       <p className="text-xs text-purple-400/80 italic border border-purple-400/20 bg-purple-400/5 rounded px-2 py-1.5">
                         Magic materials are worn in your primary or secondary slots like any other material, up to your tier's Magic limit, and each one worn grants its effect. The cost: each one gives off <span className="font-semibold">arcane residue</span>, an extra flaw check against adventurers with Magical perception +2 or higher (wizards, clerics, inquisitors, changelings…).
                       </p>
-                      <ul className="space-y-1 text-xs">
-                        {mats.filter(isMagicMaterial).map((mat) =>
-                          <li key={mat}><span className="text-purple-400">{mat}</span> <span className="text-muted-foreground">— {MAGIC_EFFECTS[mat]}</span></li>
-                        )}
-                      </ul>
                     </div>
                   )}
                   {rarity === "giant" && (
@@ -261,6 +256,15 @@ export default function Codex() {
                       </span>
                 )}
                   </div>
+                  {rarity === "magic" && (
+                    <div className="mt-3 space-y-2">
+                      <ul className="space-y-1 text-xs">
+                        {mats.filter(isMagicMaterial).map((mat) =>
+                          <li key={mat}><span className="text-purple-400">{mat}</span> <span className="text-muted-foreground">— {MAGIC_EFFECTS[mat]}</span></li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </Collapsible>
             )}
               <Collapsible title="Appearance Limits by Tier">
