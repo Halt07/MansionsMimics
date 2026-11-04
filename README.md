@@ -15,9 +15,17 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck`, `npm test`.
 
-The game's word lists (tiers, materials, traits, tags…) live in `src/components/game/vocabulary.ts`,
-and forms, adventurers, locations and the rules in `src/components/game/gameData.ts`. Names are
-type-checked everywhere, so a misspelled material, trait, form, location or room is a compile error.
+The game's content lives in `src/components/game/`:
+
+| File | Contains |
+|---|---|
+| `vocabulary.ts` | Word lists: tiers, materials, traits, tags, senses, adventurer types |
+| `mimicData.ts` | Forms, appearance limits, starting stats, tier config, magic effects, sicknesses |
+| `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks |
+| `locationData.ts` | Hunting grounds, rooms, local creatures, room/form modifiers |
+| `gameData.ts` | The rules (dice, checks, bites, spawning, behavior reactions…). Re-exports all of the above, so the rest of the app imports from here |
+
+Names are type-checked everywhere, so a misspelled material, trait, form, location or room is a compile error.
 
 ## Tests
 
