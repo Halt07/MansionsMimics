@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
+  rollDice, maxTargetForChance, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
@@ -48,6 +48,8 @@ interface RivalMimic {
 }
 
 const ACTION_LIMIT = 50;
+/** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
+const WAIT_MIN_CHANCE = 0.4;
 const STAT_CAP = 6;
 
 // Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
@@ -784,9 +786,11 @@ export default function Game() {
 
     // Patience check — reduce suspicion slightly. Roll effective Patience (after sickness and
     // form-tier penalties; Runestone adds a die) against a threshold set by base Patience,
-    // so penalties genuinely lower the odds instead of shrinking the target with the dice.
-    const roll = rollDice(effectivePatience + (hasMagic(character.currentAppearance, "Runestone") ? 1 : 0));
-    const threshold = character.patience * 3;
+    // so penalties lower the odds (~67–79% unpenalized). The threshold is capped so the dice
+    // actually rolled still succeed at least WAIT_MIN_CHANCE of the time.
+    const waitDice = effectivePatience + (hasMagic(character.currentAppearance, "Runestone") ? 1 : 0);
+    const roll = rollDice(waitDice);
+    const threshold = Math.min(character.patience * 3, maxTargetForChance(waitDice, WAIT_MIN_CHANCE));
     if (roll >= threshold) {
       setSuspicion(s => Math.max(0, s - 1));
       addEvent("stealth", `You wait in perfect stillness. Suspicion decreases.`);

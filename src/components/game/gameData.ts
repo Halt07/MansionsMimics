@@ -1880,6 +1880,26 @@ export function rollDice(numDice: number): number {
   return total;
 }
 
+/** Chance (0–1) that the sum of `numDice` d6 is at least `target`. */
+export function diceSuccessChance(numDice: number, target: number): number {
+  // Distribution of sums, built up one die at a time.
+  let ways = [1]; // ways[s] = number of ways to roll a sum of s
+  for (let i = 0; i < numDice; i++) {
+    const next = new Array<number>(ways.length + 6).fill(0);
+    ways.forEach((w, s) => { for (let face = 1; face <= 6; face++) next[s + face] += w; });
+    ways = next;
+  }
+  const hits = ways.reduce((acc, w, s) => (s >= target ? acc + w : acc), 0);
+  return hits / 6 ** numDice;
+}
+
+/** The highest target that `numDice` d6 still reach with at least `minChance` probability. */
+export function maxTargetForChance(numDice: number, minChance: number): number {
+  let target = numDice; // the minimum roll always succeeds
+  while (target < numDice * 6 && diceSuccessChance(numDice, target + 1) >= minChance) target++;
+  return target;
+}
+
 export function rollDiceVerbose(numDice: number): { total: number; rolls: number[] } {
   const rolls: number[] = [];
   for (let i = 0; i < numDice; i++) {
