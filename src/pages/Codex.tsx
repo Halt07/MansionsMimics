@@ -401,9 +401,14 @@ export default function Codex() {
                         <div className="mt-3">
                           <p className="text-xs text-muted-foreground mb-1">Companion ({Math.round(adv.companion.chance * 100)}% chance)</p>
                           <div className="flex flex-wrap gap-1">
-                            {adv.companion.options.map(o => (
-                              <span key={o.nameSuffix} className="text-[10px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{o.nameSuffix.replace("'s ", "")}</span>
-                            ))}
+                            {adv.companion.options.map((o, _i, opts) => {
+                              const rare = (o.weight ?? 1) < Math.max(...opts.map(x => x.weight ?? 1));
+                              return (
+                                <span key={o.nameSuffix} title={o.description} className="text-[10px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">
+                                  {o.nameSuffix.replace("'s ", "")}{rare ? " (rare)" : ""}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -499,8 +504,10 @@ export default function Codex() {
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• <span className="text-foreground">Rangers</span> have a chance to bring an animal companion: Bear, Hound, or Lynx.</li>
                     <li>• <span className="text-foreground">Warlocks</span> may be accompanied by a bound Imp or Felhound.</li>
+                    <li>• <span className="text-foreground">Fey Changelings</span> are often trailed by a Pixie or Thorn Sprite.</li>
+                    <li>• <span className="text-foreground">Giant's Goose-Keepers</span> rarely go anywhere without a Giant Goose — or, if you're lucky, the Golden Goose itself. Geese hear everything.</li>
                   </ul>
-                  <p>Companions may wander separately from their owner — they can be lured and consumed independently. They do not carry materials or traits, but yield AP and count toward party depletion.</p>
+                  <p>Companions may wander separately from their owner — they can be lured and consumed independently. They yield AP and count toward party depletion; some, like fey familiars and geese, also carry materials or traits you can learn.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Suspicion from Combat">

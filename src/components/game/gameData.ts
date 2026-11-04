@@ -664,10 +664,23 @@ export interface QualityList {
 export interface CompanionOption {
   readonly nameSuffix: string;
   readonly type: CompanionType;
+  /** AP for consuming it whole. */
   readonly ap: number;
   readonly discipline: number;
   readonly constitution: number;
   readonly description: string;
+  /** Relative odds of this option being picked (default 1). */
+  readonly weight?: number;
+  // Optional overrides; anything left out uses the companion defaults (see createCompanion).
+  readonly interactionStyle?: InteractionStyle;
+  readonly perceptionAffinity?: Readonly<Record<PerceptionSense, number>>;
+  readonly lootMaterials?: readonly Material[];
+  readonly lootTraits?: readonly Trait[];
+  readonly partialLoot?: readonly string[];
+  /** Set to "giantKin" for giant companions (bites, giant bite AP). */
+  readonly group?: AdventurerGroupId;
+  readonly wholeMealMass?: number;
+  readonly behavior?: BehaviorId;
 }
 
 export interface AdventurerTemplate {
@@ -1179,6 +1192,26 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Feywood", "Spellweave Silk"],
     lootTraits: ["Mossy"],
     partialLoot: ["a lock of shifting, silver hair", "scrap of dew-damp silk", "a petal-shaped scale"],
+    companion: {
+      chance: 0.50,
+      options: [
+        {
+          nameSuffix: "'s Pixie", type: "Familiar", ap: 2, discipline: 3, constitution: 1, interactionStyle: "spell",
+          description: "A thumb-sized pixie that darts about its master's head, giggling at nothing.",
+          perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 2, social: 1, spatial: 1, environmental: 1, acoustic: 1, presence: 2 },
+          lootMaterials: ["Feywood"],
+          partialLoot: ["a gossamer wing", "a pinch of glittering dust", "a thistledown cap"],
+        },
+        {
+          nameSuffix: "'s Thorn Sprite", type: "Familiar", ap: 2, discipline: 3, constitution: 2, interactionStyle: "spell",
+          description: "A prickly little sprite armored in bark, fiercely protective of its master.",
+          perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 2, acoustic: 0, presence: 2 },
+          lootMaterials: ["Feywood"],
+          lootTraits: ["Mossy"],
+          partialLoot: ["a bramble-thorn spine", "a curl of bark armor", "a pinch of glittering dust"],
+        },
+      ],
+    },
   },
   {
     name: "Gargoyle", type: "Construct", discipline: 3, baseSuspicion: 2, constitution: 6, interactionStyle: "sight",
@@ -1265,6 +1298,29 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Golden Goose Down", "Cloud Fleece", "Giant Oak"],
     lootTraits: ["Soft"],
     partialLoot: ["a golden feather", "scrap of cloud-weave apron", "length of giant twine"],
+    // Geese are famous alarm animals: Keen Hearing makes them honk at any nearby movement
+    companion: {
+      chance: 0.70,
+      options: [
+        {
+          nameSuffix: "'s Giant Goose", type: "AnimalCompanion", ap: 6, discipline: 2, constitution: 4, weight: 2,
+          description: "A goose the size of a draft horse, ill-tempered and very, very loud.",
+          group: "giantKin", wholeMealMass: 32, behavior: "keenHearing",
+          perceptionAffinity: { material: 0, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 2, presence: 1 },
+          lootTraits: ["Soft"],
+          partialLoot: ["a grey feather the size of a sword", "a tuft of giant down", "a flake of orange beak"],
+        },
+        {
+          nameSuffix: "'s Golden Goose", type: "AnimalCompanion", ap: 8, discipline: 2, constitution: 4, weight: 1,
+          description: "The prized goose itself, its feathers gleaming like coins. Guarded jealously, and just as loud.",
+          group: "giantKin", wholeMealMass: 32, behavior: "keenHearing",
+          perceptionAffinity: { material: 0, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 2, presence: 1 },
+          lootMaterials: ["Golden Goose Down"],
+          lootTraits: ["Soft", "Gilded"],
+          partialLoot: ["a golden feather the size of a sword", "a tuft of gleaming down", "a gilded flake of beak"],
+        },
+      ],
+    },
   },
   {
     name: "Giant Treasure Hoarder", type: "Nobility", discipline: 3, baseSuspicion: 2, constitution: 8, interactionStyle: "touch",
@@ -2035,7 +2091,58 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   fled?: boolean;
   isDisappeared?: boolean;
   isCompanion?: boolean;
+  /** Overrides the type/group AP reward (companions set this from their option's `ap`). */
+  apReward?: number;
 };
+
+// ============================================================
+// COMPANIONS
+// ============================================================
+const COMPANION_PERCEPTION: Readonly<Record<PerceptionSense, number>> = {
+  material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0,
+};
+
+/** Picks one companion option, honoring each option's `weight`. */
+export function pickCompanionOption(options: readonly CompanionOption[]): CompanionOption {
+  const total = options.reduce((sum, o) => sum + (o.weight ?? 1), 0);
+  let r = Math.random() * total;
+  for (const o of options) {
+    r -= o.weight ?? 1;
+    if (r < 0) return o;
+  }
+  return options[options.length - 1];
+}
+
+/** Builds the party member for an adventurer's companion. */
+export function createCompanion(
+  owner: Pick<AdventurerTemplate, "name">, option: CompanionOption, id: string, room: RoomName,
+): PartyMember {
+  return {
+    name: owner.name + option.nameSuffix,
+    type: option.type,
+    group: option.group,
+    discipline: option.discipline,
+    baseSuspicion: 1,
+    suspicion: 1,
+    constitution: option.constitution,
+    interactionStyle: option.interactionStyle ?? "touch",
+    quirks: [option.description],
+    alluringQualities: { materials: [], traits: [], tags: [] },
+    perceptionAffinity: option.perceptionAffinity ?? COMPANION_PERCEPTION,
+    lootMaterials: option.lootMaterials ?? [],
+    lootTraits: option.lootTraits ?? [],
+    partialLoot: option.partialLoot ?? ["scruff of fur", "a claw", "patch of hide"],
+    wholeMealMass: option.wholeMealMass,
+    behavior: option.behavior,
+    apReward: option.ap,
+    id,
+    isAlive: true,
+    isConsumed: false,
+    isAttracted: false,
+    isCompanion: true,
+    location: room,
+  };
+}
 
 /** The result of a contested roll (stealth, allure or adhesion). */
 export interface CheckResult {
@@ -2222,7 +2329,8 @@ export const AP_REWARDS: Record<ApRewardKey, number> = {
 
 // AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
 // their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
-export function getApReward(adventurer: Pick<PartyMember, "group" | "type">): number {
+export function getApReward(adventurer: Pick<PartyMember, "group" | "type" | "apReward">): number {
+  if (adventurer.apReward !== undefined) return adventurer.apReward;
   if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
   return AP_REWARDS[adventurer.type] || 3;
 }

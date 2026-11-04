@@ -9,7 +9,7 @@ import {
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
-  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
+  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -93,29 +93,9 @@ function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: numbe
     // Companion/familiar injection
     if (t.companion && Math.random() < t.companion.chance) {
       const opts = t.companion.options;
-      const chosen = opts[Math.floor(Math.random() * opts.length)];
+      const chosen = pickCompanionOption(opts);
       const companionRoom = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-      members.push({
-        name: t.name + chosen.nameSuffix,
-        type: chosen.type,
-        discipline: chosen.ap, // re-use ap as discipline for combat purposes
-        baseSuspicion: 1,
-        suspicion: 1,
-        constitution: chosen.constitution,
-        interactionStyle: "touch",
-        quirks: [chosen.description],
-        alluringQualities: { materials: [], traits: [], tags: [] },
-        perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
-        lootMaterials: [],
-        lootTraits: [],
-        partialLoot: ["scruff of fur", "a claw", "patch of hide"],
-        id: `comp_${Date.now()}_${i}`,
-        isAlive: true,
-        isConsumed: false,
-        isAttracted: false,
-        isCompanion: true,
-        location: companionRoom,
-      });
+      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom));
     }
   });
 
