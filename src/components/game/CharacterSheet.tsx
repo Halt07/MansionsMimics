@@ -1,10 +1,11 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
+import { ACHIEVEMENTS, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import StatBar from "./StatBar";
+import { AchievementList } from "./Achievements";
 
 interface CharacterSheetProps {
   character: MimicCharacter;
@@ -142,6 +143,14 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
             </div>
           </div>
         )}
+
+        {/* Achievements */}
+        <div>
+          <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
+            Achievements ({ACHIEVEMENTS.filter(a => a.isEarned(character)).length}/{ACHIEVEMENTS.length})
+          </p>
+          <AchievementList character={character} />
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,4 +1,4 @@
-import { ACHIEVEMENTS, type AchievementId } from "./gameData";
+import { ACHIEVEMENTS, type AchievementId, type LocationId } from "./gameData";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 
 /** Colors for each achievement's banner, badge and Codex entry. */
@@ -11,11 +11,15 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   cannibal:          { text: "text-rose-400",   box: "bg-rose-500/10 border-rose-500/40" },
 };
 
-/** A banner for each achievement the mimic has earned. */
-export function AchievementBanners({ character }: { character: MimicCharacter }) {
+/**
+ * In-game banners: earned achievements whose bannerLocation is where the mimic is hunting.
+ * Pass huntingAt as null outside a hunt (nothing shows).
+ */
+export function AchievementBanners({ character, huntingAt }: { character: MimicCharacter; huntingAt: LocationId | null }) {
+  const shown = ACHIEVEMENTS.filter(a => a.isEarned(character) && huntingAt !== null && a.bannerLocation === huntingAt);
   return (
     <>
-      {ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => (
+      {shown.map(a => (
         <div key={a.id} className={`p-4 border rounded-lg text-center ${ACHIEVEMENT_STYLES[a.id].box}`}>
           <div className="text-3xl mb-1">{a.icon}</div>
           <p className={`font-cinzel text-sm font-bold ${ACHIEVEMENT_STYLES[a.id].text}`}>{a.name}</p>
@@ -23,6 +27,27 @@ export function AchievementBanners({ character }: { character: MimicCharacter })
         </div>
       ))}
     </>
+  );
+}
+
+/** Every earned achievement, compactly, for the character sheet. */
+export function AchievementList({ character }: { character: MimicCharacter }) {
+  const earned = ACHIEVEMENTS.filter(a => a.isEarned(character));
+  if (earned.length === 0) {
+    return <p className="text-xs text-muted-foreground/70 italic">None yet. The Codex lists what to aim for.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {earned.map(a => (
+        <div key={a.id} className={`flex items-start gap-2 p-2 border rounded ${ACHIEVEMENT_STYLES[a.id].box}`}>
+          <span className="text-lg leading-none">{a.icon}</span>
+          <div>
+            <p className={`font-cinzel text-xs font-bold ${ACHIEVEMENT_STYLES[a.id].text}`}>{a.name}</p>
+            <p className="text-[10px] text-muted-foreground flavor-text italic">"{a.flavor(character.name)}"</p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -681,6 +681,11 @@ export interface Achievement {
   /** Banner flavor text for a mimic that has earned it. */
   flavor: (mimicName: string) => string;
   isEarned: (character: AchievementProgress) => boolean;
+  /**
+   * Where its banner appears during a hunt (only while hunting there). Achievements without
+   * one have no in-game banner; every earned achievement is listed on the character sheet.
+   */
+  bannerLocation?: LocationId;
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -701,24 +706,28 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: "Consume all five Cloud Kingdom giants whole — finishing one off with bites doesn't count.",
     flavor: () => "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out.",
     isEarned: (c) => c.titanicFeastReached,
+    bannerLocation: "cloud_kingdom",
   },
   {
     id: "downWithTheShip", name: "Down With the Ship", icon: "⚓",
     description: "Swallow the Ship's Captain whole, strongbox and all, aboard The Sinking Ship.",
     flavor: (n) => `The captain never did abandon ship. ${n} made sure of it.`,
     isEarned: (c) => c.downWithTheShipReached,
+    bannerLocation: "sinking_ship",
   },
   {
     id: "cultOfPersonality", name: "Cult of Personality", icon: "🕯️",
     description: `Convert ${CULT_CONVERSIONS} devotees to your worship at The Hollow Reliquary.`,
     flavor: (n) => `Candles burn for ${n} in three different hands now. The faithful are learning the hymns.`,
     isEarned: (c) => c.conversions >= CULT_CONVERSIONS,
+    bannerLocation: "hollow_reliquary",
   },
   {
     id: "cannibal", name: "Cannibal", icon: "🦷",
     description: `Devour ${CANNIBAL_MIMICS} other mimics — nest mimics, Elders and lone rivals all count.`,
     flavor: (n) => `${n} has eaten its own kind ${CANNIBAL_MIMICS} times over. The others have learned to hide from it.`,
     isEarned: (c) => c.mimicsConsumed >= CANNIBAL_MIMICS,
+    bannerLocation: "mimic_nest",
   },
 ];
 

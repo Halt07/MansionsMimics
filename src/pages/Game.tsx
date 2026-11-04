@@ -1827,7 +1827,7 @@ export default function Game() {
           )}
 
           {/* Achievement banners */}
-          {character && <AchievementBanners character={character} />}
+          {character && <AchievementBanners character={character} huntingAt={phase === "hunt" ? location?.id ?? null : null} />}
 
           {/* Event log */}
           {phase !== "setup" && (
