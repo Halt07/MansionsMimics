@@ -11,6 +11,7 @@ import {
   isTemplateEligible, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
+  isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -49,6 +50,8 @@ interface RivalMimic {
 }
 
 const ACTION_LIMIT = 50;
+/** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
+const CEREMONY_STEP_MS = 2000;
 /** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
 const WAIT_MIN_CHANCE = 0.4;
 const STAT_CAP = 6;
@@ -63,8 +66,11 @@ function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: numbe
   const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
 
   const eligible = ADVENTURER_TEMPLATES.filter(t => isTemplateEligible(t, location, mimicTier, mimicMass));
-  const common = eligible.filter(t => !ELITE_GROUPS.includes(t.group));
-  const elite = eligible.filter(t => ELITE_GROUPS.includes(t.group));
+  // Some locations guarantee certain adventurers a place (e.g. the Reliquary's pilgrim)
+  const required = eligible.filter(t => location.alwaysIncludes?.includes(t.name));
+  const pool = eligible.filter(t => !required.includes(t));
+  const common = pool.filter(t => !ELITE_GROUPS.includes(t.group));
+  const elite = pool.filter(t => ELITE_GROUPS.includes(t.group));
 
   // Exclusive-roster locations draw only from their own adventurers, with no elite/common split
   if (location.exclusiveRoster) {
@@ -75,8 +81,8 @@ function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: numbe
   const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
   const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
 
-  const baseParty: AdventurerTemplate[] = [];
-  for (let i = 0; i < eliteCount && i < size; i++) {
+  const baseParty: AdventurerTemplate[] = [...required];
+  for (let i = 0; i < eliteCount && baseParty.length < size; i++) {
     if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
   }
   let ci = 0;
@@ -236,10 +242,11 @@ export default function Game() {
   };
 
   const confirmRoom = (room: RoomName, loc: HuntLocation) => {
-    const bounty = shouldTriggerBountyHunt(character?.mass ?? 0);
+    // Rare locations tell their own story: no bounty hunters or rival mimics there
+    const bounty = !loc.rare && shouldTriggerBountyHunt(character?.mass ?? 0);
     // Rival mimic: ~1 in 7 chance, only on non-bounty hunts, Greater tier+
     const tierIdx = TIER_ORDER.indexOf(character?.tier ?? "Minor");
-    const canHaveRival = !bounty && tierIdx >= TIER_ORDER.indexOf("Greater");
+    const canHaveRival = !bounty && !loc.rare && tierIdx >= TIER_ORDER.indexOf("Greater");
     const hasRival = canHaveRival && Math.random() < (1/7);
     let rivalData: RivalMimic | null = null;
     if (hasRival) {
@@ -285,6 +292,19 @@ export default function Game() {
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
     newParty.forEach(a => addEvent("info", `${a.name} (${a.type}) — currently in the ${a.location}.`));
+
+    // Rare locations: visiting closes the open one, hunting elsewhere uses up one of its hunts,
+    // and if none was open there's a chance one opens for the next hunts
+    if (character) {
+      const { state, opened } = advanceRareLocation(character.rareLocation, loc.id, character.tier, character.mass);
+      if (opened) {
+        addEvent("system", `✦ Whispers reach you of somewhere new: ${opened.name}. It won't stay within reach for long.`);
+      }
+      if (state !== character.rareLocation) {
+        setCharacter(prev => prev ? { ...prev, rareLocation: state } : prev);
+        persist({ rareLocation: state });
+      }
+    }
     setPhase("hunt");
   };
 
@@ -758,6 +778,52 @@ export default function Game() {
     }
   };
 
+  // Devotion (The Hollow Reliquary): once a devoted pilgrim is the last one left, it
+  // recognises the mimic as the shrine's lost god, brings offerings and leaves — ending the hunt.
+  // Runs whenever the party changes; if the last kill opened the upgrade screen it waits
+  // until the hunt resumes. The ceremony plays out one line at a time (CEREMONY_STEP_MS
+  // apart); actions and the end-of-hunt panel wait until it finishes.
+  const [ceremonyRunning, setCeremonyRunning] = useState(false);
+  const ceremonyTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => ceremonyTimers.current.forEach(clearTimeout), []);
+
+  useEffect(() => {
+    if (phase !== "hunt" || !location || !character) return;
+    const devotee = findDevotee(party);
+    if (!devotee) return;
+    const offerings = rollOfferings(location);
+    const apGained = offerings.reduce((sum, c) => sum + c.ap, 0);
+    const zealot = devotee.convertedName ?? devotee.name;
+    // Mark the convert right away so this can't trigger twice
+    setParty(prev => prev.map(a => a.id === devotee.id
+      ? { ...a, name: zealot, isAlive: false, isAttracted: false, isConverted: true }
+      : a));
+    setCeremonyRunning(true);
+    setActing(true);
+
+    const steps: (() => void)[] = [
+      () => addEvent("evolve", `${devotee.name} stares at the empty places where their companions stood… then falls to their knees before you. "It is real. It has come back."`),
+      ...(zealot !== devotee.name ? [() => addEvent("evolve", `${devotee.name} is now the ${zealot}.`)] : []),
+      () => addEvent("info", `The ${zealot} hurries out, and returns with offerings, laying them before you one by one.`),
+      ...offerings.map(c => () => {
+        addEvent("consume", `You accept the ${c.name}. +${c.ap} AP.`);
+        setCharacter(prev => prev ? { ...prev, assimilationPoints: prev.assimilationPoints + c.ap } : prev);
+      }),
+      () => {
+        addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`);
+        const total = character.assimilationPoints + apGained;
+        persist({ assimilationPoints: total, lastFedAt: new Date().toISOString() });
+        setCeremonyRunning(false);
+        setActing(false);
+        if (total >= TIER_CONFIG[character.tier].apToEvolve) {
+          addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
+          setPhase("evolve");
+        }
+      },
+    ];
+    ceremonyTimers.current = steps.map((step, i) => setTimeout(step, i * CEREMONY_STEP_MS));
+  }, [party, phase]);
+
   // Open form selection. returnTo is where confirming or skipping goes afterwards.
   const startFormSelection = (returnTo: Phase = "setup") => {
     setFormSelectReturnPhase(returnTo);
@@ -1007,15 +1073,9 @@ export default function Game() {
   const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
 
   // Filter locations by minTier and minMass
-  const availableLocations = LOCATIONS.filter(loc => {
-    const charTierIdx = character ? TIER_ORDER.indexOf(character.tier) : 0;
-    if (loc.minTier) {
-      const locTierIdx = TIER_ORDER.indexOf(loc.minTier);
-      if (charTierIdx < locTierIdx) return false;
-    }
-    if (loc.minMass && (character?.mass ?? 0) < loc.minMass) return false;
-    return true;
-  });
+  const availableLocations = character
+    ? LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation))
+    : [];
 
   if (loading) {
     return (
@@ -1260,13 +1320,20 @@ export default function Game() {
                 <p className="text-[10px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {availableLocations.map(loc => (
+                {[...availableLocations].sort((a, b) => Number(!!b.rare) - Number(!!a.rare)).map(loc => (
                   <Card
                     key={loc.id}
                     onClick={() => chooseLocation(loc)}
-                    className="cursor-pointer border-border hover:border-primary/40 bg-card transition-all group"
+                    className={`cursor-pointer bg-card transition-all group ${loc.rare
+                      ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
+                      : "border-border hover:border-primary/40"}`}
                   >
                     <CardContent className="p-4">
+                      {loc.rare && character?.rareLocation && (
+                        <p className="text-[10px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
+                          ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
+                        </p>
+                      )}
                       <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{loc.name}</h3>
                       <p className="text-xs text-muted-foreground mb-2">{loc.description}</p>
                       <p className="flavor-text text-[11px] text-muted-foreground/70 italic mb-3 line-clamp-2">{loc.flavorText}</p>
@@ -1354,7 +1421,7 @@ export default function Game() {
                     )}
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setPhase("setup")} className="text-xs border-border gap-1">
+                <Button variant="outline" size="sm" onClick={() => setPhase("setup")} disabled={ceremonyRunning} className="text-xs border-border gap-1">
                   <RefreshCw className="w-3 h-3" /> New Hunt
                 </Button>
               </div>
@@ -1511,7 +1578,8 @@ export default function Game() {
                         <button
                           key={creature.uid}
                           onClick={() => doConsumeCreature(creature)}
-                          className="text-xs px-3 py-1.5 rounded border border-border bg-card hover:border-primary/40 hover:text-primary transition-all text-muted-foreground"
+                          disabled={acting}
+                          className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-border bg-card hover:border-primary/40 hover:text-primary transition-all text-muted-foreground"
                           title={creature.description}
                         >
                           🐀 {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
@@ -1522,11 +1590,12 @@ export default function Game() {
                 );
               })()}
 
-              {activeAdventurers.length === 0 && party.length > 0 && (
+              {activeAdventurers.length === 0 && party.length > 0 && !ceremonyRunning && (
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
                   <p className="text-primary font-cinzel mb-2">The hunt is over.</p>
                   <p className="text-xs text-muted-foreground mb-3">
                     {party.filter(a => a.isConsumed).length} consumed · {party.filter(a => a.fled).length} fled
+                    {party.some(a => a.isConverted) && ` · ${party.filter(a => a.isConverted).length} converted`}
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">

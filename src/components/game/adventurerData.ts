@@ -81,6 +81,8 @@ export interface AdventurerTemplate {
   /** Only appears at these locations (any location if omitted). */
   readonly locations?: readonly LocationId[];
   readonly behavior?: BehaviorId;
+  /** Devotion: the name this adventurer takes once it converts (e.g. "Elder Zealot"). */
+  readonly convertedName?: string;
 }
 
 // ============================================================
@@ -523,6 +525,67 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     },
   },
 
+  // ── The Hollow Reliquary (rare location) ──
+  {
+    name: "Wide-Eyed Pilgrim", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["hollow_reliquary"],
+    behavior: "devotion", convertedName: "Consumption Zealot",
+    quirks: ["Kisses every relic it passes", "Hums hymns about a chest that eats sinners", "Lingers at the empty altar long after the others move on"],
+    alluringQualities: { materials: ["Gold", "Oak"], traits: ["Sacred Symbol", "Heavy-Lidded", "Carved"], tags: ["Religious", "Storage"] },
+    perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 1, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 2 },
+    lootMaterials: ["Linen", "Wool"],
+    lootTraits: ["Worn"],
+    partialLoot: ["a frayed pilgrim's sash", "a tin pilgrim badge", "a string of prayer beads"],
+  },
+  {
+    name: "Pilgrim Elder", type: "Cleric", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "spell",
+    group: "commoners",
+    repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
+    locations: ["hollow_reliquary"],
+    behavior: "devotion", convertedName: "Elder Zealot",
+    quirks: ["Leads the prayers in a cracked, carrying voice", "Remembers how the shrine looked fifty years ago", "Blesses anything left on the altar"],
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Gilded"], tags: ["Religious", "Valuable"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 2, social: 1, spatial: 2, environmental: 0, acoustic: 0, presence: 2 },
+    lootMaterials: ["Silver", "Linen"],
+    lootTraits: ["Sacred Symbol"],
+    partialLoot: ["a tarnished censer chain", "a strip of vestment hem", "a well-thumbed hymnal page"],
+  },
+  {
+    name: "Shrine Guard", type: "Warrior", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "common",
+    repelledBy: { traits: ["Cracked"] },
+    locations: ["hollow_reliquary"],
+    quirks: ["Paid to keep thieves out, not to believe", "Raps the pommel of their sword on anything suspicious", "Counts the relics at every shift change"],
+    alluringQualities: { materials: ["Iron", "Steel"], traits: ["Locked", "Reinforced", "Iron-Banded"], tags: ["Defensive", "Storage"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Steel", "Cowhide"],
+    lootTraits: ["Reinforced"],
+    partialLoot: ["a dented helm strap", "a ring of shrine keys", "a strip of tabard"],
+  },
+  {
+    name: "Relic-Seeker", type: "Rogue", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "touch",
+    group: "common",
+    locations: ["hollow_reliquary"],
+    quirks: ["Posing as a pilgrim, fooling no one", "Pries at every lock and seam", "Knows exactly what the old reliquary chest was worth"],
+    alluringQualities: { materials: ["Gold", "Silver", "Mahogany"], traits: ["Locked", "Inlaid", "Gilded"], tags: ["Valuable", "Storage"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 1, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 1, presence: 0 },
+    lootMaterials: ["Silver", "Tanned Hide"],
+    lootTraits: ["Inlaid"],
+    partialLoot: ["a bent lockpick", "a stolen saint's knucklebone", "a scrap of a forged pilgrim's pass"],
+  },
+  {
+    name: "Doubting Scholar", type: "Wizard", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "common",
+    locations: ["hollow_reliquary"],
+    quirks: ["Writing a treatise on why the legend is false", "Measures the altar where the chest once stood", "Reads every inscription aloud, skeptically"],
+    alluringQualities: { materials: ["Walnut", "Linen"], traits: ["Runescript", "Etched", "Carved"], tags: ["Knowledge", "Religious"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 3, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 1 },
+    lootMaterials: ["Linen", "Walnut"],
+    lootTraits: ["Etched"],
+    partialLoot: ["an ink-stained cuff", "a page of skeptical notes", "a broken reading lens"],
+  },
+
   // ── Supernatural / Monster types ──
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
@@ -820,6 +883,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
 export interface BehaviorInfo {
   readonly label: string;
   readonly description: string;
+  /** Hidden behaviors are never shown to the player, not even in the Codex. */
+  readonly hidden?: boolean;
 }
 
 export const BEHAVIORS = {
@@ -838,6 +903,11 @@ export const BEHAVIORS = {
   stoneWatch: {
     label: "Stone Watch",
     description: "Never leaves its perch. If you move out of, into, or past a room next to it, it notices the change.",
+  },
+  devotion: {
+    label: "Devotion",
+    description: "Once every other party member is gone, it recognises you as the shrine's lost god: it brings you offerings and leaves in reverence, ending the hunt.",
+    hidden: true,
   },
   bloodScent: {
     label: "Blood Scent",
@@ -864,6 +934,8 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   fled?: boolean;
   isDisappeared?: boolean;
   isCompanion?: boolean;
+  /** Converted by Devotion: no longer part of the hunt (isAlive is false too). */
+  isConverted?: boolean;
   /** Overrides the type/group AP reward (companions set this from their option's `ap`). */
   apReward?: number;
 };

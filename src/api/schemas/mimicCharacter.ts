@@ -15,7 +15,7 @@ import { z } from 'zod';
 import {
   ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
 } from '@/components/game/vocabulary';
-import { FORM_IDS } from '@/components/game/gameData';
+import { FORM_IDS, LOCATIONS, type LocationId } from '@/components/game/gameData';
 
 const TierSchema = z.enum(TIER_ORDER);
 const MaterialSchema = z.enum(ALL_MATERIALS);
@@ -60,6 +60,11 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */
   hatboxToLegendReached: z.boolean().default(false),
+  /** The rare location currently open to this mimic (see advanceRareLocation), or null. */
+  rareLocation: z.strictObject({
+    id: z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]),
+    huntsLeft: z.number().int().min(1),
+  }).nullable().default(null),
   /** True once every Cloud Kingdom giant has been consumed whole. */
   titanicFeastReached: z.boolean().default(false),
   /** ISO timestamp of the last time the mimic consumed something (used for mass decay). */

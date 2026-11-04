@@ -16,11 +16,12 @@ import {
   MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
 } from "./mimicData";
 import {
-  ADVENTURER_TEMPLATES, AP_REWARDS, type AdventurerTemplate, type CompanionOption,
+  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
-  ROOM_FORM_MODIFIERS, type HuntLocation, type RoomContextMod, type RoomName,
+  LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId,
+  type RoomContextMod, type RoomName,
 } from "./locationData";
 
 export * from "./vocabulary";
@@ -446,6 +447,83 @@ export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Ma
 }
 
 // ============================================================
+// LOCATION AVAILABILITY & RARE LOCATIONS
+// After every hunt there's a RARE_LOCATION_CHANCE that one rare location the mimic
+// qualifies for opens. It stays on the map for RARE_LOCATION_HUNTS hunts (or until
+// visited), and only one can be open at a time.
+// ============================================================
+export const RARE_LOCATION_CHANCE = 0.15;
+export const RARE_LOCATION_HUNTS = 2;
+
+/** The rare location currently open for a mimic, and how many more hunts it stays. */
+export interface RareLocationState {
+  id: LocationId;
+  huntsLeft: number;
+}
+
+/** Whether the mimic's tier and mass meet a location's requirements (ignores rarity). */
+export function meetsLocationRequirements(location: HuntLocation, tier: Tier, mass: number): boolean {
+  if (TIER_ORDER.indexOf(tier) < TIER_ORDER.indexOf(location.minTier)) return false;
+  if (location.minMass && mass < location.minMass) return false;
+  return true;
+}
+
+/** Whether a location appears on the hunting-ground screen right now. */
+export function isLocationAvailable(
+  location: HuntLocation, tier: Tier, mass: number, rareLocation: RareLocationState | null | undefined,
+): boolean {
+  if (location.rare && rareLocation?.id !== location.id) return false;
+  return meetsLocationRequirements(location, tier, mass);
+}
+
+/**
+ * The rare-location state after a hunt at `huntedAt`. Visiting the open rare location
+ * closes it; hunting elsewhere uses up one of its hunts. If nothing was open before this
+ * hunt, there's a RARE_LOCATION_CHANCE that a qualifying rare location opens.
+ */
+export function advanceRareLocation(
+  current: RareLocationState | null | undefined, huntedAt: LocationId, tier: Tier, mass: number,
+  random: () => number = Math.random,
+): { state: RareLocationState | null; opened: HuntLocation | null } {
+  if (current) {
+    const huntsLeft = current.huntsLeft - 1;
+    const state = current.id === huntedAt || huntsLeft <= 0 ? null : { ...current, huntsLeft };
+    return { state, opened: null };
+  }
+  if (random() >= RARE_LOCATION_CHANCE) return { state: null, opened: null };
+  const candidates = LOCATIONS.filter(l => l.rare && meetsLocationRequirements(l, tier, mass));
+  if (candidates.length === 0) return { state: null, opened: null };
+  const opened = candidates[Math.floor(random() * candidates.length)];
+  return { state: { id: opened.id, huntsLeft: RARE_LOCATION_HUNTS }, opened };
+}
+
+// ============================================================
+// DEVOTION (The Hollow Reliquary)
+// A devoted adventurer left as the last one standing converts: it brings the mimic
+// OFFERING_COUNT small creatures from the location and leaves, ending the hunt.
+// ============================================================
+export const OFFERING_COUNT: readonly [number, number] = [4, 5];
+
+const isStillHunting = (a: PartyMember): boolean =>
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted;
+
+/** The devoted adventurer ready to convert: the only party member left, or null. */
+export function findDevotee(party: readonly PartyMember[]): PartyMember | null {
+  const remaining = party.filter(isStillHunting);
+  if (party.length < 2 || remaining.length !== 1) return null;
+  return remaining[0].behavior === "devotion" ? remaining[0] : null;
+}
+
+/** The small creatures a convert brings as offerings. */
+export function rollOfferings(location: HuntLocation, random: () => number = Math.random): LocationCreature[] {
+  const pool = location.locationCreatures;
+  if (pool.length === 0) return [];
+  const [min, max] = OFFERING_COUNT;
+  const count = min + Math.floor(random() * (max - min + 1));
+  return Array.from({ length: count }, () => pool[Math.floor(random() * pool.length)]);
+}
+
+// ============================================================
 // PARTY ELIGIBILITY
 // Whether a template may appear in a party at this location for this mimic.
 // ============================================================
@@ -528,6 +606,12 @@ export function consumeSuspicion(witnesses: number): number {
   if (witnesses >= 3) return 3;
   if (witnesses >= 1) return 2;
   return 1;
+}
+
+/** Hidden behaviors are never revealed to the player (e.g. in the Codex). */
+export function isHiddenBehavior(id: BehaviorId): boolean {
+  const info: BehaviorInfo = BEHAVIORS[id];
+  return !!info.hidden;
 }
 
 /** Adventurers with this behavior never wander on their own. */
@@ -619,6 +703,9 @@ export function getBehaviorReactions(
         if (arrived && moved) result.arrivals.push({ ...adv, location: newRoom });
         return;
       }
+      case "devotion":
+        // Doesn't react to individual actions; the game checks findDevotee() whenever the party changes
+        return;
       default: {
         // Compile-time check that every behavior is handled above
         const unhandled: never = adv.behavior;

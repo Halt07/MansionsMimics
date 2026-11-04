@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
+  ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
   isMagicMaterial, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -387,7 +387,7 @@ export default function Codex() {
                       <ul className="space-y-0.5 text-xs text-muted-foreground">
                         {adv.quirks.map((q) => <li key={q}>• {q}</li>)}
                       </ul>
-                      {adv.behavior && (
+                      {adv.behavior && !isHiddenBehavior(adv.behavior) && (
                         <div className="mt-3">
                           <p className="text-xs text-muted-foreground mb-1">
                             Instinct: <span className="text-purple-400">{BEHAVIORS[adv.behavior].label}</span>
@@ -600,6 +600,13 @@ export default function Codex() {
                     <li>• <span className="text-foreground">Abandoned Castle</span> / <span className="text-foreground">Castle Gate form</span> — unlocks at mass 35</li>
                     <li>• <span className="text-foreground">Lighthouse form</span> — unlocks at mass 38</li>
                   </ul>
+                </div>
+              </Collapsible>
+              <Collapsible title="Rare Locations">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>Some hunting grounds aren't always within reach. After each hunt there's a <span className="text-foreground">15% chance</span> that word reaches you of a rare location for which you qualify. It appears on the hunting-ground screen with a <span className="text-amber-400">✦ gold border</span> and stays for <span className="text-foreground">2 hunts elsewhere</span>, or until you hunt there. Only one rare location is open at a time. Rare locations have their own adventurers, and no bounty hunters or rival mimics follow you there.</p>
+                  <p className="font-semibold text-foreground">The Hollow Reliquary <span className="text-muted-foreground font-normal">(Standard+)</span></p>
+                  <p>A half-ruined shrine built around a sacred chest that once "consumed the unworthy." The chest is long gone, but pilgrims still come, and some of them have never stopped believing it will return.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Giant Realm (Apex — Mass 28+)">

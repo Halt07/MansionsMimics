@@ -37,6 +37,13 @@ interface LocationDef {
   readonly isGiantRealm?: boolean;
   /** Only adventurers that list this location in their `locations` can appear here. */
   readonly exclusiveRoster?: boolean;
+  /**
+   * Rare locations aren't always on the map: after a hunt there's a small chance one opens
+   * for a couple of hunts (see advanceRareLocation in ./gameData).
+   */
+  readonly rare?: boolean;
+  /** Adventurers (template names) guaranteed a place in every party here. */
+  readonly alwaysIncludes?: readonly string[];
 }
 
 const LOCATION_DATA = [
@@ -397,6 +404,35 @@ const LOCATION_DATA = [
       { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "Black against grey sky, always watching." },
       { id: "adder", name: "Moorland Adder", ap: 1, discipline: 2, description: "A venomous snake basking near the peat stack." },
     ],
+  },
+
+  // ── Rare locations (open briefly at random; see advanceRareLocation) ──
+  {
+    id: "hollow_reliquary", name: "The Hollow Reliquary", minTier: "Standard",
+    description: "A half-ruined shrine built around a sacred chest that once \"consumed the unworthy.\" Pilgrims still come.",
+    flavorText: "The altar where the chest once stood is bare, scrubbed clean, and waiting. The faithful say it will return.",
+    rooms: ["Nave", "Reliquary Vault", "Candle Gallery", "Pilgrims' Dormitory", "Bell Loft", "Ossuary"],
+    roomGraph: {
+      "Nave":                ["Reliquary Vault", "Candle Gallery", "Pilgrims' Dormitory"],
+      "Reliquary Vault":     ["Nave", "Ossuary"],
+      "Candle Gallery":      ["Nave", "Bell Loft"],
+      "Pilgrims' Dormitory": ["Nave"],
+      "Bell Loft":           ["Candle Gallery"],
+      "Ossuary":             ["Reliquary Vault"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 1,
+    advantageTags: ["Religious", "Valuable", "Storage"],
+    imageHint: "candlelit ruined shrine with an empty altar and kneeling pilgrims",
+    locationCreatures: [
+      { id: "church_mouse", name: "Church Mouse", ap: 1, discipline: 1, description: "Fat on spilled communion bread." },
+      { id: "dove", name: "Temple Dove", ap: 1, discipline: 1, description: "Kept for releasing at blessings." },
+      { id: "bell_bat", name: "Bell-Loft Bat", ap: 1, discipline: 1, description: "Deaf from the bells, and unbothered by anything." },
+      { id: "temple_cat", name: "Temple Cat", ap: 2, discipline: 2, description: "A sleek mouser the pilgrims think is lucky." },
+      { id: "votive_lamb", name: "Votive Lamb", ap: 3, discipline: 1, description: "Brought by a pilgrim as an offering. To whom, it does not know." },
+    ],
+    rare: true,
+    exclusiveRoster: true,
+    alwaysIncludes: ["Wide-Eyed Pilgrim"],
   },
 ] as const satisfies readonly LocationDef[];
 
