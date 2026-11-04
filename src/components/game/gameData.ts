@@ -16,7 +16,7 @@ import {
   MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
 } from "./mimicData";
 import {
-  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
+  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
@@ -400,9 +400,26 @@ export function allureCheck(
   };
 }
 
+/** Extra dice an Elusive adventurer rolls when resisting a Strike (or bite). */
+export const ELUSIVE_EXTRA_DICE = 1;
+
+/** Dice an adventurer resists a Strike (or bite) with: its Discipline, plus any Elusive dice. */
+export function strikeResistDice(adventurer: Pick<PartyMember, "discipline" | "behavior">): number {
+  return adventurer.discipline + (adventurer.behavior === "elusive" ? ELUSIVE_EXTRA_DICE : 0);
+}
+
+/** Where an adventurer that slipped a Strike runs to: a room next to it, never the mimic's. */
+export function escapeRoom(
+  location: HuntLocation, fromRoom: RoomName, mimicRoom: RoomName | null, random: () => number = Math.random,
+): RoomName {
+  const adjacent = getAdjacentRooms(location, fromRoom).filter(r => r !== mimicRoom);
+  const options = adjacent.length > 0 ? adjacent : location.rooms.filter(r => r !== mimicRoom && r !== fromRoom);
+  return options.length > 0 ? options[Math.floor(random() * options.length)] : fromRoom;
+}
+
 export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember): CheckResult {
   const mimicRoll = rollDice(adhesion);
-  const advRoll = rollDice(adventurer.discipline);
+  const advRoll = rollDice(strikeResistDice(adventurer));
   const success = mimicRoll >= advRoll;
   return {
     success, mimicRoll, advRoll, suspicionChange: 0, detectedFlaws: [],
@@ -452,7 +469,7 @@ export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Ma
 // qualifies for opens. It stays on the map for RARE_LOCATION_HUNTS hunts (or until
 // visited), and only one can be open at a time.
 // ============================================================
-export const RARE_LOCATION_CHANCE = 0.15;
+export const RARE_LOCATION_CHANCE = 1;//0.15;
 export const RARE_LOCATION_HUNTS = 2;
 
 /** The rare location currently open for a mimic, and how many more hunts it stays. */
@@ -592,6 +609,38 @@ export function isNestCleared(rivals: readonly RivalMimic[]): boolean {
 }
 
 // ============================================================
+// TREASURE
+// ============================================================
+export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: Trait };
+
+/** One random prize from the treasure that the mimic doesn't already know, or null if it knows them all. */
+export function pickTreasurePrize(
+  treasure: Pick<Treasure, "materials" | "traits">, knownMaterials: readonly Material[], knownTraits: readonly Trait[],
+  random: () => number = Math.random,
+): TreasurePrize | null {
+  const options: TreasurePrize[] = [
+    ...treasure.materials.filter(name => !knownMaterials.includes(name)).map(name => ({ kind: "material" as const, name })),
+    ...treasure.traits.filter(name => !knownTraits.includes(name)).map(name => ({ kind: "trait" as const, name })),
+  ];
+  return options.length > 0 ? options[Math.floor(random() * options.length)] : null;
+}
+
+// ============================================================
+// SINKING (The Sinking Ship)
+// Each turn (Wait, Lure, Relocate, Strike) brings the ship closer to going under. At
+// sinkingTurns the hunt ends: survivors take to the lifeboats and the mimic drifts ashore.
+// ============================================================
+/** The log warning for a sinking turn, if this turn has one. */
+export function sinkingWarning(totalTurns: number, turn: number): string | null {
+  const left = totalTurns - turn;
+  if (left <= 0) return null;
+  if (turn === Math.floor(totalTurns / 3)) return "🌊 Water sloshes across the lower decks. The hull groans under the strain.";
+  if (turn === Math.floor((totalTurns * 2) / 3)) return "🌊 The ship lists hard. Loose cargo slides, and the hold is half underwater.";
+  if (left <= 2) return `🌊 The deck is awash. ${left === 1 ? "One more turn" : "Two more turns"} before she goes under!`;
+  return null;
+}
+
+// ============================================================
 // PARTY ELIGIBILITY
 // Whether a template may appear in a party at this location for this mimic.
 // ============================================================
@@ -616,10 +665,12 @@ export function isTemplateEligible(
 export const CULT_CONVERSIONS = 3;
 export const CANNIBAL_MIMICS = 10;
 
-export type AchievementId = "hatboxToLegend" | "apexPeak" | "titanicFeast" | "cultOfPersonality" | "cannibal";
+export type AchievementId =
+  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal";
 
 type AchievementProgress = Pick<MimicCharacter,
-  "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "conversions" | "mimicsConsumed">;
+  "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
+  "conversions" | "mimicsConsumed">;
 
 export interface Achievement {
   id: AchievementId;
@@ -650,6 +701,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: "Consume all five Cloud Kingdom giants whole — finishing one off with bites doesn't count.",
     flavor: () => "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out.",
     isEarned: (c) => c.titanicFeastReached,
+  },
+  {
+    id: "downWithTheShip", name: "Down With the Ship", icon: "⚓",
+    description: "Swallow the Ship's Captain whole, strongbox and all, aboard The Sinking Ship.",
+    flavor: (n) => `The captain never did abandon ship. ${n} made sure of it.`,
+    isEarned: (c) => c.downWithTheShipReached,
   },
   {
     id: "cultOfPersonality", name: "Cult of Personality", icon: "🕯️",
@@ -828,6 +885,9 @@ export function getBehaviorReactions(
         if (arrived && moved) result.arrivals.push({ ...adv, location: newRoom });
         return;
       }
+      case "elusive":
+        // Handled when a Strike is resolved (extra resist die; bolts to another room instead of fleeing)
+        return;
       case "devotion":
         // Doesn't react to individual actions; the game checks findDevotee() whenever the party changes
         return;

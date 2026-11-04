@@ -6,6 +6,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   hatboxToLegend:    { text: "text-sky-400",    box: "bg-sky-500/10 border-sky-500/40" },
   apexPeak:          { text: "text-primary",    box: "bg-primary/10 border-primary/40" },
   titanicFeast:      { text: "text-amber-400",  box: "bg-amber-500/10 border-amber-500/40" },
+  downWithTheShip:   { text: "text-cyan-400",   box: "bg-cyan-500/10 border-cyan-500/40" },
   cultOfPersonality: { text: "text-yellow-200", box: "bg-yellow-200/10 border-yellow-200/40" },
   cannibal:          { text: "text-rose-400",   box: "bg-rose-500/10 border-rose-500/40" },
 };

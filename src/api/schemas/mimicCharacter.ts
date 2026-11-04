@@ -65,6 +65,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
     id: z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]),
     huntsLeft: z.number().int().min(1),
   }).nullable().default(null),
+  /** True once this mimic has swallowed the Ship's Captain (and the strongbox) whole. */
+  downWithTheShipReached: z.boolean().default(false),
   /** How many devotees have converted to this mimic's worship (Cult of Personality). */
   conversions: z.number().int().min(0).default(0),
   /** How many rival mimics this mimic has devoured (Cannibal). */

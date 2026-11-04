@@ -49,6 +49,8 @@ interface LocationDef {
    * Devouring the Elder ends the hunt; losing every adventurer does not.
    */
   readonly rivalNest?: readonly [number, number];
+  /** The location sinks (and the hunt ends) after this many turns. */
+  readonly sinkingTurns?: number;
 }
 
 const LOCATION_DATA = [
@@ -464,6 +466,33 @@ const LOCATION_DATA = [
     rare: true,
     exclusiveRoster: true,
     rivalNest: [3, 4],
+  },
+  {
+    id: "sinking_ship", name: "The Sinking Ship", minTier: "Lesser",
+    description: "A merchant ship holed on the rocks and going down fast. Its captain refuses to leave without the strongbox.",
+    flavorText: "Every timber groans. The water is already in the hold, and rising. Whatever you mean to eat, eat it quickly.",
+    rooms: ["Main Deck", "Quarterdeck", "Captain's Cabin", "Galley", "Cargo Hold", "Bilge"],
+    roomGraph: {
+      "Main Deck":       ["Quarterdeck", "Galley", "Cargo Hold"],
+      "Quarterdeck":     ["Main Deck", "Captain's Cabin"],
+      "Captain's Cabin": ["Quarterdeck"],
+      "Galley":          ["Main Deck", "Cargo Hold"],
+      "Cargo Hold":      ["Main Deck", "Galley", "Bilge"],
+      "Bilge":           ["Cargo Hold"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 1,
+    advantageTags: ["Storage", "Coastal", "Transport"],
+    imageHint: "listing merchant ship at night, water pouring into the hold, lanterns swinging",
+    locationCreatures: [
+      { id: "ship_rat", name: "Ship Rat", ap: 1, discipline: 1, description: "Already climbing for the rigging." },
+      { id: "gull", name: "Harbor Gull", ap: 1, discipline: 1, description: "Circling, waiting to see what floats." },
+      { id: "crab", name: "Rock Crab", ap: 1, discipline: 2, description: "Came in through the hole in the hull." },
+      { id: "ships_cat", name: "Ship's Cat", ap: 2, discipline: 2, description: "Furious about the water." },
+    ],
+    rare: true,
+    exclusiveRoster: true,
+    alwaysIncludes: ["Ship's Captain"],
+    sinkingTurns: 15,
   },
 ] as const satisfies readonly LocationDef[];
 

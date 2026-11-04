@@ -13,6 +13,7 @@ import {
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
+  sinkingWarning, pickTreasurePrize, escapeRoom,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
@@ -166,6 +167,8 @@ export default function Game() {
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   // Rival mimics hiding in the location: none, a lone rival, or a whole nest
   const [rivals, setRivals] = useState<RivalMimic[]>([]);
+  // The Sinking Ship: turns taken so far this hunt (see advanceShip)
+  const [shipTurn, setShipTurn] = useState(0);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
   // Where form selection returns to: the hunting-ground screen normally, or straight back
@@ -225,6 +228,7 @@ export default function Game() {
     setMimicRoom(null);
     setIsBountyHunt(false);
     setRivals([]);
+    setShipTurn(0);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -298,6 +302,24 @@ export default function Game() {
       }
     }
     setPhase("hunt");
+  };
+
+  // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
+  // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
+  const advanceShip = () => {
+    const total = location?.sinkingTurns;
+    if (!total || shipTurn >= total) return;
+    const turn = shipTurn + 1;
+    setShipTurn(turn);
+    const warning = sinkingWarning(total, turn);
+    if (warning) addEvent("alert", warning);
+    if (turn >= total) {
+      setParty(prev => prev.map(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared
+        ? { ...a, isAlive: false, isAttracted: false, fled: true }
+        : a));
+      addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
+      addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
+    }
   };
 
   // Called whenever suspicion hits 10 — ends hunt immediately
@@ -414,6 +436,7 @@ export default function Game() {
     });
     applyBehaviorReactions("relocate", { mimicRoom: targetRoom, fromRoom: mimicRoom });
     checkActionLimit(newCount);
+    advanceShip();
   };
 
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
@@ -493,11 +516,24 @@ export default function Game() {
       }
     }
     checkActionLimit(newCount);
+    advanceShip();
     setActing(false);
   };
 
-  const doStrikeTurn = () => {
-    if (!character || !location) return;
+  // Elusive adventurers never leave the hunting ground: when they get away they bolt to
+  // another room instead (unattracted, and more wary).
+  const boltAway = (target: PartyMember, extraSuspicion: number, hitsTaken?: number) => {
+    if (!location) return;
+    const room = escapeRoom(location, target.location, mimicRoom);
+    addEvent("escape", `${target.name} bolts for the ${room}!`);
+    setParty(prev => prev.map(a => a.id === target.id
+      ? { ...a, location: room, isAttracted: false, suspicion: a.suspicion + extraSuspicion, hitsTaken: hitsTaken ?? a.hitsTaken }
+      : a));
+  };
+
+  // Resolves a Strike. Returns whether it took a turn (false if there was nothing to strike).
+  const resolveStrike = (): boolean => {
+    if (!character || !location) return false;
     // Bonesteel: +1 die on strike rolls
     const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
 
@@ -547,16 +583,16 @@ export default function Game() {
         setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
       }
       setActing(false);
-      return;
+      return true;
     }
 
     const attracted = party.filter(a => a.isAlive && !a.isConsumed && a.isAttracted);
     if (attracted.length === 0) {
       addEvent("info", "No adventurers are close enough to strike. Use Allure first.");
-      return;
+      return false;
     }
     const form = getActiveForm(character);
-    if (!form) { addEvent("alert", "No active form!"); return; }
+    if (!form) { addEvent("alert", "No active form!"); return false; }
     setActing(true);
     setActionCount(0); // Strike resets the action counter
 
@@ -635,7 +671,9 @@ export default function Game() {
 
           if (finishing) {
             // Dead or fled
-            if (flees) {
+            if (flees && target.behavior === "elusive") {
+              boltAway(target, 2, hitsSoFar);
+            } else if (flees) {
               addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
               setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
@@ -662,7 +700,9 @@ export default function Game() {
           const hitsSoFarMissed = (target.hitsTaken || 0);
           addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
           setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
-          if (hitsSoFarMissed + 1 >= (target.constitution || 3) && Math.random() < 0.6) {
+          if (hitsSoFarMissed + 1 >= (target.constitution || 3) && target.behavior === "elusive") {
+            boltAway(target, 4, hitsSoFarMissed + 1);
+          } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && Math.random() < 0.6) {
             addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
             setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, fled: true } : a));
           } else {
@@ -677,7 +717,7 @@ export default function Game() {
         setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 2 } : a));
       }
       setActing(false);
-      return;
+      return true;
     }
 
     // Full-size mimics: full consumption
@@ -685,7 +725,8 @@ export default function Game() {
     addEvent(result.success ? "attack" : "escape", result.narrative);
 
     if (result.success) {
-      const apGained = getApReward(target);
+      // Treasure carried by the target (e.g. the Captain's strongbox) goes down with them
+      const apGained = getApReward(target) + (target.treasure?.ap ?? 0);
       const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
       const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
       // Variable learning: learn 1–all materials randomly (at least 1 if any exist)
@@ -697,9 +738,32 @@ export default function Game() {
         : [];
       const learnedNewMats = matsToLearn.filter(m => !(character.learnedMaterials || []).includes(m));
       const learnedNewTraits = traitsToLearn.filter(t => !(character.learnedTraits || []).includes(t));
+      // Treasure guarantees one prize the mimic doesn't know yet (counting this meal's learning)
+      const prize = target.treasure
+        ? pickTreasurePrize(target.treasure, [...character.learnedMaterials, ...matsToLearn], [...character.learnedTraits, ...traitsToLearn])
+        : null;
+      if (prize?.kind === "material") matsToLearn.push(prize.name);
+      if (prize?.kind === "trait") traitsToLearn.push(prize.name);
+      const sankWithShip = target.name === "Ship's Captain" && !character.downWithTheShipReached;
 
       setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
-      addEvent("consume", `${target.name} has been consumed! +${apGained} Assimilation Points.`);
+      addEvent("consume", `${target.name} has been consumed! +${apGained - (target.treasure?.ap ?? 0)} Assimilation Points.`);
+      if (target.treasure) {
+        addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
+        if (prize) {
+          addEvent("evolve", `The strongbox cracks open inside you: ${prize.name}! New ${prize.kind} learned.`);
+        } else {
+          const shrugs = [
+            "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
+            "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
+            "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
+          ];
+          addEvent("info", shrugs[Math.floor(Math.random() * shrugs.length)]);
+        }
+      }
+      if (sankWithShip) {
+        addEvent("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
+      }
       if (othersRemain) {
         // A party member vanished; anyone still in the room watched it happen
         const gain = consumeSuspicion(witnessCount);
@@ -751,6 +815,7 @@ export default function Game() {
         learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
         giantsConsumedWhole,
         titanicFeastReached: character.titanicFeastReached || feastNowComplete,
+        downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
       };
       setCharacter(updatedChar);
       persist({
@@ -759,6 +824,7 @@ export default function Game() {
         learnedTraits: updatedChar.learnedTraits,
         giantsConsumedWhole: updatedChar.giantsConsumedWhole,
         titanicFeastReached: updatedChar.titanicFeastReached,
+        downWithTheShipReached: updatedChar.downWithTheShipReached,
         lastFedAt: new Date().toISOString(),
       });
 
@@ -771,9 +837,18 @@ export default function Game() {
       const lungePenalty = hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4;
       setSuspicion(s => { const n = Math.min(s + lungePenalty, 10); if (n >= 10) triggerHuntEnd(); return n; });
       addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${lungePenalty} suspicion${lungePenalty < 4 ? ", softened by your Dragonhide" : ""})`);
-      setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 3 } : a));
+      if (target.behavior === "elusive") {
+        boltAway(target, 3);
+      } else {
+        setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 3 } : a));
+      }
     }
     setActing(false);
+    return true;
+  };
+
+  const doStrikeTurn = () => {
+    if (resolveStrike()) advanceShip();
   };
 
   const doConsumeCreature = (creature: SmallCreature) => {
@@ -985,6 +1060,7 @@ export default function Game() {
     }));
 
     checkActionLimit(newCount);
+    advanceShip();
   };
 
   // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
@@ -1290,6 +1366,20 @@ export default function Game() {
                   )}
                 </CardContent>
               </Card>
+            );
+          })()}
+
+          {/* Sinking ship status */}
+          {phase === "hunt" && !huntOver && location?.sinkingTurns && (() => {
+            const left = location.sinkingTurns - shipTurn;
+            const urgent = left <= 3;
+            return (
+              <div className={`px-3 py-2 rounded border text-xs ${urgent ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-sky-400/30 bg-sky-400/5 text-sky-400/80"}`}>
+                <span className="font-cinzel">🌊 {left} {left === 1 ? "turn" : "turns"} until she goes under</span>
+                <div className="h-1 mt-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full ${urgent ? "bg-destructive/70" : "bg-sky-400/60"} transition-all duration-500`} style={{ width: `${(shipTurn / location.sinkingTurns) * 100}%` }} />
+                </div>
+              </div>
             );
           })()}
 

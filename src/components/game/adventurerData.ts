@@ -55,6 +55,17 @@ export interface CompanionOption {
   readonly behaviorChance?: number;
 }
 
+/**
+ * Treasure an adventurer carries. Swallowing it gives bonus AP and one guaranteed prize:
+ * a material or trait from these lists that the mimic doesn't know yet.
+ */
+export interface Treasure {
+  readonly ap: number;
+  readonly description: string;
+  readonly materials: readonly Material[];
+  readonly traits: readonly Trait[];
+}
+
 export interface AdventurerTemplate {
   readonly name: string;
   readonly type: AdventurerType;
@@ -83,6 +94,8 @@ export interface AdventurerTemplate {
   readonly behavior?: BehaviorId;
   /** Devotion: the name this adventurer takes once it converts (e.g. "Elder Zealot"). */
   readonly convertedName?: string;
+  /** Something valuable carried, swallowed along with them when consumed whole (not by bites). */
+  readonly treasure?: Treasure;
 }
 
 // ============================================================
@@ -639,6 +652,68 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a hand-drawn portrait of her brother", "a frayed shawl corner", "a porter's tin token"],
   },
 
+  // ── The Sinking Ship (rare location) ──
+  {
+    name: "Ship's Captain", type: "Nobility", discipline: 4, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["sinking_ship"],
+    behavior: "elusive",
+    treasure: {
+      ap: 8, description: "the ship's strongbox, still clutched to their chest",
+      materials: ["Gold", "Silver", "Crystal"], traits: ["Gilded", "Ornate"],
+    },
+    quirks: ["Refuses to abandon ship without the strongbox", "Barks orders at anything that moves", "Knows every inch of this hull — and that one chest wasn't in the manifest"],
+    alluringQualities: { materials: ["Brass", "Mahogany", "Gold"], traits: ["Locked", "Iron-Banded", "Polished"], tags: ["Storage", "Valuable", "Authority"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 1, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Brass", "Mahogany", "Gold"],
+    lootTraits: ["Locked"],
+    partialLoot: ["a gold-braided epaulette", "a sodden logbook page", "the strongbox key on a chain"],
+  },
+  {
+    name: "First Mate", type: "Warrior", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "common",
+    locations: ["sinking_ship"],
+    quirks: ["Trying to drag the captain to the lifeboats", "Shoves anything loose overboard to lighten the ship", "Shouts headcounts that keep coming up short"],
+    alluringQualities: { materials: ["Oak", "Iron"], traits: ["Reinforced", "Weathered"], tags: ["Structural", "Transport"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
+    lootMaterials: ["Oak", "Cowhide"],
+    lootTraits: ["Weathered"],
+    partialLoot: ["a tarred rope end", "a strip of salt-stiff coat", "a bosun's whistle"],
+  },
+  {
+    name: "Ship's Cook", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 3, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["sinking_ship"],
+    quirks: ["Salvaging the good knives before anything else", "Swears at the water as if it can hear", "Grabs any sturdy container to bail with"],
+    alluringQualities: { materials: ["Pine", "Iron", "Brass"], traits: ["Worn", "Soft"], tags: ["Dining", "Storage"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
+    lootMaterials: ["Iron", "Linen"],
+    lootTraits: ["Worn"],
+    partialLoot: ["a greasy apron string", "a ladle", "a sack of soaked flour"],
+  },
+  {
+    name: "Panicked Passenger", type: "Nobility", discipline: 1, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["sinking_ship"],
+    quirks: ["Trying to save their luggage instead of themselves", "Opens every trunk looking for their own", "Screams at sudden movements"],
+    alluringQualities: { materials: ["Silk", "Velvet", "Silver"], traits: ["Upholstered", "Gilded", "Locked"], tags: ["Storage", "Valuable", "Comfort"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 0, social: 1, spatial: 0, environmental: 0, acoustic: 1, presence: 1 },
+    lootMaterials: ["Silk", "Silver"],
+    lootTraits: ["Gilded"],
+    partialLoot: ["a sodden silk glove", "a luggage tag", "a pearl-handled hatpin"],
+  },
+  {
+    name: "Deckhand", type: "Rogue", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
+    group: "common",
+    locations: ["sinking_ship"],
+    quirks: ["Pocketing whatever the passengers leave behind", "Climbs rather than walks", "Eyes the captain's strongbox"],
+    alluringQualities: { materials: ["Brass", "Silver"], traits: ["Locked", "Inlaid"], tags: ["Valuable", "Storage"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
+    lootMaterials: ["Linen", "Brass"],
+    lootTraits: ["Weathered"],
+    partialLoot: ["a knotted bandana", "a stolen pocket watch", "a coil of rigging line"],
+  },
+
   // ── Supernatural / Monster types ──
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
@@ -956,6 +1031,10 @@ export const BEHAVIORS = {
   stoneWatch: {
     label: "Stone Watch",
     description: "Never leaves its perch. If you move out of, into, or past a room next to it, it notices the change.",
+  },
+  elusive: {
+    label: "Elusive",
+    description: "Hard to pin down: rolls an extra die when resisting your Strikes. If it slips free, it bolts to another room — it never leaves the hunting ground.",
   },
   devotion: {
     label: "Devotion",

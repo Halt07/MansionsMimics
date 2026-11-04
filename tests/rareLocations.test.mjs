@@ -16,7 +16,7 @@ export default async function ({ gameData: m, ok, log }) {
   ok(m.advanceRareLocation(null, 'manor', 'Standard', 9, seq(0.5)).state === null, 'a roll of 15% or more opens nothing');
   const opened = m.advanceRareLocation(null, 'manor', 'Standard', 9, seq(0.1, 0));
   ok(opened.opened?.id === 'hollow_reliquary' && opened.state?.huntsLeft === m.RARE_LOCATION_HUNTS, 'a successful roll opens a qualifying rare location for 2 hunts');
-  ok(m.advanceRareLocation(null, 'manor', 'Lesser', 6, seq(0.1, 0)).state === null, 'nothing opens if the mimic qualifies for no rare location');
+  ok(m.advanceRareLocation(null, 'manor', 'Minor', 3, seq(0.1, 0)).state === null, 'nothing opens if the mimic qualifies for no rare location');
   let opens = 0;
   for (let i = 0; i < 20000; i++) if (m.advanceRareLocation(null, 'manor', 'Standard', 9).opened) opens++;
   ok(Math.abs(opens / 20000 - 0.15) < 0.015, `about 15% of hunts open a rare location (${((opens / 20000) * 100).toFixed(1)}%)`);
