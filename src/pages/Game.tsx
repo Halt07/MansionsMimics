@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
+  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
@@ -544,6 +544,10 @@ export default function Game() {
     // Killing the last adventurer ends the hunt in success, so it never adds suspicion
     const othersRemain = party.some(a =>
       a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
+    // Other party members in the mimic's room who could notice the attack
+    const witnessCount = party.filter(a =>
+      a.id !== target.id && a.location === mimicRoom &&
+      a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared).length;
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
     // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
@@ -580,7 +584,12 @@ export default function Game() {
           const flees = finishing && target.discipline >= 3 && Math.random() < 0.5;
           const finalKill = finishing && !flees && !othersRemain;
           if (!finalKill) {
-            setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
+            // A bite is always noticed (+2); a crowd of 3+ others in the room raises it to +3
+            const gain = Math.max(2, consumeSuspicion(witnessCount));
+            setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+            if (gain > 2) {
+              addEvent("alert", `${target.name}'s cry turns every head in the room. (+${gain} suspicion)`);
+            }
           }
           const learnedMaterials = newMaterial
             ? [...character.learnedMaterials, newMaterial]
@@ -665,9 +674,26 @@ export default function Game() {
       setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
       addEvent("consume", `${target.name} has been consumed! +${apGained} Assimilation Points.`);
       if (othersRemain) {
-        // +1 suspicion — a party member vanished
-        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
-        addEvent("alert", `One of the party has vanished — the others grow uneasy. (+1 suspicion)`);
+        // A party member vanished; anyone still in the room watched it happen
+        const gain = consumeSuspicion(witnessCount);
+        setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        if (witnessCount === 0) {
+          addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
+        } else {
+          // Witnesses catch only a glimpse: they know something happened here, not what or who
+          const glimpses = witnessCount === 1
+            ? [
+                `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
+                `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
+                `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
+              ]
+            : [
+                `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
+                `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
+                `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
+              ];
+          addEvent("alert", glimpses[Math.floor(Math.random() * glimpses.length)]);
+        }
       } else {
         addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
       }

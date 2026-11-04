@@ -2337,6 +2337,17 @@ export interface BehaviorContext {
   appearance?: AppearanceLike;
 }
 
+/**
+ * Suspicion added when a party member is consumed whole while others remain in the hunt.
+ * A disappearance alone is +1; anyone still in the room may have seen it happen (+2), and a crowd
+ * of 3 or more witnesses raises the alarm further (+3).
+ */
+export function consumeSuspicion(witnesses: number): number {
+  if (witnesses >= 3) return 3;
+  if (witnesses >= 1) return 2;
+  return 1;
+}
+
 /** Adventurers with this behavior never wander on their own. */
 export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean {
   return adventurer.behavior === "stoneWatch";
