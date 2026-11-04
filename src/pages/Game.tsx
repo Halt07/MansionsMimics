@@ -167,6 +167,9 @@ export default function Game() {
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   // Rival mimics hiding in the location: none, a lone rival, or a whole nest
   const [rivals, setRivals] = useState<RivalMimic[]>([]);
+  // TEMPORARY dev preview: show banners and the sheet as if every achievement were earned.
+  // Only affects what's displayed (displayCharacter); the real character is never changed.
+  const [previewAchievements, setPreviewAchievements] = useState(false);
   // The Sinking Ship: turns taken so far this hunt (see advanceShip)
   const [shipTurn, setShipTurn] = useState(0);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
@@ -1147,6 +1150,14 @@ export default function Game() {
     persist(updates);
   };
 
+  const displayCharacter = character && previewAchievements
+    ? {
+        ...character,
+        hatboxToLegendReached: true, apexPeakReached: true, titanicFeastReached: true, downWithTheShipReached: true,
+        conversions: Math.max(character.conversions, CULT_CONVERSIONS),
+        mimicsConsumed: Math.max(character.mimicsConsumed, CANNIBAL_MIMICS),
+      }
+    : character;
   const activeAdventurers = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
   // A nest hunt ends when its Elder is devoured (not when the adventurers run out);
   // any other hunt ends when no adventurers remain. Either way, wait for a ceremony to finish.
@@ -1245,7 +1256,7 @@ export default function Game() {
       {showSheet && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSheet(false)}>
           <div onClick={e => e.stopPropagation()} className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CharacterSheet character={character} onClose={() => setShowSheet(false)} />
+            <CharacterSheet character={displayCharacter ?? character} onClose={() => setShowSheet(false)} />
           </div>
         </div>
       )}
@@ -1336,6 +1347,19 @@ export default function Game() {
               </div>
             </CardContent>
           </Card>
+
+          {/* TEMPORARY (dev builds only): preview every achievement's banner and sheet entry.
+              Display only — nothing is saved. Remove once the banners have been reviewed. */}
+          {import.meta.env.DEV && phase === "hunt" && character && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+              onClick={() => setPreviewAchievements(p => !p)}
+            >
+              🛠 Dev: {previewAchievements ? "stop previewing achievements" : "preview all achievements (not saved)"}
+            </Button>
+          )}
 
           {/* Rival mimic / nest status */}
           {phase === "hunt" && !huntOver && rivals.some(r => !r.consumed) && (() => {
@@ -1827,7 +1851,7 @@ export default function Game() {
           )}
 
           {/* Achievement banners */}
-          {character && <AchievementBanners character={character} huntingAt={phase === "hunt" ? location?.id ?? null : null} />}
+          {displayCharacter && <AchievementBanners character={displayCharacter} huntingAt={phase === "hunt" ? location?.id ?? null : null} />}
 
           {/* Event log */}
           {phase !== "setup" && (
