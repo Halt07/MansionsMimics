@@ -104,7 +104,7 @@ const FORM_DATA = {
     },
     {
       id: "minor_candlestick", name: "Candlestick", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Radiant"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Attractive if silver or gold.",
       flawProfiles: [
@@ -115,7 +115,7 @@ const FORM_DATA = {
     },
     {
       id: "minor_brick", name: "Brick", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Minimalist"],
+      builtInTraits: ["Minimalist", "Cold to Touch"],
       baseAllureModifier: 0, plausibilityModifier: 1, utilityTags: ["Structural"],
       materialSlots: 1, digestCapacityRequired: 1, description: "Low allure, high plausibility.",
       flawProfiles: [
@@ -220,7 +220,7 @@ const FORM_DATA = {
     },
     {
       id: "standard_bookshelf", name: "Bookshelf", tier: "Standard", baseMassRange: [9, 12],
-      builtInTraits: ["Carved", "Arched"],
+      builtInTraits: ["Carved", "Arched", "Whispering"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 4, description: "A scholar's temptation.",
       flawProfiles: [
@@ -278,7 +278,7 @@ const FORM_DATA = {
   Greater: [
     {
       id: "greater_statue", name: "Statue", tier: "Greater", baseMassRange: [13, 16],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Cold to Touch"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 5, description: "Imposing and monumental.",
       flawProfiles: [
@@ -336,7 +336,7 @@ const FORM_DATA = {
   Grand: [
     {
       id: "grand_personal_library", name: "Personal Library", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Carved", "Ornate"],
+      builtInTraits: ["Carved", "Ornate", "Whispering"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Structural", "Knowledge"],
       materialSlots: 6, digestCapacityRequired: 6, description: "An enclosed sanctuary of scholarship.",
       flawProfiles: [
@@ -372,7 +372,7 @@ const FORM_DATA = {
     },
     {
       id: "grand_chandelier", name: "Chandelier", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Ornate"],
+      builtInTraits: ["Ornate", "Radiant"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A glittering centerpiece suspended above prey.",
       flawProfiles: [
@@ -384,7 +384,7 @@ const FORM_DATA = {
     },
     {
       id: "grand_vault", name: "Vault", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Locked"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Locked", "Cold to Touch"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Massive, secure, and hungry.",
       flawProfiles: [
@@ -435,7 +435,7 @@ const FORM_DATA = {
     },
     {
       id: "apex_chapel", name: "Chapel", tier: "Apex", baseMassRange: [28, 45],
-      builtInTraits: ["Carved", "Ornate", "Arched"],
+      builtInTraits: ["Carved", "Ornate", "Arched", "Radiant"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Religious"],
       materialSlots: 8, digestCapacityRequired: 9, description: "Sanctuary to some. Sanctuary from none.",
       flawProfiles: [
@@ -472,7 +472,7 @@ const FORM_DATA = {
     // ── Mass-gated Apex forms ──
     {
       id: "apex_castle_gate", name: "Castle Gate", tier: "Apex", baseMassRange: [35, 99],
-      builtInTraits: ["Reinforced", "Iron-Banded", "Arched"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Arched", "Cold to Touch"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive", "Authority"],
       materialSlots: 9, digestCapacityRequired: 10, description: "Imposing, inevitable, and patient as stone.",
       flawProfiles: [
@@ -485,7 +485,7 @@ const FORM_DATA = {
     },
     {
       id: "apex_lighthouse", name: "Lighthouse", tier: "Apex", baseMassRange: [38, 99],
-      builtInTraits: ["Reinforced"],
+      builtInTraits: ["Reinforced", "Radiant"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Coastal", "Lighting"],
       materialSlots: 9, digestCapacityRequired: 10, description: "A beacon in the dark. A trap for the hopeful.",
       flawProfiles: [
@@ -532,7 +532,7 @@ const FORM_DATA = {
     },
     {
       id: "giant_book", name: "Giant Tome", tier: "Apex", baseMassRange: [30, 99],
-      builtInTraits: ["Ornate"],
+      builtInTraits: ["Ornate", "Whispering"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A tome taller than a man — giants read standing up.",
       flawProfiles: [

@@ -7,11 +7,17 @@ export default async function ({ gameData: m, ok }) {
   ok(forms.every((f) => f.builtInTraits.every((t) => builtInAllowed.has(t))), 'built-in traits are all structural or aura traits');
   ok(forms.every((f) => f.flawProfiles.every((x) => x.type !== 'sound')), "no 'sound' flaws (they are 'acoustic')");
 
-  for (const t of ['Upholstered', 'Locked', 'Rustic', 'Arched']) {
+  // Every structural and aura trait must matter: built into at least one form, and
+  // liked or disliked by at least one adventurer (otherwise it does nothing in play)
+  for (const t of [...m.UNLEARNED_TRAITS.structural, ...m.UNLEARNED_TRAITS.aura]) {
     const fs = forms.filter((f) => f.builtInTraits.includes(t));
     const likers = m.ADVENTURER_TEMPLATES.filter((a) => a.alluringQualities.traits.includes(t));
-    ok(m.UNLEARNED_TRAITS.structural.includes(t) && fs.length > 0 && likers.length > 0, `${t}: on ${fs.length} forms, liked by ${likers.length} adventurers`);
+    const dislikers = m.ADVENTURER_TEMPLATES.filter((a) => a.repelledBy?.traits?.includes(t));
+    ok(fs.length > 0 && likers.length + dislikers.length > 0,
+      `${t}: on ${fs.length} forms, liked by ${likers.length}, disliked by ${dislikers.length}`);
   }
+  const book = forms.find((f) => f.id === 'minor_book');
+  ok(book && !book.builtInTraits.includes('Whispering'), 'an ordinary Book does not whisper');
 
   const rogue = m.ADVENTURER_TEMPLATES.find((a) => a.name === 'Greedy Rogue');
   const hunter = m.ADVENTURER_TEMPLATES.find((a) => a.name === 'Mimic Hunter');
