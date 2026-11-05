@@ -20,7 +20,7 @@ import {
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
-  LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId,
+  LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
 } from "./locationData";
 
@@ -33,8 +33,9 @@ export * from "./locationData";
 // ROOM HELPERS
 // ============================================================
 // Get room context modifier for a form in a specific room
-export function getRoomContextMod(formId: FormId, roomName: RoomName): RoomContextMod {
-  const roomMods = ROOM_FORM_MODIFIERS[roomName];
+export function getRoomContextMod(formId: FormId, locationId: LocationId, roomName: RoomName): RoomContextMod {
+  const locationMods = ROOM_FORM_MODIFIERS[locationId] as Partial<Record<RoomName, Partial<Record<FormId, RoomModifier>>>> | undefined;
+  const roomMods = locationMods?.[roomName];
   if (!roomMods) return { plausibility: 0, allure: 0 };
   const mod = roomMods[formId] ?? roomMods[formFamily(formId)];
   if (!mod) return { plausibility: 0, allure: 0 };

@@ -404,7 +404,7 @@ export default function Game() {
     const form = getActiveForm(character);
     if (!form || !character || !location || !currentMimicRoom || advs.length === 0) return 0;
 
-    const roomMod = getRoomContextMod(form.id, currentMimicRoom);
+    const roomMod = getRoomContextMod(form.id, location.id, currentMimicRoom);
     if (roomMod.plausibility !== 0) {
       addEvent(roomMod.plausibility > 0 ? "stealth" : "alert",
         `Room context: ${roomMod.note} (Plausibility ${roomMod.plausibility > 0 ? "+" : ""}${roomMod.plausibility})`);
@@ -520,7 +520,7 @@ export default function Game() {
     const form = getActiveForm(character);
     if (!form) { addEvent("alert", "No active form!"); setActing(false); return; }
     const range = getAllureRange();
-    const roomMod = getRoomContextMod(form.id, mimicRoom);
+    const roomMod = getRoomContextMod(form.id, location.id, mimicRoom);
 
     if (roomMod.allure !== 0) {
       addEvent(roomMod.allure > 0 ? "allure" : "alert",

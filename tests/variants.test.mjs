@@ -52,7 +52,7 @@ export default async function ({ gameData: m, ok, log }) {
   ok(m.formFamily('apex_cathedral') === 'apex_chapel' && m.ROOM_FORM_IDS.has(m.formFamily('apex_cathedral')) && m.ROOM_FORM_IDS.has(m.formFamily('grand_atheneum')), 'room-form variants count as their base room type');
 
   // Room modifiers: the Hidden Grove's Ancient Altar suits statues (and the Gargoyle, as a Statue variant)
-  ok(m.getRoomContextMod('greater_statue', 'Ancient Altar').plausibility === 1, 'a Statue is more plausible at the Ancient Altar');
-  ok(m.getRoomContextMod('greater_gargoyle', 'Ancient Altar').plausibility === 1, 'so is its Gargoyle variant');
-  ok(m.getRoomContextMod('minor_book', 'Ancient Altar').plausibility === 0, 'other forms are unaffected there');
+  ok(m.getRoomContextMod('greater_statue', 'hidden_grove', 'Ancient Altar').plausibility === 1, 'a Statue is more plausible at the Ancient Altar');
+  ok(m.getRoomContextMod('greater_gargoyle', 'hidden_grove', 'Ancient Altar').plausibility === 1, 'so is its Gargoyle variant');
+  ok(m.getRoomContextMod('minor_book', 'hidden_grove', 'Ancient Altar').plausibility === 0, 'other forms are unaffected there');
 }
