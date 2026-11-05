@@ -50,7 +50,11 @@ export default function Codex() {
   const [activeSection, setActiveSection] = useState<Section>("Overview");
   const [selectedTier, setSelectedTier] = useState<Tier>("Minor");
   // Adventurers are only described once one of your mimics has met them (see CODEX DISCOVERY)
-  const [discoveries, setDiscoveries] = useState<Discoveries>({ met: new Set(), eaten: new Set() });
+  const [savedDiscoveries, setDiscoveries] = useState<Discoveries>({ met: new Set(), eaten: new Set() });
+  // DEV ONLY (achievement-preview branch): show every adventurer as if eaten. Display only — nothing is saved.
+  const [revealAll, setRevealAll] = useState(false);
+  const allNames = new Set(ADVENTURER_TEMPLATES.map(a => a.name));
+  const discoveries: Discoveries = revealAll ? { met: allNames, eaten: allNames } : savedDiscoveries;
   useEffect(() => {
     db.entities.MimicCharacter.list()
       .then(chars => setDiscoveries(pooledDiscoveries(chars)))
@@ -343,6 +347,14 @@ export default function Codex() {
               <p className="text-xs font-cinzel text-primary mb-2">
                 Met {metCount}/{ADVENTURER_TEMPLATES.length} · Eaten {eatenCount}/{ADVENTURER_TEMPLATES.length}
               </p>
+              {import.meta.env.DEV && (
+                <button
+                  onClick={() => setRevealAll(r => !r)}
+                  className="w-full mb-2 text-[10px] px-3 py-1.5 rounded border border-dashed border-amber-400/40 text-amber-400/80 hover:text-amber-400"
+                >
+                  🛠 Dev: {revealAll ? "show only what my mimics have discovered" : "reveal all adventurers (not saved)"}
+                </button>
+              )}
               {ADVENTURER_GROUPS.map((group, groupIndex) => {
                 const members = ADVENTURER_TEMPLATES.filter((adv) => adv.group === group.id);
                 if (members.length === 0) return null;
