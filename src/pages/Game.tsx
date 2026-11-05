@@ -14,6 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
+  VARIANT_FORMS, isVariantUnlocked,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -1244,6 +1245,21 @@ export default function Game() {
   useEffect(() => {
     if (huntOver) recordHunt("survived");
   }, [huntOver]);
+
+  // Announce variant forms the moment something learned unlocks them (not on load)
+  const unlockedVariantsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!character) return;
+    const unlocked = VARIANT_FORMS.filter(f => isVariantUnlocked(f, character));
+    if (unlockedVariantsRef.current) {
+      for (const f of unlocked) {
+        if (unlockedVariantsRef.current.has(f.id)) continue;
+        const base = ALL_FORMS.find(b => b.id === f.variantOf)?.name ?? "another form";
+        addEvent("evolve", `🗝️ What you've learned gives you an idea… you could now take the shape of a ${f.name}, a variant of the ${base}. Choose it the next time you pick your forms.`);
+      }
+    }
+    unlockedVariantsRef.current = new Set(unlocked.map(f => f.id));
+  }, [character?.learnedMaterials, character?.learnedTraits]);
 
   // Announce achievements that can be completed from several places (bites, meals, the
   // strongbox…) the moment they're earned. The others announce themselves where they happen.

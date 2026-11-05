@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
-  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
+  ALL_FORMS, TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
   ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
@@ -218,6 +218,11 @@ export default function Codex() {
                           +{form.baseAllureModifier} Allure
                         </Badge>
                       </div>
+                      {form.variantOf && (
+                        <p className="text-[11px] text-teal-300 mb-1">
+                          🗝️ Variant of {ALL_FORMS.find((f) => f.id === form.variantOf)?.name} — unlocked by learning any of: {(form.unlockedBy ?? []).join(", ")}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
                       <div className="flex flex-wrap gap-1 mb-2">
                         {form.utilityTags.map((t) =>

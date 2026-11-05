@@ -36,7 +36,7 @@ export * from "./locationData";
 export function getRoomContextMod(formId: FormId, roomName: RoomName): RoomContextMod {
   const roomMods = ROOM_FORM_MODIFIERS[roomName];
   if (!roomMods) return { plausibility: 0, allure: 0 };
-  const mod = roomMods[formId];
+  const mod = roomMods[formId] ?? roomMods[formFamily(formId)];
   if (!mod) return { plausibility: 0, allure: 0 };
   return { plausibility: mod.plausibility || 0, allure: mod.allure || 0, note: mod.note };
 }
@@ -131,18 +131,61 @@ export function canAddForm(selectedForms: readonly Pick<Form, "tier">[], form: P
   return selectedForms.filter(f => isFormAboveTier(f, mimicTier)).length < MAX_FORMS_ABOVE_TIER;
 }
 
-export function getValidForms(tierStr: Tier, massVal: number): Form[] {
+// ============================================================
+// VARIANT FORMS
+// A variant (e.g. Grimoire, a variant of Book) is available whenever its base form is,
+// once the mimic knows any one of its unlockedBy materials or traits. It shares its
+// base form's burn and room modifiers; "forms used" counts it separately.
+// ============================================================
+export const VARIANT_FORMS: readonly Form[] = ALL_FORMS.filter(f => f.variantOf);
+
+export function isVariantForm(form: Pick<Form, "variantOf">): boolean {
+  return !!form.variantOf;
+}
+
+/** The base form of a variant (or the form itself): what burns and room modifiers are keyed by. */
+export function formFamily(formId: FormId): FormId {
+  return (ALL_FORMS.find(f => f.id === formId)?.variantOf as FormId | undefined) ?? formId;
+}
+
+/** What a mimic knows, for unlocking variant forms. */
+export type FormKnowledge = Pick<MimicCharacter, "learnedMaterials" | "learnedTraits">;
+
+/** Whether the mimic knows any of the materials or traits that unlock this variant. */
+export function isVariantUnlocked(form: Pick<Form, "unlockedBy">, knowledge: FormKnowledge): boolean {
+  return (form.unlockedBy ?? []).some(x =>
+    (ALL_MATERIALS as readonly string[]).includes(x)
+      ? knowledge.learnedMaterials.includes(x as Material)
+      : knowsTrait(knowledge, x as Trait));
+}
+
+/** Forms whose tier and mass rules allow them, ignoring variant unlocks. */
+function formsInRange(tierStr: Tier, massVal: number): Form[] {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];
-  const validForms: Form[] = [];
+  const forms: Form[] = [];
   TIER_ORDER.forEach((tier, tierIndex) => {
     if (Math.abs(tierIndex - currentTierIndex) > 1) return;
     MASTER_FORMS[tier].forEach((form) => {
       if (isFormMassGated(form) && massVal < form.baseMassRange[0]) return;
-      validForms.push(form);
+      forms.push(form);
     });
   });
-  return validForms;
+  return forms;
+}
+
+/**
+ * Forms a mimic can choose. Base forms by tier and mass; variant forms only when `knowledge`
+ * is given and unlocks them (omit it, e.g. at character creation, for base forms only).
+ */
+export function getValidForms(tierStr: Tier, massVal: number, knowledge?: FormKnowledge): Form[] {
+  return formsInRange(tierStr, massVal).filter(f =>
+    !isVariantForm(f) || (knowledge !== undefined && isVariantUnlocked(f, knowledge)));
+}
+
+/** Variants whose base form is in range but which the mimic hasn't unlocked yet (shown locked). */
+export function getLockedVariants(tierStr: Tier, massVal: number, knowledge: FormKnowledge): Form[] {
+  return formsInRange(tierStr, massVal).filter(f => isVariantForm(f) && !isVariantUnlocked(f, knowledge));
 }
 
 /** Any appearance-shaped object; fields may be missing (e.g. partially built looks). */
@@ -528,8 +571,9 @@ export function burnAfterDiscovery(burns: Burns, locationId: LocationId, formId:
       ...burns.burnedLocations.filter(b => b.id !== locationId),
       { id: locationId, huntsLeft: BURN_HUNTS },
     ],
+    // A variant burns with its base form: the survivors describe the shape, not the details
     burnedForms: formId
-      ? [...burns.burnedForms.filter(b => b.formId !== formId), { formId, huntsLeft: BURN_HUNTS }]
+      ? [...burns.burnedForms.filter(b => b.formId !== formFamily(formId)), { formId: formFamily(formId), huntsLeft: BURN_HUNTS }]
       : burns.burnedForms,
   };
 }
@@ -539,7 +583,7 @@ export function locationBurn(burns: Burns, locationId: LocationId): number {
   return burns.burnedLocations.find(b => b.id === locationId)?.huntsLeft ?? 0;
 }
 export function formBurn(burns: Burns, formId: FormId): number {
-  return burns.burnedForms.find(b => b.formId === formId)?.huntsLeft ?? 0;
+  return burns.burnedForms.find(b => b.formId === formFamily(formId))?.huntsLeft ?? 0;
 }
 
 /** Extra starting suspicion for a hunt at this location in this form. */
@@ -759,11 +803,11 @@ export const CANNIBAL_MIMICS = 10;
 
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
-  "connoisseur" | "masterOfDisguise";
+  "connoisseur" | "masterOfDisguise" | "curiosityCabinet";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
-  "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits">;
+  "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -855,6 +899,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
     isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
       LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
+  },
+  {
+    id: "curiosityCabinet", name: "Curiosity Cabinet", icon: "🗝️",
+    description: "Hunt in every variant form at least once — the shapes you can only take after learning something new.",
+    flavor: (n) => `${n} has been a whispering grimoire, a weeping portrait and a grinning gargoyle. Collectors would pay a fortune — if they knew.`,
+    isEarned: (c) => VARIANT_FORMS.every(f => c.formsUsed.includes(f.id as FormId)),
   },
 ];
 

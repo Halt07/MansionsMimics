@@ -6,7 +6,7 @@
 // ============================================================
 import {
   MATERIALS, TIER_ORDER,
-  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material,
+  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
   type MaterialRarity, type StartingType, type Tier, type UtilityTag,
 } from "./vocabulary";
 
@@ -32,6 +32,12 @@ interface FormDef {
   readonly digestCapacityRequired: number;
   readonly description: string;
   readonly flawProfiles: readonly FlawProfile[];
+  /**
+   * Variant forms: the base form's id. A variant is available whenever its base is (same tier and
+   * mass rules) AND the mimic knows any one of `unlockedBy`. It shares the base form's burn.
+   */
+  readonly variantOf?: string;
+  readonly unlockedBy?: readonly (Material | Trait)[];
 }
 
 const FORM_DATA = {
@@ -81,6 +87,18 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "minor_grimoire", name: "Grimoire", tier: "Minor", baseMassRange: [1, 4],
+      variantOf: "minor_book", unlockedBy: ["Faint Glow", "Arcane Sigil", "Runescript"],
+      builtInTraits: ["Ornate", "Whispering"],
+      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Knowledge"],
+      materialSlots: 2, digestCapacityRequired: 1, description: "A book that murmurs to itself. Irresistible to anyone who dabbles — and unsettling to anyone who prays.",
+      flawProfiles: [
+        { type: "text", description: "The marginalia rearranges itself between readings" },
+        { type: "acoustic", description: "The whispering stops the moment someone listens closely" },
+        { type: "material", description: "The binding is warm, like something recently held" },
+      ],
+    },
+    {
       id: "minor_jewelry_box", name: "Jewelry Box", tier: "Minor", baseMassRange: [1, 4],
       builtInTraits: ["Ornate", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Storage"],
@@ -89,6 +107,18 @@ const FORM_DATA = {
         { type: "material", description: "Wood grain pattern appears mirrored on both sides" },
         { type: "structure", description: "Hinges align slightly crooked when opened" },
         { type: "weight", description: "Feels too heavy or too light for its size" },
+      ],
+    },
+    {
+      id: "minor_music_box", name: "Music Box", tier: "Minor", baseMassRange: [1, 4],
+      variantOf: "minor_jewelry_box", unlockedBy: ["Inlaid", "Lacquered"],
+      builtInTraits: ["Ornate", "Heavy-Lidded", "Whispering"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment", "Valuable"],
+      materialSlots: 3, digestCapacityRequired: 2, description: "Plays a half-remembered tune when the lid lifts. Nobody can resist lifting the lid.",
+      flawProfiles: [
+        { type: "acoustic", description: "The tune never quite repeats the same way twice" },
+        { type: "structure", description: "There's no winding key, yet it never runs down" },
+        { type: "weight", description: "Far too heavy for a box of tiny gears" },
       ],
     },
     {
@@ -139,6 +169,18 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "lesser_reliquary", name: "Reliquary", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_chest", unlockedBy: ["Sacred Symbol", "Stained Glass"],
+      builtInTraits: ["Heavy-Lidded", "Locked", "Radiant"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Religious", "Valuable", "Storage"],
+      materialSlots: 3, digestCapacityRequired: 3, description: "A holy chest for holy remains. The faithful lean in close to pray over it.",
+      flawProfiles: [
+        { type: "light", description: "Its glow brightens when someone reaches toward it" },
+        { type: "structure", description: "The relic inside is never quite visible through the glass" },
+        { type: "presence", description: "Candles nearby lean toward it, as if drawn" },
+      ],
+    },
+    {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
       builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
@@ -147,6 +189,18 @@ const FORM_DATA = {
         { type: "material", description: "Metal bands lack realistic hammering marks" },
         { type: "structure", description: "Staves align too perfectly with no warping" },
         { type: "acoustic", description: "Produces a dull, inconsistent echo when tapped" },
+      ],
+    },
+    {
+      id: "lesser_rum_cask", name: "Rum Cask", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_barrel", unlockedBy: ["Pitted", "Lacquered"],
+      builtInTraits: ["Iron-Banded", "Rustic"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Storage", "Coastal", "Dining"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "A sea-worn cask that smells of spice and molasses. Sailors find it from across the hold.",
+      flawProfiles: [
+        { type: "acoustic", description: "Sounds full when knocked, but nothing sloshes" },
+        { type: "material", description: "The salt crust stops exactly at the waterline, like a painted line" },
+        { type: "environmental", description: "The rum smell is strongest where no tap is" },
       ],
     },
     {
@@ -180,6 +234,18 @@ const FORM_DATA = {
         { type: "material", description: "Brush strokes lack natural variation in thickness" },
         { type: "structure", description: "Canvas does not sag slightly within the frame" },
         { type: "visual", description: "Eyes in the portrait seem subtly misaligned" },
+      ],
+    },
+    {
+      id: "lesser_haunted_portrait", name: "Haunted Portrait", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_painting", unlockedBy: ["Shadowed Presence", "Gravecloth"],
+      builtInTraits: ["Ornate", "Whispering", "Cold to Touch"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Decor", "Valuable"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "A portrait whose eyes follow you. The dead adore it; the devout want it burned.",
+      flawProfiles: [
+        { type: "visual", description: "The eyes follow people a little too eagerly" },
+        { type: "presence", description: "The room feels watched even with the portrait turned to the wall" },
+        { type: "temperature", description: "The frame is colder than the wall it hangs on" },
       ],
     },
     {
@@ -288,6 +354,18 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "greater_gargoyle", name: "Gargoyle", tier: "Greater", baseMassRange: [13, 16],
+      variantOf: "greater_statue", unlockedBy: ["Etched", "Basalt"],
+      builtInTraits: ["Carved", "Cold to Touch", "Arched"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Defensive"],
+      materialSlots: 3, digestCapacityRequired: 5, description: "A grinning stone guardian. Real gargoyles have been known to stop and stare.",
+      flawProfiles: [
+        { type: "structure", description: "No drainage channel runs through its mouth" },
+        { type: "environmental", description: "Pigeons refuse to perch on it" },
+        { type: "visual", description: "Its grin is a little wider every time you look" },
+      ],
+    },
+    {
       id: "greater_piano", name: "Piano", tier: "Greater", baseMassRange: [13, 16],
       builtInTraits: ["Ornate", "Heavy-Lidded"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment"],
@@ -304,7 +382,7 @@ const FORM_DATA = {
       baseAllureModifier: 0, plausibilityModifier: 2, utilityTags: ["Structural"],
       materialSlots: 2, digestCapacityRequired: 5, description: "Blends into architecture seamlessly.",
       flawProfiles: [
-        { type: "structure", description: "Mortar seams subtly misalign with adjacent masonry" },
+        { type: "structure", description: "Mortar seams to subtly misalign with adjacent masonry" },
         { type: "environmental", description: "Fails to transmit vibrations when struck like surrounding walls" },
         { type: "spatial", description: "Thickness feels inconsistent when measured or knocked upon" },
       ],

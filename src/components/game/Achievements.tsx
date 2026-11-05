@@ -11,6 +11,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   cannibal:          { text: "text-rose-400",   box: "bg-rose-500/10 border-rose-500/40" },
   connoisseur:       { text: "text-emerald-400", box: "bg-emerald-500/10 border-emerald-500/40" },
   masterOfDisguise:  { text: "text-fuchsia-400", box: "bg-fuchsia-500/10 border-fuchsia-500/40" },
+  curiosityCabinet:  { text: "text-teal-300",   box: "bg-teal-400/10 border-teal-400/40" },
 };
 
 /**

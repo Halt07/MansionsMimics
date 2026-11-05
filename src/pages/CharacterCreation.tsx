@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER,
+  STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
   canAddForm, MAX_FORMS_ABOVE_TIER, type Form, type Material, type StartingType,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,8 @@ export default function CharacterCreation() {
   const startingTier: StartingType = origin || "Minor";
   const tierIndex = TIER_ORDER.indexOf(startingTier);
   const availableForms = TIER_ORDER.reduce<Form[]>((acc, tier, i) => {
-    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier]];
+    // Base forms only: variant forms must be unlocked by learning something in play
+    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier].filter(f => !isVariantForm(f))];
     return acc;
   }, []);
 

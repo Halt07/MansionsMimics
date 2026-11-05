@@ -9,9 +9,9 @@ export default async function ({ gameData: m, ok }) {
 
   // The shared achievement list
   const { ACHIEVEMENTS, CULT_CONVERSIONS, CANNIBAL_MIMICS } = m;
-  const fresh = { hatboxToLegendReached: false, apexPeakReached: false, titanicFeastReached: false, downWithTheShipReached: false, conversions: 0, mimicsConsumed: 0, adventurersEaten: [], learnedMaterials: [], learnedTraits: [] };
+  const fresh = { hatboxToLegendReached: false, apexPeakReached: false, titanicFeastReached: false, downWithTheShipReached: false, conversions: 0, mimicsConsumed: 0, adventurersEaten: [], learnedMaterials: [], learnedTraits: [], formsUsed: [] };
   const earned = (c) => ACHIEVEMENTS.filter((a) => a.isEarned(c)).map((a) => a.id);
-  ok(ACHIEVEMENTS.length === 8 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 8, 'eight distinct achievements');
+  ok(ACHIEVEMENTS.length === 9 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 9, 'nine distinct achievements');
   ok(earned(fresh).length === 0, 'a new mimic has none');
   ok(CULT_CONVERSIONS === 3 && CANNIBAL_MIMICS === 10, 'Cult of Personality needs 3 conversions; Cannibal needs 10 mimics');
   ok(!earned({ ...fresh, conversions: 2 }).includes('cultOfPersonality') && earned({ ...fresh, conversions: 3 }).includes('cultOfPersonality'), 'Cult of Personality is earned at the 3rd conversion');
