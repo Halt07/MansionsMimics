@@ -55,6 +55,8 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/rareLocations.test.mjs` | Rare locations opening/expiring, the Hollow Reliquary roster, Devotion and offerings |
 | `tests/mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
 | `tests/sinkingShip.test.mjs` | Sinking Ship roster, the Captain's strongbox and its guaranteed prize, sinking warnings, Down With the Ship |
+| `tests/burns.test.mjs` | Burned lairs and forms: starting suspicion, stacking, expiry |
+| `tests/discovery.test.mjs` | Codex discovery: met/eaten levels, pooling across mimics, recording parties |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

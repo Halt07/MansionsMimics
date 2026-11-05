@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TIER_ORDER, getValidForms, canAddForm, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
+import { TIER_ORDER, getValidForms, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
+import BurnBadge from "./BurnBadge";
 import { Button } from "@/components/ui/button";
 
 const MAX_FORMS = 3;
@@ -96,6 +97,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground">{form.description}</p>
+                  <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                   {blockedByAboveRule && selected.length < MAX_FORMS && (
                     <p className="text-[9px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
                   )}

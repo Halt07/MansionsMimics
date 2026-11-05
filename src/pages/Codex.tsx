@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { db } from "@/api/db";
 import {
   TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
-  ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
-  isMagicMaterial, type Material, type MaterialRarity, type Tier } from
+  ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
+  isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +49,15 @@ function Collapsible({ title, subtitle, children, defaultOpen = false }: Collaps
 export default function Codex() {
   const [activeSection, setActiveSection] = useState<Section>("Overview");
   const [selectedTier, setSelectedTier] = useState<Tier>("Minor");
+  // Adventurers are only described once one of your mimics has met them (see CODEX DISCOVERY)
+  const [discoveries, setDiscoveries] = useState<Discoveries>({ met: new Set(), eaten: new Set() });
+  useEffect(() => {
+    db.entities.MimicCharacter.list()
+      .then(chars => setDiscoveries(pooledDiscoveries(chars)))
+      .catch(err => console.error("Failed to load discoveries:", err));
+  }, []);
+  const metCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length;
+  const eatenCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) === "eaten").length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -327,25 +337,41 @@ export default function Codex() {
               <p className="text-sm text-muted-foreground mb-2">
                 Parties are randomly assembled from these templates. Each adventurer has unique perception affinities and luring preferences. Entries marked <span className="text-primary">✦</span> may bring a companion.
               </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                The Codex only knows what your mimics have learned: an adventurer is described once you've <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once you've <span className="text-foreground">eaten</span> one.
+              </p>
+              <p className="text-xs font-cinzel text-primary mb-2">
+                Met {metCount}/{ADVENTURER_TEMPLATES.length} · Eaten {eatenCount}/{ADVENTURER_TEMPLATES.length}
+              </p>
               {ADVENTURER_GROUPS.map((group, groupIndex) => {
                 const members = ADVENTURER_TEMPLATES.filter((adv) => adv.group === group.id);
                 if (members.length === 0) return null;
                 return (
               <Collapsible
                 key={group.id}
-                title={`${group.label} (${members.length})`}
+                title={`${group.label} (${members.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length}/${members.length})`}
                 subtitle={group.description}
                 defaultOpen={groupIndex === 0}>
                 <div className="space-y-2">
-              {members.map((adv) =>
+              {members.map((adv) => {
+                const level = discoveryLevel(discoveries, adv.name);
+                return (
             <Collapsible key={adv.name} title={<>
-                {`${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
+                {level === "unknown" ? "???" : `${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
                 {adv.minTier && (
                   <span className="ml-2 align-middle text-[10px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
-                    {adv.minTier}+{adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{adv.wholeMealMass ? ` · Consumed whole at ${adv.wholeMealMass}` : ""}
+                    {adv.minTier}+{level !== "unknown" && adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{level !== "unknown" && adv.wholeMealMass ? ` · Consumed whole at ${adv.wholeMealMass}` : ""}
                   </span>
                 )}
               </>}>
+                  {level === "unknown" ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      You haven't crossed paths with this one yet.{" "}
+                      {adv.locations
+                        ? `Rumors place it in ${adv.locations.map((id) => LOCATION_NAMES[id] ?? id).join(" or ")}.`
+                        : adv.minTier ? `It isn't seen by mimics below ${adv.minTier} tier.` : "Keep hunting."}
+                    </p>
+                  ) : (
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Base Stats</p>
@@ -354,6 +380,9 @@ export default function Codex() {
                         <div className="flex justify-between"><span className="text-muted-foreground">Base Suspicion:</span> <span className="text-foreground">{adv.baseSuspicion}</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Interaction:</span> <span className="text-foreground capitalize">{adv.interactionStyle}</span></div>
                       </div>
+                      {level !== "eaten" ? (
+                        <p className="text-xs text-muted-foreground/70 italic mt-3">Eat one to learn what it craves — and what puts it off.</p>
+                      ) : (<>
                       <p className="text-xs text-muted-foreground mt-3 mb-1">Attracted To</p>
                       <div className="flex flex-wrap gap-1">
                         {[...adv.alluringQualities.materials, ...adv.alluringQualities.traits, ...adv.alluringQualities.tags].map((q) =>
@@ -370,6 +399,7 @@ export default function Codex() {
                           </div>
                         </>
                       )}
+                      </>)}
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Perception Strengths</p>
@@ -419,8 +449,10 @@ export default function Codex() {
                       )}
                     </div>
                   </div>
+                  )}
                 </Collapsible>
-            )}
+                );
+              })}
                 </div>
               </Collapsible>
                 );
@@ -521,6 +553,12 @@ export default function Codex() {
                   <p><span className="text-foreground">Successful consumption</span> raises suspicion by <span className="text-red-400">+1</span> — a party member has gone missing.</p>
                   <p><span className="text-foreground">Failed strike</span> raises suspicion by <span className="text-red-400">+4</span> — the target saw you lunge and knows exactly what you are.</p>
                   <p>Partial bites (Minor mimics, or any mimic biting a giant it can't yet swallow) raise suspicion by <span className="text-red-400">+2</span> per hit, and <span className="text-red-400">+3</span> if the target flees.</p>
+                </div>
+              </Collapsible>
+              <Collapsible title="Burned Lairs & Forms">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>When a party discovers you, the survivors talk. The <span className="text-foreground">location</span> and the <span className="text-foreground">form you were caught in</span> are both <span className="text-orange-400">🔥 burned</span> for your next <span className="text-foreground">{BURN_HUNTS} hunts</span>.</p>
+                  <p>Hunting at a burned location starts you at <span className="text-foreground">+{BURN_SUSPICION} suspicion</span>, and so does starting a hunt in a burned form. They stack: going back to the same place in the same shape starts you at +{BURN_SUSPICION * 2}. Burned cards are marked on the hunting-ground and form screens. Being discovered again resets the count.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Bounty Hunts (Legendary Reputation)">

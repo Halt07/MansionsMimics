@@ -464,6 +464,88 @@ export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Ma
 }
 
 // ============================================================
+// CODEX DISCOVERY
+// The Codex only describes adventurers you've met, and only reveals what they like and
+// dislike once you've eaten one. Discoveries are pooled across all of your mimics.
+// ============================================================
+export type DiscoveryLevel = "unknown" | "met" | "eaten";
+
+export interface Discoveries {
+  met: ReadonlySet<string>;
+  eaten: ReadonlySet<string>;
+}
+
+/** Everything any of these mimics has met or eaten (eating counts as meeting). */
+export function pooledDiscoveries(
+  characters: readonly Pick<MimicCharacter, "adventurersMet" | "adventurersEaten">[],
+): Discoveries {
+  const eaten = new Set(characters.flatMap(c => c.adventurersEaten));
+  const met = new Set([...characters.flatMap(c => c.adventurersMet), ...eaten]);
+  return { met, eaten };
+}
+
+export function discoveryLevel(discoveries: Discoveries, name: string): DiscoveryLevel {
+  if (discoveries.eaten.has(name)) return "eaten";
+  if (discoveries.met.has(name)) return "met";
+  return "unknown";
+}
+
+/** Adds template names to a discovery list (ignoring companions and anything that isn't a template). */
+export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion">[]): string[] {
+  const templateNames = new Set(ADVENTURER_TEMPLATES.map(t => t.name));
+  const added = members.filter(m => !m.isCompanion && templateNames.has(m.name)).map(m => m.name);
+  return [...new Set([...list, ...added])];
+}
+
+// ============================================================
+// BURNS
+// Being discovered burns the location and the form you were caught in. For the next
+// BURN_HUNTS hunts, each adds BURN_SUSPICION to starting suspicion (they stack): the
+// survivors have warned others about this place and this shape.
+// ============================================================
+export const BURN_HUNTS = 2;
+export const BURN_SUSPICION = 2;
+
+export interface Burns {
+  burnedLocations: { id: LocationId; huntsLeft: number }[];
+  burnedForms: { formId: FormId; huntsLeft: number }[];
+}
+
+/** Burns after being discovered at `locationId` in `formId` (resets them if already burned). */
+export function burnAfterDiscovery(burns: Burns, locationId: LocationId, formId: FormId | null): Burns {
+  return {
+    burnedLocations: [
+      ...burns.burnedLocations.filter(b => b.id !== locationId),
+      { id: locationId, huntsLeft: BURN_HUNTS },
+    ],
+    burnedForms: formId
+      ? [...burns.burnedForms.filter(b => b.formId !== formId), { formId, huntsLeft: BURN_HUNTS }]
+      : burns.burnedForms,
+  };
+}
+
+/** Hunts left on a location's or form's burn (0 if not burned). */
+export function locationBurn(burns: Burns, locationId: LocationId): number {
+  return burns.burnedLocations.find(b => b.id === locationId)?.huntsLeft ?? 0;
+}
+export function formBurn(burns: Burns, formId: FormId): number {
+  return burns.burnedForms.find(b => b.formId === formId)?.huntsLeft ?? 0;
+}
+
+/** Extra starting suspicion for a hunt at this location in this form. */
+export function burnSuspicion(burns: Burns, locationId: LocationId, formId: FormId | null): number {
+  return (locationBurn(burns, locationId) > 0 ? BURN_SUSPICION : 0) +
+    (formId && formBurn(burns, formId) > 0 ? BURN_SUSPICION : 0);
+}
+
+/** Burns after a hunt starts: each one has one fewer hunt left, and spent ones are dropped. */
+export function tickBurns(burns: Burns): Burns {
+  const tick = <T extends { huntsLeft: number }>(list: T[]): T[] =>
+    list.map(b => ({ ...b, huntsLeft: b.huntsLeft - 1 })).filter(b => b.huntsLeft > 0);
+  return { burnedLocations: tick(burns.burnedLocations), burnedForms: tick(burns.burnedForms) };
+}
+
+// ============================================================
 // LOCATION AVAILABILITY & RARE LOCATIONS
 // After every hunt there's a RARE_LOCATION_CHANCE that one rare location the mimic
 // qualifies for opens. It stays on the map for RARE_LOCATION_HUNTS hunts (or until
