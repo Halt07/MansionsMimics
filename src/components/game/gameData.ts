@@ -8,12 +8,12 @@
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
+  ALL_MATERIALS, ALL_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
   type GameEventType, type MagicMaterial, type Material,
   type PerceptionSense, type Tier, type Trait, type UtilityTag,
 } from "./vocabulary";
 import {
-  MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
+  ALL_FORMS, MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
 } from "./mimicData";
 import {
   ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
@@ -490,6 +490,11 @@ export function discoveryLevel(discoveries: Discoveries, name: string): Discover
   return "unknown";
 }
 
+/** Adds a form to the list of forms a mimic has hunted in. */
+export function withFormUsed(list: readonly FormId[], formId: FormId | null | undefined): FormId[] {
+  return formId && !list.includes(formId) ? [...list, formId] : [...list];
+}
+
 /** Adds template names to a discovery list (ignoring companions and anything that isn't a template). */
 export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion">[]): string[] {
   const templateNames = new Set(ADVENTURER_TEMPLATES.map(t => t.name));
@@ -748,11 +753,33 @@ export const CULT_CONVERSIONS = 3;
 export const CANNIBAL_MIMICS = 10;
 
 export type AchievementId =
-  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal";
+  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
+  "connoisseur" | "masterOfDisguise";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
-  "conversions" | "mimicsConsumed">;
+  "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits">;
+
+/**
+ * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
+ * Disguise needs ALL_MATERIALS and ALL_TRAITS, so anything missing from these lists is a
+ * content bug: it can never be learned (tests/achievements.test.mjs checks this).
+ */
+export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<Trait> } {
+  const materials = new Set<Material>();
+  const traits = new Set<Trait>();
+  for (const t of ADVENTURER_TEMPLATES) {
+    t.lootMaterials.forEach(x => materials.add(x));
+    t.lootTraits.forEach(x => traits.add(x));
+    t.treasure?.materials.forEach(x => materials.add(x));
+    t.treasure?.traits.forEach(x => traits.add(x));
+    for (const o of t.companion?.options ?? []) {
+      o.lootMaterials?.forEach(x => materials.add(x));
+      o.lootTraits?.forEach(x => traits.add(x));
+    }
+  }
+  return { materials, traits };
+}
 
 export interface Achievement {
   id: AchievementId;
@@ -811,7 +838,78 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     isEarned: (c) => c.mimicsConsumed >= CANNIBAL_MIMICS,
     bannerLocation: "mimic_nest",
   },
+  {
+    id: "connoisseur", name: "Connoisseur", icon: "🍽️",
+    description: "Eat at least one of every kind of adventurer (companions don't count). The Codex tracks your progress.",
+    flavor: (n) => `There is no one left that ${n} hasn't tasted. It has opinions about all of them.`,
+    isEarned: (c) => ADVENTURER_TEMPLATES.every(t => c.adventurersEaten.includes(t.name)),
+  },
+  {
+    id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
+    description: "Learn every material and every trait in the game.",
+    flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
+    isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
+      ALL_TRAITS.every(x => c.learnedTraits.includes(x)),
+  },
 ];
+
+// ============================================================
+// LIFETIME STATS (character sheet)
+// ============================================================
+export interface LifetimeStats {
+  huntsSurvived: number;
+  huntsFailed: number;
+  huntsTotal: number;
+  /** Adventurers, companions and rival mimics eaten. */
+  entitiesEaten: number;
+  formsUsed: number;
+  closestCall: number;
+  biggestMeal: { name: string; ap: number } | null;
+  lifetimeApEarned: number;
+  favoriteForm: { name: string; hunts: number } | null;
+  favoriteHuntingGround: { name: string; hunts: number } | null;
+}
+
+/** The key with the highest count (first one wins a tie), or null if nothing has been counted. */
+export function mostCounted<K extends string>(counts: Partial<Record<K, number>>): { key: K; count: number } | null {
+  let best: { key: K; count: number } | null = null;
+  for (const [key, count] of Object.entries(counts) as [K, number][]) {
+    if (count > 0 && (!best || count > best.count)) best = { key, count };
+  }
+  return best;
+}
+
+/** Adds one to a key's count. */
+export function withCount<K extends string>(counts: Partial<Record<K, number>>, key: K | null | undefined): Partial<Record<K, number>> {
+  if (!key) return { ...counts };
+  return { ...counts, [key]: (counts[key] ?? 0) + 1 };
+}
+
+/** The bigger of the current biggest meal and this one. */
+export function withBiggestMeal(
+  current: { name: string; ap: number } | null, name: string, ap: number,
+): { name: string; ap: number } | null {
+  return !current || ap > current.ap ? { name, ap } : current;
+}
+
+export function lifetimeStats(c: Pick<MimicCharacter,
+  "huntsSurvived" | "huntsFailed" | "partyMembersEaten" | "mimicsConsumed" | "formsUsed" | "closestCall" |
+  "biggestMeal" | "lifetimeApEarned" | "formHuntCounts" | "locationHuntCounts">): LifetimeStats {
+  const form = mostCounted(c.formHuntCounts);
+  const place = mostCounted(c.locationHuntCounts);
+  return {
+    huntsSurvived: c.huntsSurvived,
+    huntsFailed: c.huntsFailed,
+    huntsTotal: c.huntsSurvived + c.huntsFailed,
+    entitiesEaten: c.partyMembersEaten + c.mimicsConsumed,
+    formsUsed: c.formsUsed.length,
+    closestCall: c.closestCall,
+    biggestMeal: c.biggestMeal,
+    lifetimeApEarned: c.lifetimeApEarned,
+    favoriteForm: form ? { name: ALL_FORMS.find(f => f.id === form.key)?.name ?? form.key, hunts: form.count } : null,
+    favoriteHuntingGround: place ? { name: LOCATIONS.find(l => l.id === place.key)?.name ?? place.key, hunts: place.count } : null,
+  };
+}
 
 // ============================================================
 // FROM HATBOX TO LEGEND

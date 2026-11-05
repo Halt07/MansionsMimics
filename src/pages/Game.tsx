@@ -14,7 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  withDiscovered,
+  withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
@@ -49,6 +49,8 @@ interface SmallCreature extends LocationCreature {
 }
 
 const ACTION_LIMIT = 50;
+/** How a devoured rival is named in the "biggest meal" stat. */
+const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
 /** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
 const CEREMONY_STEP_MS = 2000;
 /** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
@@ -311,11 +313,55 @@ export default function Game() {
       const burns = tickBurns(character);
       // Codex discovery: everyone in this party has now been met
       const adventurersMet = withDiscovered(character.adventurersMet, newParty);
-      setCharacter(prev => prev ? { ...prev, rareLocation: state, ...burns, adventurersMet } : prev);
-      persist({ rareLocation: state, ...burns, adventurersMet });
+      const formsUsed = withFormUsed(character.formsUsed, startForm?.id);
+      const formHuntCounts = withCount(character.formHuntCounts, startForm?.id);
+      const locationHuntCounts = withCount(character.locationHuntCounts, loc.id);
+      const startUpdates = { rareLocation: state, ...burns, adventurersMet, formsUsed, formHuntCounts, locationHuntCounts };
+      setCharacter(prev => prev ? { ...prev, ...startUpdates } : prev);
+      persist(startUpdates);
+      huntRecordedRef.current = false;
+      peakSuspicionRef.current = 0;
     }
     setPhase("hunt");
   };
+
+  // Lifetime stats: each hunt is counted once, as survived or failed, however it ends.
+  // (Leaving mid-hunt with "New Hunt" isn't counted either way.)
+  const huntRecordedRef = useRef(true);
+  // Highest suspicion reached this hunt, for the "closest call" stat
+  const peakSuspicionRef = useRef(0);
+  useEffect(() => {
+    if (phase === "hunt") peakSuspicionRef.current = Math.max(peakSuspicionRef.current, suspicion);
+  }, [suspicion, phase]);
+  const recordHunt = (outcome: "survived" | "failed") => {
+    if (huntRecordedRef.current || !character) return;
+    huntRecordedRef.current = true;
+    if (outcome === "survived") {
+      const updates = {
+        huntsSurvived: character.huntsSurvived + 1,
+        closestCall: Math.max(character.closestCall, peakSuspicionRef.current),
+      };
+      setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+      persist(updates);
+    } else {
+      const huntsFailed = character.huntsFailed + 1;
+      setCharacter(prev => prev ? { ...prev, huntsFailed } : prev);
+      persist({ huntsFailed });
+    }
+  };
+
+  // Lifetime AP: every increase in current AP counts, whatever caused it (spending AP on
+  // upgrades lowers current AP but never this). Starts tracking once a character is loaded.
+  const lastApRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!character) return;
+    const prev = lastApRef.current;
+    lastApRef.current = character.assimilationPoints;
+    if (prev === null || character.assimilationPoints <= prev) return;
+    const lifetimeApEarned = character.lifetimeApEarned + (character.assimilationPoints - prev);
+    setCharacter(c => c ? { ...c, lifetimeApEarned } : c);
+    persist({ lifetimeApEarned });
+  }, [character?.assimilationPoints]);
 
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
@@ -338,6 +384,7 @@ export default function Game() {
   // Called whenever suspicion hits 10 — ends hunt immediately
   const triggerHuntEnd = () => {
     addEvent("alert", "🔥 The party has found you out! Torches are lit. You flee into the dark.");
+    recordHunt("failed");
     // The survivors spread word of this place and of the shape you wore (see burnAfterDiscovery)
     if (character && location) {
       const form = getActiveForm(character);
@@ -579,11 +626,13 @@ export default function Game() {
           ...character,
           assimilationPoints: (character.assimilationPoints || 0) + apGained,
           mimicsConsumed: character.mimicsConsumed + 1,
+          biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rivalTarget.kind], apGained),
         };
         setCharacter(updatedChar);
         persist({
           assimilationPoints: updatedChar.assimilationPoints,
           mimicsConsumed: updatedChar.mimicsConsumed,
+          biggestMeal: updatedChar.biggestMeal,
           lastFedAt: new Date().toISOString(),
         });
         if (updatedChar.mimicsConsumed === CANNIBAL_MIMICS) {
@@ -703,9 +752,14 @@ export default function Game() {
                 ...updatedChar,
                 assimilationPoints: updatedChar.assimilationPoints + 2,
                 adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
+                partyMembersEaten: character.partyMembersEaten + 1,
               };
               setCharacter(finalChar);
-              persist({ assimilationPoints: finalChar.assimilationPoints, adventurersEaten: finalChar.adventurersEaten });
+              persist({
+                assimilationPoints: finalChar.assimilationPoints,
+                adventurersEaten: finalChar.adventurersEaten,
+                partyMembersEaten: finalChar.partyMembersEaten,
+              });
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
             }
           } else {
@@ -841,6 +895,8 @@ export default function Game() {
         titanicFeastReached: character.titanicFeastReached || feastNowComplete,
         downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
         adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
+        partyMembersEaten: character.partyMembersEaten + 1,
+        biggestMeal: withBiggestMeal(character.biggestMeal, target.name, apGained),
       };
       setCharacter(updatedChar);
       persist({
@@ -851,6 +907,8 @@ export default function Game() {
         titanicFeastReached: updatedChar.titanicFeastReached,
         downWithTheShipReached: updatedChar.downWithTheShipReached,
         adventurersEaten: updatedChar.adventurersEaten,
+        partyMembersEaten: updatedChar.partyMembersEaten,
+        biggestMeal: updatedChar.biggestMeal,
         lastFedAt: new Date().toISOString(),
       });
 
@@ -966,9 +1024,12 @@ export default function Game() {
 
   const doChangeForm = (formIndex: number) => {
     if (!character) return;
-    const updatedChar = { ...character, activeFormIndex: formIndex };
+    const formsUsed = phase === "hunt"
+      ? withFormUsed(character.formsUsed, character.forms[formIndex]?.formId)
+      : character.formsUsed;
+    const updatedChar = { ...character, activeFormIndex: formIndex, formsUsed };
     setCharacter(updatedChar);
-    persist({ activeFormIndex: formIndex });
+    persist({ activeFormIndex: formIndex, formsUsed });
     const newForm = ALL_FORMS.find(f => f.id === character.forms[formIndex]?.formId);
     if (hasMagic(character.currentAppearance, "Feywood")) {
       addEvent("info", `You flow seamlessly into the form of a ${newForm?.name || "new shape"} — the Feywood makes the shift effortless.`);
@@ -1001,6 +1062,7 @@ export default function Game() {
       addEvent("system", `The party leaves the ${location?.name} of their own accord. Find new prey.`);
       setGameoverReason("abandoned");
       setPhase("gameover");
+      recordHunt("survived");
     }
   };
 
@@ -1179,6 +1241,25 @@ export default function Game() {
   const isNest = !!location?.rivalNest;
   const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
     (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
+  useEffect(() => {
+    if (huntOver) recordHunt("survived");
+  }, [huntOver]);
+
+  // Announce achievements that can be completed from several places (bites, meals, the
+  // strongbox…) the moment they're earned. The others announce themselves where they happen.
+  const earnedRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!character) return;
+    const earned = new Set(ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => a.id));
+    if (earnedRef.current) {
+      for (const a of ACHIEVEMENTS) {
+        if ((a.id === "connoisseur" || a.id === "masterOfDisguise") && earned.has(a.id) && !earnedRef.current.has(a.id)) {
+          addEvent("evolve", `${a.icon} ${a.name}! ${a.flavor(character.name)}`);
+        }
+      }
+    }
+    earnedRef.current = earned;
+  }, [character]);
   const consumedCount = party.filter(a => a.isConsumed).length;
 
   // Mass-below-tier plausibility penalty

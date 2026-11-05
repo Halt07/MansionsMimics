@@ -51,7 +51,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/suspicion.test.mjs` | Suspicion from consuming a party member in front of witnesses |
 | `tests/companions.test.mjs` | Companion stats/AP wiring, per-companion overrides, Changeling familiars, Goose-Keeper geese |
 | `tests/giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
-| `tests/achievements.test.mjs` | The achievement list, From Hatbox to Legend, Cult of Personality and Cannibal thresholds |
+| `tests/achievements.test.mjs` | The achievement list and thresholds, every material/trait being learnable, lifetime stats |
 | `tests/rareLocations.test.mjs` | Rare locations opening/expiring, the Hollow Reliquary roster, Devotion and offerings |
 | `tests/mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
 | `tests/sinkingShip.test.mjs` | Sinking Ship roster, the Captain's strongbox and its guaranteed prize, sinking warnings, Down With the Ship |
