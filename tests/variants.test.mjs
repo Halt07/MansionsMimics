@@ -50,4 +50,9 @@ export default async function ({ gameData: m, ok, log }) {
   ok(['Radiant', 'Arched', 'Ornate'].every((t) => cathedral.builtInTraits.includes(t)) && cathedral.unlockedBy.join() === 'Stained Glass', 'the Cathedral is Radiant, Arched and Ornate, unlocked by Stained Glass');
   ok(['Ornate', 'Rustic'].every((t) => byId('grand_antler_chandelier').builtInTraits.includes(t)), 'the Antler Chandelier is both Ornate and Rustic');
   ok(m.formFamily('apex_cathedral') === 'apex_chapel' && m.ROOM_FORM_IDS.has(m.formFamily('apex_cathedral')) && m.ROOM_FORM_IDS.has(m.formFamily('grand_atheneum')), 'room-form variants count as their base room type');
+
+  // Room modifiers: the Hidden Grove's Ancient Altar suits statues (and the Gargoyle, as a Statue variant)
+  ok(m.getRoomContextMod('greater_statue', 'Ancient Altar').plausibility === 1, 'a Statue is more plausible at the Ancient Altar');
+  ok(m.getRoomContextMod('greater_gargoyle', 'Ancient Altar').plausibility === 1, 'so is its Gargoyle variant');
+  ok(m.getRoomContextMod('minor_book', 'Ancient Altar').plausibility === 0, 'other forms are unaffected there');
 }

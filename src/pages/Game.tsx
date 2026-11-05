@@ -1552,8 +1552,8 @@ export default function Game() {
                           <span className="text-[9px] text-destructive/70">{adv.hitsTaken}/{maxHits}hp</span>
                         )}
                         {dist !== null && (
-                          <span className={`text-[9px] ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
-                            {adv.location?.split(" ")[0]} ({dist})
+                          <span title={adv.location} className={`text-[9px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
+                            <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
                           </span>
                         )}
                       </div>
