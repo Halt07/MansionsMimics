@@ -14,6 +14,8 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
+  withDiscovered,
+  BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
@@ -31,6 +33,7 @@ import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
+import BurnBadge from "../components/game/BurnBadge";
 import { AchievementBanners } from "../components/game/Achievements";
 
 // ── Game-screen state types ──
@@ -262,16 +265,24 @@ export default function Game() {
     const sickness = character ? rollForSickness(character) : null;
     setCurrentSickness(sickness);
 
+    // Burned locations and forms (from earlier discoveries) start the hunt under suspicion
+    const startForm = character ? getActiveForm(character) : null;
+    const burnLoc = character ? locationBurn(character, loc.id) > 0 : false;
+    const burnForm = character && startForm ? formBurn(character, startForm.id) > 0 : false;
+    const burnExtra = (burnLoc ? BURN_SUSPICION : 0) + (burnForm ? BURN_SUSPICION : 0);
+
     if (bounty) {
-      setSuspicion(4); // Hunters know the mimic is here
+      setSuspicion(Math.min(4 + burnExtra, 9)); // Hunters know the mimic is here
       addEvent("alert", `⚠️ A bounty has been placed on the mimic known as "${character?.name}". Hunters from across the realm have come to collect.`);
       addEvent("alert", `${newParty.length} bounty hunters are sweeping the ${loc.name} — they know exactly what they are looking for.`);
       addEvent("alert", `The hunters enter with weapons drawn. Suspicion starts at 4.`);
     } else {
-      setSuspicion(0);
+      setSuspicion(Math.min(burnExtra, 9));
       addEvent("info", `You settle into the ${room} of the ${loc.name}, perfectly still.`);
       addEvent("system", `${newParty.length} adventurers are exploring the premises.`);
     }
+    if (burnLoc) addEvent("alert", `🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
+    if (burnForm && startForm) addEvent("alert", `🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
     if (sickness) {
       addEvent("alert", `⚠ You are afflicted with ${sickness.name}: ${sickness.description} ${Object.entries(sickness.penalties).map(([k, v]) => `–${v} ${k}`).join(", ")} this hunt.`);
     }
@@ -296,10 +307,12 @@ export default function Game() {
       if (opened) {
         addEvent("system", `✦ Whispers reach you of somewhere new: ${opened.name}. It won't stay within reach for long.`);
       }
-      if (state !== character.rareLocation) {
-        setCharacter(prev => prev ? { ...prev, rareLocation: state } : prev);
-        persist({ rareLocation: state });
-      }
+      // Burns count down one hunt each time a hunt starts
+      const burns = tickBurns(character);
+      // Codex discovery: everyone in this party has now been met
+      const adventurersMet = withDiscovered(character.adventurersMet, newParty);
+      setCharacter(prev => prev ? { ...prev, rareLocation: state, ...burns, adventurersMet } : prev);
+      persist({ rareLocation: state, ...burns, adventurersMet });
     }
     setPhase("hunt");
   };
@@ -325,7 +338,14 @@ export default function Game() {
   // Called whenever suspicion hits 10 — ends hunt immediately
   const triggerHuntEnd = () => {
     addEvent("alert", "🔥 The party has found you out! Torches are lit. You flee into the dark.");
-    addEvent("alert", "Your hunting ground is burned. Find new prey — and perhaps a new form.");
+    // The survivors spread word of this place and of the shape you wore (see burnAfterDiscovery)
+    if (character && location) {
+      const form = getActiveForm(character);
+      const burns = burnAfterDiscovery(character, location.id, form?.id ?? null);
+      setCharacter(prev => prev ? { ...prev, ...burns } : prev);
+      persist(burns);
+      addEvent("alert", `The ${location.name} is burned${form ? `, and the survivors will describe your ${form.name} shape to anyone who listens` : ""}. For the next ${BURN_HUNTS} hunts, returning here${form ? " or wearing that form" : ""} means starting under suspicion.`);
+    }
     setGameoverReason("discovered");
     setPhase("gameover");
   };
@@ -679,9 +699,13 @@ export default function Game() {
               setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
             } else {
               addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
-              const finalChar = { ...updatedChar, assimilationPoints: updatedChar.assimilationPoints + 2 };
+              const finalChar = {
+                ...updatedChar,
+                assimilationPoints: updatedChar.assimilationPoints + 2,
+                adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
+              };
               setCharacter(finalChar);
-              persist({ assimilationPoints: finalChar.assimilationPoints });
+              persist({ assimilationPoints: finalChar.assimilationPoints, adventurersEaten: finalChar.adventurersEaten });
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
             }
           } else {
@@ -816,6 +840,7 @@ export default function Game() {
         giantsConsumedWhole,
         titanicFeastReached: character.titanicFeastReached || feastNowComplete,
         downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
+        adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
       };
       setCharacter(updatedChar);
       persist({
@@ -825,6 +850,7 @@ export default function Game() {
         giantsConsumedWhole: updatedChar.giantsConsumedWhole,
         titanicFeastReached: updatedChar.titanicFeastReached,
         downWithTheShipReached: updatedChar.downWithTheShipReached,
+        adventurersEaten: updatedChar.adventurersEaten,
         lastFedAt: new Date().toISOString(),
       });
 
@@ -1462,6 +1488,7 @@ export default function Game() {
                       : "border-border hover:border-primary/40"}`}
                   >
                     <CardContent className="p-4">
+                      {character && <BurnBadge huntsLeft={locationBurn(character, loc.id)} />}
                       {loc.rare && character?.rareLocation && (
                         <p className="text-[10px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
                           ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
@@ -1604,6 +1631,7 @@ export default function Game() {
                           </div>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{form.description}</p>
+                        <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                       </button>
                     );
                   })}
@@ -1810,7 +1838,7 @@ export default function Game() {
               <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
                 {gameoverReason === "abandoned"
                   ? "Find a new hunting ground. Better forms and higher stats will help you lure more resistant prey."
-                  : "You must find a new hunting ground. Your forms remain, but consider changing them — the survivors will warn others of your shape."}
+                  : `This hunting ground and the form you were caught in are burned for ${BURN_HUNTS} hunts: using either starts you under suspicion (+${BURN_SUSPICION} each). Consider a new form.`}
               </p>
               <div className="flex flex-col gap-2 items-center">
                 <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 w-48">

@@ -60,6 +60,21 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */
   hatboxToLegendReached: z.boolean().default(false),
+  /** Adventurer templates (by name) this mimic has met in a hunt, and has eaten (Codex discovery). */
+  adventurersMet: z.array(z.string()).default([]),
+  adventurersEaten: z.array(z.string()).default([]),
+  /**
+   * Burned after being discovered: hunting at a burned location, or starting a hunt in a
+   * burned form, raises starting suspicion for a couple of hunts (see gameData BURNS).
+   */
+  burnedLocations: z.array(z.strictObject({
+    id: z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]),
+    huntsLeft: z.number().int().min(1),
+  })).default([]),
+  burnedForms: z.array(z.strictObject({
+    formId: z.enum(FORM_IDS),
+    huntsLeft: z.number().int().min(1),
+  })).default([]),
   /** The rare location currently open to this mimic (see advanceRareLocation), or null. */
   rareLocation: z.strictObject({
     id: z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]),
