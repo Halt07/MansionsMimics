@@ -653,6 +653,12 @@ export const STARTING_STATS: Record<StartingType, StartingStats> = {
   Lesser: { plausibility: 2, adhesion: 4, patience: 2, mass: 6, digestiveCapacity: 5, baseAllure: 3 },
 };
 
+/** Materials each origin knows from creation. */
+export const STARTING_MATERIALS: Record<StartingType, readonly [Material, ...Material[]]> = {
+  Minor: ["Pine", "Iron", "Cotton"],
+  Lesser: ["Oak", "Iron", "Cowhide"],
+};
+
 // ============================================================
 // TIER CONFIG
 // ============================================================

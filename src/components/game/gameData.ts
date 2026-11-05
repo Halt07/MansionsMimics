@@ -8,9 +8,9 @@
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_MATERIALS, ALL_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
+  ALL_MATERIALS, ALL_STARTING_TRAITS, LEARNABLE_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
   type GameEventType, type MagicMaterial, type Material,
-  type PerceptionSense, type Tier, type Trait, type UtilityTag,
+  type LearnableTrait, type PerceptionSense, type TeachableTrait, type Tier, type Trait, type UtilityTag,
 } from "./vocabulary";
 import {
   ALL_FORMS, MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
@@ -490,6 +490,11 @@ export function discoveryLevel(discoveries: Discoveries, name: string): Discover
   return "unknown";
 }
 
+/** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
+export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
+  return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);
+}
+
 /** Adds a form to the list of forms a mimic has hunted in. */
 export function withFormUsed(list: readonly FormId[], formId: FormId | null | undefined): FormId[] {
   return formId && !list.includes(formId) ? [...list, formId] : [...list];
@@ -698,7 +703,7 @@ export function isNestCleared(rivals: readonly RivalMimic[]): boolean {
 // ============================================================
 // TREASURE
 // ============================================================
-export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: Trait };
+export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: TeachableTrait };
 
 /** One random prize from the treasure that the mimic doesn't already know, or null if it knows them all. */
 export function pickTreasurePrize(
@@ -762,12 +767,12 @@ type AchievementProgress = Pick<MimicCharacter,
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
- * Disguise needs ALL_MATERIALS and ALL_TRAITS, so anything missing from these lists is a
+ * Disguise needs ALL_MATERIALS and LEARNABLE_TRAITS, so anything missing from these lists is a
  * content bug: it can never be learned (tests/achievements.test.mjs checks this).
  */
-export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<Trait> } {
+export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<LearnableTrait> } {
   const materials = new Set<Material>();
-  const traits = new Set<Trait>();
+  const traits = new Set<LearnableTrait>();
   for (const t of ADVENTURER_TEMPLATES) {
     t.lootMaterials.forEach(x => materials.add(x));
     t.lootTraits.forEach(x => traits.add(x));
@@ -846,10 +851,10 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   },
   {
     id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
-    description: "Learn every material and every trait in the game.",
+    description: "Learn every material and every learnable trait (surface, symbolic and condition) in the game.",
     flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
     isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
-      ALL_TRAITS.every(x => c.learnedTraits.includes(x)),
+      LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
   },
 ];
 

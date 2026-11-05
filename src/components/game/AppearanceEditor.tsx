@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, type Material } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, knowsTrait, type Material, type Trait } from "./gameData";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
 type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits";
@@ -85,7 +85,12 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
       </button>
     );
   };
-  const learnedTraits = character.learnedTraits || [];
+  // Only traits the mimic knows (starting traits, plus any it has learned) are offered. A trait
+  // already worn but not known (e.g. from an older save) stays listed so it can be taken off.
+  const worn: readonly Trait[] = [
+    ...(appearance.surfaceTraits || []), ...(appearance.symbolicTraits || []), ...(appearance.conditionTraits || []),
+  ];
+  const known = (t: Trait) => knowsTrait(character, t) || worn.includes(t);
 
   // With a limit of 1, picking a new material replaces the current one.
   // With higher limits, extra picks are ignored once the limit is reached.
@@ -168,7 +173,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Surface Traits (max {limits.surfaceTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.surface.map(trait => (
+              {TRAITS.surface.filter(known).map(trait => (
                 <button
                   key={trait}
                   onClick={() => toggleTrait("surfaceTraits", trait, limits.surfaceTraits)}
@@ -192,9 +197,9 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Symbolic Traits — learned only (max {limits.symbolicTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.symbolic.filter(t => learnedTraits.includes(t)).length === 0
+              {TRAITS.symbolic.filter(known).length === 0
                 ? <span className="text-muted-foreground italic">No symbolic traits learned yet.</span>
-                : TRAITS.symbolic.filter(t => learnedTraits.includes(t)).map(trait => (
+                : TRAITS.symbolic.filter(known).map(trait => (
                   <button
                     key={trait}
                     onClick={() => toggleTrait("symbolicTraits", trait, limits.symbolicTraits)}
@@ -219,7 +224,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Condition Traits (max {limits.conditionTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.condition.map(trait => (
+              {TRAITS.condition.filter(known).map(trait => (
                 <button
                   key={trait}
                   onClick={() => toggleTrait("conditionTraits", trait, limits.conditionTraits)}

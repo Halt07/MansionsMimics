@@ -6,7 +6,7 @@
 // ============================================================
 import {
   type AdventurerType, type CompanionType, type InteractionStyle, type Material,
-  type PerceptionSense, type Tier, type Trait, type UtilityTag,
+  type PerceptionSense, type TeachableTrait, type Tier, type Trait, type UtilityTag,
 } from "./vocabulary";
 import type { LocationId, RoomName } from "./locationData";
 
@@ -45,7 +45,7 @@ export interface CompanionOption {
   readonly interactionStyle?: InteractionStyle;
   readonly perceptionAffinity?: Readonly<Record<PerceptionSense, number>>;
   readonly lootMaterials?: readonly Material[];
-  readonly lootTraits?: readonly Trait[];
+  readonly lootTraits?: readonly TeachableTrait[];
   readonly partialLoot?: readonly string[];
   /** Set to "giantKin" for giant companions (bites, giant bite AP). */
   readonly group?: AdventurerGroupId;
@@ -63,7 +63,7 @@ export interface Treasure {
   readonly ap: number;
   readonly description: string;
   readonly materials: readonly Material[];
-  readonly traits: readonly Trait[];
+  readonly traits: readonly TeachableTrait[];
 }
 
 export interface AdventurerTemplate {
@@ -80,7 +80,7 @@ export interface AdventurerTemplate {
   readonly repelledBy?: QualityList;
   readonly perceptionAffinity: Readonly<Record<PerceptionSense, number>>;
   readonly lootMaterials: readonly Material[];
-  readonly lootTraits: readonly Trait[];
+  readonly lootTraits: readonly TeachableTrait[];
   /** Flavor text for what a partial bite tears off. */
   readonly partialLoot: readonly string[];
   readonly companion?: { readonly chance: number; readonly options: readonly CompanionOption[] };
@@ -141,9 +141,9 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     repelledBy: { traits: ["Bloodstained", "Shadowed Presence"] },
     quirks: ["Whispers prayers when nervous", "Easily distracted by relics"],
-    alluringQualities: { materials: ["Gold", "Silver", "Marble"], traits: ["Sacred Symbol", "Runescript", "Arched"], tags: ["Religious", "Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Marble"], traits: ["Sacred Symbol", "Runescript", "Arched", "Faint Glow"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
-    lootMaterials: ["Cotton", "Silver", "Linen"],
+    lootMaterials: ["Cotton", "Silver", "Linen", "Stained Glass"],
     lootTraits: ["Sacred Symbol"],
     partialLoot: ["torn robe hem", "a cloth belt", "strip of parchment"],
   },
@@ -185,7 +185,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     name: "Hedge Witch", type: "Wizard", discipline: 2, baseSuspicion: 3, constitution: 3, interactionStyle: "spell",
     group: "common",
     quirks: ["Sniffs objects for magical residue", "Mutters to herself"],
-    alluringQualities: { materials: ["Feywood", "Crystal"], traits: ["Cracked", "Arcane Sigil"], tags: ["Knowledge"] },
+    alluringQualities: { materials: ["Feywood", "Crystal"], traits: ["Cracked", "Arcane Sigil", "Faint Glow"], tags: ["Knowledge"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 2, social: 0, spatial: 1, environmental: 2, acoustic: 0, presence: 2 },
     lootMaterials: ["Gravecloth", "Feywood", "Crystal"],
     lootTraits: ["Arcane Sigil"],
@@ -199,7 +199,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Steel", "Gold"], traits: [], tags: ["Valuable"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Blacksteel", "Iron", "Cowhide"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Bloodstained"],
     partialLoot: ["torn chainmail link strip", "a boot tongue", "piece of pauldron strap"],
   },
   {
@@ -238,7 +238,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Marks exits mentally", "Stays near walls"],
     alluringQualities: { materials: ["Oak", "Deerskin"], traits: ["Weathered", "Worn", "Rustic"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 2, acoustic: 2, presence: 0 },
-    lootMaterials: ["Goatskin", "Linen", "Oak"],
+    lootMaterials: ["Goatskin", "Linen", "Oak", "Birch"],
     lootTraits: [],
     partialLoot: ["torn wool blanket strip", "a boot sole", "scrap of hunting jacket"],
     companion: {
@@ -258,7 +258,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Detects evil presence", "Slow to trust but fierce when provoked"],
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 2, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 2 },
-    lootMaterials: ["Gold", "Silver", "Granite"],
+    lootMaterials: ["Gold", "Silver", "Granite", "Ironwood"],
     lootTraits: ["Sacred Symbol", "Heraldic Crest"],
     partialLoot: ["torn surcoat panel", "a holy symbol chain link", "scrap of blessed tabard"],
   },
@@ -289,11 +289,11 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Silent Assassin", type: "Assassin", discipline: 4, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
     group: "common",
-    repelledBy: { traits: ["Gilded"] },
+    repelledBy: { traits: ["Gilded", "Faint Glow"] },
     quirks: ["Never announces presence", "Studies shadows carefully"],
     alluringQualities: { materials: ["Shadowwood", "Silk"], traits: [], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
-    lootMaterials: ["Shadowwood", "Goatskin", "Steel"],
+    lootMaterials: ["Shadowwood", "Goatskin", "Steel", "Smoked Glass"],
     lootTraits: ["Shadowed Presence"],
     partialLoot: ["torn black cloak strip", "a garotte cord", "scrap of shadow-dyed leather"],
   },
@@ -304,8 +304,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Taps walls for hollow sounds", "Obsessed with metals and stonework"],
     alluringQualities: { materials: ["Gold", "Mithril", "Obsidian"], traits: [], tags: ["Valuable", "Structural"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 0, acoustic: 2, presence: 0 },
-    lootMaterials: ["Iron", "Granite", "Blacksteel"],
-    lootTraits: ["Iron-Banded"],
+    lootMaterials: ["Iron", "Granite", "Blacksteel", "Limestone"],
+    lootTraits: ["Pitted"],
     partialLoot: ["torn mining smock strip", "a belt buckle", "scrap of heavy wool tunic"],
   },
   {
@@ -315,7 +315,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Feywood", "Aether Crystal"], traits: ["Arcane Sigil", "Runescript"], tags: ["Knowledge"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 2, magical: 3, social: 0, spatial: 2, environmental: 1, acoustic: 0, presence: 2 },
     lootMaterials: ["Feywood", "Aether Crystal", "Spellweave Silk"],
-    lootTraits: ["Runescript", "Arcane Sigil"],
+    lootTraits: ["Runescript", "Arcane Sigil", "Faint Glow"],
     partialLoot: ["scrap of elven-woven robe", "a runed button", "torn enchanted sleeve"],
   },
   {
@@ -339,7 +339,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Gold"], traits: [], tags: ["Valuable"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 2, social: 0, spatial: 3, environmental: 2, acoustic: 2, presence: 3 },
     lootMaterials: ["Blacksteel", "Mithril", "Dragonhide"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Runescript"],
     partialLoot: ["vial of mimic acid", "a silver detection rod shard", "strip of warded leather coat"],
     // Elite companions: stronger than ordinary ones, and less common
     companion: {
@@ -388,7 +388,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 2 },
     lootMaterials: ["Boarhide", "Iron", "Horn"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Bloodstained"],
     partialLoot: ["strip of studded hide armor", "a bone talisman shard", "torn tusk-leather belt"],
     companion: {
       chance: 0.40,
@@ -441,7 +441,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Maintains a permanent magical sight", "Questions spatial anomalies obsessively", "Takes rubbings of every surface"],
     alluringQualities: { materials: ["Aether Crystal", "Feywood"], traits: ["Runescript", "Arcane Sigil"], tags: ["Knowledge"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 3, magical: 4, social: 0, spatial: 3, environmental: 2, acoustic: 1, presence: 3 },
-    lootMaterials: ["Aether Crystal", "Feywood", "Soulglass"],
+    lootMaterials: ["Aether Crystal", "Feywood", "Soulglass", "Void Marble"],
     lootTraits: ["Runescript", "Arcane Sigil"],
     partialLoot: ["torn archmage robe panel", "a crystalline focus shard", "scrap of runed glove"],
   },
@@ -454,7 +454,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Jumps at shadows", "Clutches holy symbol", "Easily startled by unusual things"],
     alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty", "Upholstered", "Rustic"], tags: ["Comfort", "Storage"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 1 },
-    lootMaterials: ["Wool", "Linen", "Burlap"],
+    lootMaterials: ["Wool", "Linen", "Burlap", "Pine"],
     lootTraits: [],
     partialLoot: ["torn wool smock", "a rope belt", "scrap of burlap sack"],
   },
@@ -465,7 +465,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Iron", "Brass", "Cotton"], traits: ["Worn", "Weathered", "Tarnished", "Rustic"], tags: ["Storage", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Linen", "Cowhide", "Iron"],
-    lootTraits: ["Worn"],
+    lootTraits: ["Wrinkled"],
     partialLoot: ["patched travelling cloak strip", "a worn boot sole", "scrap of road-stained linen"],
   },
 
@@ -495,7 +495,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Reaches out to touch pretty things", "Easily enchanted by ornate objects", "Wanders from her escort"],
     alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched", "Upholstered"], tags: ["Valuable", "Comfort", "Decor"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 1, presence: 1 },
-    lootMaterials: ["Silk", "Silver", "Crystal"],
+    lootMaterials: ["Silk", "Silver", "Crystal", "Satin"],
     lootTraits: ["Gilded"],
     partialLoot: ["strip of silk gown hem", "a pearl button", "scrap of lace trim"],
     companion: {
@@ -513,8 +513,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Mentally appraises everything", "Tests material quality with fingers", "Offers to buy things on the spot"],
     alluringQualities: { materials: ["Gold", "Silver", "Mahogany", "Silk"], traits: ["Polished", "Lacquered", "Gilded"], tags: ["Valuable", "Storage", "Dining"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
-    lootMaterials: ["Gold", "Silver", "Mahogany"],
-    lootTraits: ["Gilded", "Polished"],
+    lootMaterials: ["Gold", "Silver", "Mahogany", "Marble"],
+    lootTraits: ["Gilded", "Lacquered"],
     partialLoot: ["torn merchant coat lining", "a wax seal stamp", "scrap of velvet money pouch"],
   },
 
@@ -526,7 +526,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Speaks to unseen entities", "Prefers shadowy corners", "Reacts strangely near magical objects"],
     alluringQualities: { materials: ["Shadowwood", "Obsidian", "Gravecloth"], traits: ["Arcane Sigil", "Shadowed Presence"], tags: ["Knowledge", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 3, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 3 },
-    lootMaterials: ["Shadowwood", "Gravecloth", "Obsidian"],
+    lootMaterials: ["Shadowwood", "Gravecloth", "Obsidian", "Ebonwood"],
     lootTraits: ["Arcane Sigil", "Shadowed Presence"],
     partialLoot: ["torn warlock pact-cloth", "a bound iron focus shard", "scrap of shadow-dyed robe"],
     companion: {
@@ -545,10 +545,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["hollow_reliquary"],
     behavior: "devotion", convertedName: "Consumption Zealot",
     quirks: ["Kisses every relic it passes", "Hums hymns about a chest that eats sinners", "Lingers at the empty altar long after the others move on"],
-    alluringQualities: { materials: ["Gold", "Oak"], traits: ["Sacred Symbol", "Heavy-Lidded", "Carved"], tags: ["Religious", "Storage"] },
+    alluringQualities: { materials: ["Gold", "Oak"], traits: ["Sacred Symbol", "Heavy-Lidded", "Carved", "Faint Glow"], tags: ["Religious", "Storage"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 1, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 2 },
     lootMaterials: ["Linen", "Wool"],
-    lootTraits: ["Worn"],
+    lootTraits: ["Sacred Symbol"],
     partialLoot: ["a frayed pilgrim's sash", "a tin pilgrim badge", "a string of prayer beads"],
   },
   {
@@ -560,8 +560,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Leads the prayers in a cracked, carrying voice", "Remembers how the shrine looked fifty years ago", "Blesses anything left on the altar"],
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Gilded"], tags: ["Religious", "Valuable"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 2, social: 1, spatial: 2, environmental: 0, acoustic: 0, presence: 2 },
-    lootMaterials: ["Silver", "Linen"],
-    lootTraits: ["Sacred Symbol"],
+    lootMaterials: ["Silver", "Linen", "Stained Glass"],
+    lootTraits: ["Sacred Symbol", "Wrinkled"],
     partialLoot: ["a tarnished censer chain", "a strip of vestment hem", "a well-thumbed hymnal page"],
   },
   {
@@ -573,7 +573,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Iron", "Steel"], traits: ["Locked", "Reinforced", "Iron-Banded"], tags: ["Defensive", "Storage"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
     lootMaterials: ["Steel", "Cowhide"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Etched"],
     partialLoot: ["a dented helm strap", "a ring of shrine keys", "a strip of tabard"],
   },
   {
@@ -594,7 +594,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Writing a treatise on why the legend is false", "Measures the altar where the chest once stood", "Reads every inscription aloud, skeptically"],
     alluringQualities: { materials: ["Walnut", "Linen"], traits: ["Runescript", "Etched", "Carved"], tags: ["Knowledge", "Religious"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 3, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 1 },
-    lootMaterials: ["Linen", "Walnut"],
+    lootMaterials: ["Linen", "Walnut", "Clear Glass"],
     lootTraits: ["Etched"],
     partialLoot: ["an ink-stained cuff", "a page of skeptical notes", "a broken reading lens"],
   },
@@ -607,8 +607,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Walks the same round every hour, lantern held high", "Swears the crates were stacked differently yesterday", "Won't sit on anything in here anymore"],
     alluringQualities: { materials: ["Oak", "Iron"], traits: ["Locked", "Iron-Banded"], tags: ["Storage", "Seating"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
-    lootMaterials: ["Iron", "Wool"],
-    lootTraits: ["Iron-Banded"],
+    lootMaterials: ["Iron", "Wool", "Clear Glass"],
+    lootTraits: ["Pitted"],
     partialLoot: ["a cracked lantern shutter", "a ring of warehouse keys", "a strip of oilskin coat"],
   },
   {
@@ -630,8 +630,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Hired to deal with \"the rat problem\" — has seen no rats", "Lays traps in every corner", "Talks to their terrier as if it understands"],
     alluringQualities: { materials: ["Burlap", "Pine"], traits: ["Worn", "Dusty", "Weathered"], tags: ["Storage", "Coastal"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
-    lootMaterials: ["Burlap", "Goatskin"],
-    lootTraits: ["Weathered"],
+    lootMaterials: ["Burlap", "Goatskin", "Pine"],
+    lootTraits: ["Mossy"],
     partialLoot: ["a sprung rat trap", "a leather glove, bitten through", "a sack smelling of bait"],
     companion: {
       chance: 0.50,
@@ -648,7 +648,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Pine", "Cotton"], traits: ["Worn", "Heavy-Lidded"], tags: ["Storage", "Comfort"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Cotton", "Linen"],
-    lootTraits: ["Worn"],
+    lootTraits: ["Soft"],
     partialLoot: ["a hand-drawn portrait of her brother", "a frayed shawl corner", "a porter's tin token"],
   },
 
@@ -666,7 +666,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Brass", "Mahogany", "Gold"], traits: ["Locked", "Iron-Banded", "Polished"], tags: ["Storage", "Valuable", "Authority"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 1, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
     lootMaterials: ["Brass", "Mahogany", "Gold"],
-    lootTraits: ["Locked"],
+    lootTraits: ["Pitted"],
     partialLoot: ["a gold-braided epaulette", "a sodden logbook page", "the strongbox key on a chain"],
   },
   {
@@ -677,7 +677,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Oak", "Iron"], traits: ["Reinforced", "Weathered"], tags: ["Structural", "Transport"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Oak", "Cowhide"],
-    lootTraits: ["Weathered"],
+    lootTraits: ["Lacquered"],
     partialLoot: ["a tarred rope end", "a strip of salt-stiff coat", "a bosun's whistle"],
   },
   {
@@ -688,7 +688,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Pine", "Iron", "Brass"], traits: ["Worn", "Soft"], tags: ["Dining", "Storage"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Iron", "Linen"],
-    lootTraits: ["Worn"],
+    lootTraits: ["Pitted"],
     partialLoot: ["a greasy apron string", "a ladle", "a sack of soaked flour"],
   },
   {
@@ -710,7 +710,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Brass", "Silver"], traits: ["Locked", "Inlaid"], tags: ["Valuable", "Storage"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Linen", "Brass"],
-    lootTraits: ["Weathered"],
+    lootTraits: ["Inlaid"],
     partialLoot: ["a knotted bandana", "a stolen pocket watch", "a coil of rigging line"],
   },
 
@@ -718,7 +718,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
     group: "supernatural",
-    repelledBy: { traits: ["Sacred Symbol"] },
+    repelledBy: { traits: ["Sacred Symbol", "Faint Glow"] },
     locations: ["noble_estate", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     quirks: ["Drawn to bloodstained objects", "Cannot enter without invitation — waits at thresholds", "Hypersensitive to magical auras"],
     alluringQualities: { materials: ["Gold", "Silver", "Silk", "Gravecloth", "Bloodoak"], traits: ["Bloodstained", "Tarnished", "Gilded", "Upholstered"], tags: ["Valuable", "Comfort", "Religious"] },
@@ -734,7 +734,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Iron", "Steel", "Oak", "Horn"], traits: ["Reinforced", "Iron-Banded", "Worn"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 3, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 2, acoustic: 1, presence: 1 },
     lootMaterials: ["Horn", "Iron", "Boarhide"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Bloodstained"],
     partialLoot: ["a broken horn shard", "strip of iron-studded leather", "scrap of rough ox-hide"],
   },
   {
@@ -746,7 +746,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Oak", "Linen", "Iron"], traits: ["Bloodstained", "Worn", "Cracked", "Dusty"], tags: ["Comfort", "Structural"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 2 },
     lootMaterials: ["Gravecloth", "Iron", "Linen", "Cowhide"],
-    lootTraits: ["Bloodstained", "Worn"],
+    lootTraits: ["Bloodstained", "Pitted"],
     partialLoot: ["strip of burial shroud", "a rusted iron clasp", "scrap of grave-dirt-stained wool", "torn leather boot from its past life"],
   },
 
@@ -760,13 +760,13 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Gravecloth", "Soulglass", "Silver"], traits: ["Tarnished", "Etched"], tags: ["Religious"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 1, acoustic: 4, presence: 3 },
     lootMaterials: ["Gravecloth", "Soulglass"],
-    lootTraits: ["Tarnished"],
+    lootTraits: ["Shadowed Presence"],
     partialLoot: ["a lock of grave-white hair", "strip of tattered burial veil", "a cracked, yellowed fingernail"],
   },
   {
     name: "Ghoul", type: "Undead", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
-    repelledBy: { traits: ["Sacred Symbol"] },
+    repelledBy: { traits: ["Sacred Symbol", "Faint Glow"] },
     locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     behavior: "carrionScent",
     quirks: ["Sniffs at cupboards and larders", "Gnaws on anything that smells of meat", "Follows the scent of a fresh kill"],
@@ -784,7 +784,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["wizard_tower", "noble_estate", "hidden_grove", "crossroads"],
     behavior: "shapeSense",
     quirks: ["Its face never quite settles on one shape", "Feels the moment anything nearby changes its form", "Cannot resist pretty, delicate things"],
-    alluringQualities: { materials: ["Feywood", "Silk"], traits: ["Mossy", "Inlaid"], tags: ["Decor", "Comfort"] },
+    alluringQualities: { materials: ["Feywood", "Silk"], traits: ["Mossy", "Inlaid", "Faint Glow"], tags: ["Decor", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 1, magical: 2, social: 3, spatial: 1, environmental: 1, acoustic: 1, presence: 3 },
     lootMaterials: ["Feywood", "Spellweave Silk"],
     lootTraits: ["Mossy"],
@@ -797,6 +797,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
           description: "A thumb-sized pixie that darts about its master's head, giggling at nothing.",
           perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 2, social: 1, spatial: 1, environmental: 1, acoustic: 1, presence: 2 },
           lootMaterials: ["Feywood"],
+          lootTraits: ["Faint Glow"],
           partialLoot: ["a gossamer wing", "a pinch of glittering dust", "a thistledown cap"],
         },
         {
@@ -819,7 +820,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Never moves from its perch", "Memorizes where every object in sight sits", "Watches without blinking for hours"],
     alluringQualities: { materials: ["Marble", "Granite", "Basalt"], traits: ["Etched", "Pitted", "Sacred Symbol", "Arched"], tags: ["Structural", "Religious"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 4, environmental: 1, acoustic: 0, presence: 1 },
-    lootMaterials: ["Basalt", "Runestone"],
+    lootMaterials: ["Basalt", "Runestone", "Marble"],
     lootTraits: ["Etched"],
     partialLoot: ["a chip of weathered stone", "a broken stone talon", "grit from a cracked wing"],
   },
@@ -834,7 +835,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Direwolf Pelt", "Oak"], traits: ["Mossy", "Rough-Hewn", "Rustic"], tags: ["Rural"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 2, environmental: 4, acoustic: 2, presence: 2 },
     lootMaterials: ["Direwolf Pelt", "Boarhide"],
-    lootTraits: ["Rough-Hewn"],
+    lootTraits: ["Bloodstained"],
     partialLoot: ["a tuft of coarse grey fur", "a cracked claw", "strip of torn, half-shifted hide"],
   },
 
@@ -847,7 +848,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Giant Oak", "Giant Iron", "Beanstalk Leather"], traits: ["Reinforced", "Iron-Banded", "Heavy-Lidded"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 4, weight: 4, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 0 },
     lootMaterials: ["Giant Oak", "Giant Iron", "Beanstalk Leather"],
-    lootTraits: ["Reinforced"],
+    lootTraits: ["Bloodstained"],
     partialLoot: ["a massive belt buckle", "strip of giant-hide jerkin", "enormous boot sole"],
   },
   {
@@ -884,7 +885,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Stormforged Iron", "Giant Granite", "Beanstalk Timber"], traits: ["Iron-Banded", "Rough-Hewn", "Carved"], tags: ["Structural", "Defensive"] },
     perceptionAffinity: { material: 3, structure: 5, weight: 5, text: 0, magical: 2, social: 0, spatial: 3, environmental: 3, acoustic: 4, presence: 2 },
     lootMaterials: ["Stormforged Iron", "Giant Granite", "Beanstalk Timber"],
-    lootTraits: ["Iron-Banded"],
+    lootTraits: ["Pitted"],
     partialLoot: ["a stormforged iron rivet", "shard of giant granite block", "length of beanstalk rope"],
   },
   {
@@ -897,7 +898,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Giant Gold", "Giant Marble", "Stormforged Iron"], traits: ["Gilded", "Ornate", "Heraldic Crest", "Inlaid"], tags: ["Authority", "Valuable", "Seating"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 4, text: 2, magical: 2, social: 4, spatial: 4, environmental: 2, acoustic: 2, presence: 3 },
     lootMaterials: ["Giant Gold", "Stormforged Iron", "Giant Marble"],
-    lootTraits: ["Ornate", "Heraldic Crest"],
+    lootTraits: ["Gilded", "Heraldic Crest"],
     partialLoot: ["a signet ring the size of a shield", "strip of storm-dyed royal mantle", "a chip of crown-gold"],
   },
   {
@@ -910,7 +911,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Stormforged Iron", "Giant Iron", "Giant Granite"], traits: ["Iron-Banded", "Reinforced", "Etched"], tags: ["Structural", "Storage", "Defensive"] },
     perceptionAffinity: { material: 5, structure: 4, weight: 3, text: 1, magical: 2, social: 0, spatial: 1, environmental: 2, acoustic: 4, presence: 1 },
     lootMaterials: ["Stormforged Iron", "Giant Iron"],
-    lootTraits: ["Iron-Banded"],
+    lootTraits: ["Etched"],
     partialLoot: ["a scorched leather apron strap", "a hammer-head the size of an anvil", "a coil of lightning-tempered wire"],
   },
   {
@@ -923,7 +924,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     alluringQualities: { materials: ["Cloud Fleece", "Beanstalk Leather", "Giant Oak"], traits: ["Weathered", "Rustic"], tags: ["Transport", "Structural"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 0, magical: 1, social: 0, spatial: 4, environmental: 3, acoustic: 2, presence: 2 },
     lootMaterials: ["Cloud Fleece", "Beanstalk Leather"],
-    lootTraits: ["Weathered"],
+    lootTraits: ["Soft"],
     partialLoot: ["a strip of saddle leather", "a long grey flight feather", "a wind-burned riding glove"],
     companion: {
       chance: 0.60,
@@ -1108,12 +1109,12 @@ export const ADVENTURER_MATERIALS: Partial<Record<ApRewardKey, readonly Material
 };
 
 // Traits learned from full consumption (by type)
-export const ADVENTURER_TRAITS: Partial<Record<ApRewardKey, readonly Trait[]>> = {
+export const ADVENTURER_TRAITS: Partial<Record<ApRewardKey, readonly TeachableTrait[]>> = {
   Rogue: [],
   Cleric: ["Sacred Symbol"],
   Bard: ["Gilded"],
   Wizard: ["Runescript", "Arcane Sigil"],
-  Warrior: ["Reinforced"],
+  Warrior: ["Bloodstained"],
   Ranger: [],
   Paladin: ["Sacred Symbol", "Heraldic Crest"],
   Artificer: ["Arcane Sigil"],
@@ -1124,6 +1125,6 @@ export const ADVENTURER_TRAITS: Partial<Record<ApRewardKey, readonly Trait[]>> =
   Undead: ["Bloodstained"],
   Fey: ["Mossy"],
   Construct: ["Etched"],
-  Beast: ["Rough-Hewn"],
-  Giant: ["Rough-Hewn", "Iron-Banded"],
+  Beast: ["Bloodstained"],
+  Giant: ["Pitted"],
 };

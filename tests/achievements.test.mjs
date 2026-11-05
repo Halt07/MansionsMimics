@@ -25,16 +25,18 @@ export default async function ({ gameData: m, ok }) {
   ok(earned({ ...fresh, adventurersEaten: allNames }).includes('connoisseur'), 'eating every adventurer earns Connoisseur');
 
   // Master of Disguise: every material and every trait
-  const { ALL_MATERIALS, ALL_TRAITS } = m;
-  ok(earned({ ...fresh, learnedMaterials: [...ALL_MATERIALS], learnedTraits: [...ALL_TRAITS] }).includes('masterOfDisguise'), 'knowing every material and trait earns Master of Disguise');
-  ok(!earned({ ...fresh, learnedMaterials: [...ALL_MATERIALS], learnedTraits: ALL_TRAITS.slice(1) }).includes('masterOfDisguise'), 'one trait short is not enough');
+  const { ALL_MATERIALS, LEARNABLE_TRAITS } = m;
+  ok(earned({ ...fresh, learnedMaterials: [...ALL_MATERIALS], learnedTraits: [...LEARNABLE_TRAITS] }).includes('masterOfDisguise'), 'knowing every material and learnable trait earns Master of Disguise');
+  ok(!earned({ ...fresh, learnedMaterials: [...ALL_MATERIALS], learnedTraits: LEARNABLE_TRAITS.filter((t) => t !== 'Gilded') }).includes('masterOfDisguise'), 'one learned trait short is not enough');
+  const teachable = LEARNABLE_TRAITS.filter((t) => !m.ALL_STARTING_TRAITS.includes(t));
+  ok(earned({ ...fresh, learnedMaterials: [...ALL_MATERIALS], learnedTraits: teachable }).includes('masterOfDisguise'), 'starting traits count without being learned');
 
   // Every material and trait must actually be learnable somewhere, or Master of Disguise is impossible
   const { materials, traits } = m.obtainableMaterialsAndTraits();
   const missingMats = ALL_MATERIALS.filter((x) => !materials.has(x));
-  const missingTraits = ALL_TRAITS.filter((x) => !traits.has(x));
+  const missingTraits = teachable.filter((x) => !traits.has(x));
   ok(missingMats.length === 0, `every material can be learned from some adventurer${missingMats.length ? ` — missing: ${missingMats.join(', ')}` : ''}`);
-  ok(missingTraits.length === 0, `every trait can be learned from some adventurer${missingTraits.length ? ` — missing: ${missingTraits.join(', ')}` : ''}`);
+  ok(missingTraits.length === 0, `every trait a mimic doesn't start with can be learned from some adventurer${missingTraits.length ? ` — missing: ${missingTraits.join(', ')}` : ''}`);
 
   // Lifetime stats
   const stats = m.lifetimeStats({
@@ -53,4 +55,22 @@ export default async function ({ gameData: m, ok }) {
   ok(m.withCount({ manor: 2 }, 'manor').manor === 3 && m.withCount({}, 'manor').manor === 1, 'withCount adds one to a key');
   ok(m.withBiggestMeal({ name: 'Ghoul', ap: 5 }, 'Rat', 1)?.name === 'Ghoul' && m.withBiggestMeal({ name: 'Ghoul', ap: 5 }, 'Elder Mimic', 18)?.name === 'Elder Mimic', 'biggest meal only changes for a bigger one');
   ok(m.withBiggestMeal(null, 'Rat', 1)?.name === 'Rat', 'the first meal is the biggest so far');
+
+  // Starting traits and materials
+  const startingTaught = [...traits].filter((t) => m.ALL_STARTING_TRAITS.includes(t));
+  ok(startingTaught.length === 0, `no adventurer teaches a trait every mimic already knows${startingTaught.length ? ` — ${startingTaught.join(', ')}` : ''}`);
+  ok(['Bloodstained', 'Shadowed Presence', 'Faint Glow', 'Gilded'].every((t) => !m.ALL_STARTING_TRAITS.includes(t)), 'Bloodstained, Shadowed Presence, Faint Glow and Gilded must be learned');
+  ok(m.knowsTrait({ learnedTraits: [] }, 'Worn') && !m.knowsTrait({ learnedTraits: [] }, 'Gilded') && m.knowsTrait({ learnedTraits: ['Gilded'] }, 'Gilded'), 'a mimic knows starting traits plus what it has learned');
+  ok(m.STARTING_MATERIALS.Minor.join() === 'Pine,Iron,Cotton' && m.STARTING_MATERIALS.Lesser.join() === 'Oak,Iron,Cowhide', 'Minor mimics start with Pine, Lesser with Oak');
+  const starters = new Set([...m.STARTING_MATERIALS.Minor, ...m.STARTING_MATERIALS.Lesser]);
+  const unteachableStarters = [...starters].filter((x) => !materials.has(x));
+  ok(unteachableStarters.length === 0, `either origin can learn the other's starting materials${unteachableStarters.length ? ` — missing: ${unteachableStarters.join(', ')}` : ''}`);
+
+  // Starting materials should be learnable outside rare locations too (rare ones may never open)
+  const rareIds = new Set(m.LOCATIONS.filter((l) => l.rare).map((l) => l.id));
+  const everydayTeachers = (mat) => m.ADVENTURER_TEMPLATES.filter((t) =>
+    t.lootMaterials.includes(mat) && !(t.locations && t.locations.every((id) => rareIds.has(id))));
+  for (const mat of starters) {
+    ok(everydayTeachers(mat).length > 0, `${mat} can be learned outside rare locations (${everydayTeachers(mat).map((t) => t.name).join(', ')})`);
+  }
 }

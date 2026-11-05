@@ -31,25 +31,50 @@ export const ALL_MATERIALS = [
 ] as const satisfies readonly Material[];
 
 // ── Traits ──
-// surface / symbolic / condition: applied through the appearance editor
-// structural / aura: built into forms (see Form.builtInTraits)
+// TRAITS are learned (from loot) and applied in the appearance editor.
+// UNLEARNED_TRAITS are built into forms (Form.builtInTraits) — you get them only by
+// wearing a form that has them. Both kinds count when adventurers are lured or put off.
 export const TRAITS = {
   surface: ["Polished", "Tarnished", "Gilded", "Etched", "Inlaid", "Lacquered", "Rough-Hewn", "Soft", "Wrinkled", "Smooth", "Pitted", "Mossy"],
   symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
-  condition: ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence"],
+  condition: ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence", "Faint Glow"],
+} as const;
+export const UNLEARNED_TRAITS = {
   structural: ["Reinforced", "Carved", "Ornate", "Minimalist", "Heavy-Lidded", "Iron-Banded", "Upholstered", "Locked", "Rustic", "Arched"],
-  aura: ["Faint Glow", "Cold to Touch", "Warm to Touch", "Whispering", "Radiant"],
+  aura: ["Cold to Touch", "Warm to Touch", "Whispering", "Radiant"],
 } as const;
 export type TraitCategory = keyof typeof TRAITS;
-export type Trait = (typeof TRAITS)[TraitCategory][number];
+export type UnlearnedTraitCategory = keyof typeof UNLEARNED_TRAITS;
+/** A trait that can be learned and applied in the appearance editor. */
+export type LearnableTrait = (typeof TRAITS)[TraitCategory][number];
+/** A trait built into forms rather than learned or applied. */
+export type BuiltInTrait = (typeof UNLEARNED_TRAITS)[UnlearnedTraitCategory][number];
+export type Trait = LearnableTrait | BuiltInTrait;
 export type SurfaceTrait = (typeof TRAITS)["surface"][number];
 export type SymbolicTrait = (typeof TRAITS)["symbolic"][number];
 export type ConditionTrait = (typeof TRAITS)["condition"][number];
-/** Traits a form has built in rather than ones applied in the appearance editor. */
-export type BuiltInTrait = (typeof TRAITS)["structural" | "aura"][number];
 
+/**
+ * Traits every mimic knows from creation: ordinary finishes and states any object could have.
+ * Every other surface/condition trait (and all symbolic ones) must be learned from prey.
+ */
+export const STARTING_TRAITS = {
+  surface: ["Polished", "Tarnished", "Smooth", "Rough-Hewn"],
+  condition: ["Worn", "Pristine", "Weathered", "Cracked", "Dusty"],
+} as const satisfies { surface: readonly SurfaceTrait[]; condition: readonly ConditionTrait[] };
+export type StartingTrait = (typeof STARTING_TRAITS)[keyof typeof STARTING_TRAITS][number];
+export const ALL_STARTING_TRAITS: readonly StartingTrait[] = [...STARTING_TRAITS.surface, ...STARTING_TRAITS.condition];
+/** A trait adventurers can teach: learnable, but not one every mimic already starts with. */
+export type TeachableTrait = Exclude<LearnableTrait, StartingTrait>;
+
+/** Every trait that can be learned (what Master of Disguise asks for). */
+export const LEARNABLE_TRAITS = [
+  ...TRAITS.surface, ...TRAITS.symbolic, ...TRAITS.condition,
+] as const satisfies readonly LearnableTrait[];
+
+/** Every trait, learned or built in (what adventurers can like or dislike). */
 export const ALL_TRAITS = [
-  ...TRAITS.surface, ...TRAITS.symbolic, ...TRAITS.condition, ...TRAITS.structural, ...TRAITS.aura,
+  ...LEARNABLE_TRAITS, ...UNLEARNED_TRAITS.structural, ...UNLEARNED_TRAITS.aura,
 ] as const satisfies readonly Trait[];
 
 // ── Utility tags ──

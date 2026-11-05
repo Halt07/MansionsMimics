@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
-  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
+  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
-  isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
+  ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { Card, CardContent } from "@/components/ui/card";
@@ -318,12 +318,24 @@ export default function Codex() {
           {activeSection === "Traits" &&
           <div className="space-y-4">
               <h2 className="font-cinzel text-2xl text-foreground mb-4">Traits</h2>
+              <p className="text-sm text-muted-foreground">Surface, symbolic and condition traits are learned from your prey and applied in the appearance editor. Every mimic starts knowing a few ordinary ones (<span className="text-primary">highlighted</span>);</p>
               {Object.entries(TRAITS).map(([category, traits]) =>
             <div key={category}>
                   <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category}</h3>
                   <div className="flex flex-wrap gap-2">
                     {traits.map((t) =>
-                <Badge key={t} variant="outline" className="border-border text-muted-foreground hover:text-foreground transition-colors">{t}</Badge>
+                <Badge key={t} variant="outline" className={ALL_STARTING_TRAITS.includes(t as StartingTrait) ? "border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground transition-colors"}>{t}</Badge>
+                )}
+                  </div>
+                </div>
+            )}
+              <p className="text-sm text-muted-foreground pt-2">Structural and aura traits can't be learned or applied — they're built into forms, so you have them only while wearing a form that does.</p>
+              {Object.entries(UNLEARNED_TRAITS).map(([category, traits]) =>
+            <div key={category}>
+                  <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category} <span className="normal-case tracking-normal text-[10px]">(built into forms)</span></h3>
+                  <div className="flex flex-wrap gap-2">
+                    {traits.map((t) =>
+                <Badge key={t} variant="outline" className="border-dashed border-border text-muted-foreground hover:text-foreground transition-colors">{t}</Badge>
                 )}
                   </div>
                 </div>
