@@ -14,7 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  VARIANT_FORMS, isVariantUnlocked,
+  VARIANT_FORMS, isVariantUnlocked, formFamily,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -423,8 +423,9 @@ export default function Game() {
 
     // Duplicate room-type plausibility check (Grand/Apex room-forms only)
     const form2 = getActiveForm(character);
-    if (form2 && ROOM_FORM_IDS.has(form2.id)) {
-      const formRoomType = FORM_ROOM_TYPE[form2.id];
+    // Variants of room-forms (Atheneum, Cathedral) count as their base room type
+    if (form2 && ROOM_FORM_IDS.has(formFamily(form2.id))) {
+      const formRoomType = FORM_ROOM_TYPE[formFamily(form2.id)];
       if (formRoomType) {
         const otherRooms = location.rooms.filter(r => r !== currentMimicRoom);
         const hasDuplicate = otherRooms.some(r => r.toLowerCase().includes(formRoomType));
@@ -1399,7 +1400,7 @@ export default function Game() {
               {character.currentAppearance && (() => {
                 const app = character.currentAppearance;
                 const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || [])];
-                const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || [])];
+                const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || []), ...(app.scentTraits || [])];
                 if (mats.length === 0 && traits.length === 0) return null;
                 return (
                   <div className="space-y-1 pt-1 border-t border-border/50">

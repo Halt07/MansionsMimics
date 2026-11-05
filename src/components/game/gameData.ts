@@ -386,6 +386,7 @@ export function calcAllureBreakdown(
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),
     ...(currentAppearance.conditionTraits || []),
+    ...(currentAppearance.scentTraits || []),
     ...(form.builtInTraits || []),
   ];
   const formTags: readonly UtilityTag[] = form.utilityTags || [];

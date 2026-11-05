@@ -295,6 +295,7 @@ export default function Codex() {
                         <th className="py-1 px-2 font-cinzel text-foreground">Surface</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Symbolic</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Condition</th>
+                        <th className="py-1 px-2 font-cinzel text-foreground">Scent</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -309,6 +310,7 @@ export default function Codex() {
                             <td className="py-1.5 px-2 text-center">{lim.surfaceTraits}</td>
                             <td className="py-1.5 px-2 text-center">{lim.symbolicTraits}</td>
                             <td className="py-1.5 px-2 text-center">{lim.conditionTraits}</td>
+                            <td className="py-1.5 px-2 text-center">{lim.scentTraits}</td>
                           </tr>);
 
                     })}

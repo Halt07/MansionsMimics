@@ -4,7 +4,7 @@ export default async function ({ gameData: m, ok, log }) {
   const byId = (id) => ALL_FORMS.find((f) => f.id === id);
   const none = { learnedMaterials: [], learnedTraits: [] };
 
-  ok(VARIANT_FORMS.length === 6, `six variant forms (${VARIANT_FORMS.map((f) => f.name).join(', ')})`);
+  ok(VARIANT_FORMS.length === 10, `ten variant forms (${VARIANT_FORMS.map((f) => f.name).join(', ')})`);
   for (const v of VARIANT_FORMS) {
     const base = byId(v.variantOf);
     ok(base && !base.variantOf && base.tier === v.tier, `${v.name} is a variant of ${base?.name}, in the same tier`);
@@ -43,4 +43,11 @@ export default async function ({ gameData: m, ok, log }) {
   ok(!cab.isEarned({ ...fresh, formsUsed: VARIANT_FORMS.slice(1).map((f) => f.id) }), 'Curiosity Cabinet needs every variant');
   ok(cab.isEarned({ ...fresh, formsUsed: [...VARIANT_FORMS.map((f) => f.id), 'minor_book'] }), 'hunting in every variant earns Curiosity Cabinet');
   log(VARIANT_FORMS.map((v) => `${v.name} ← ${v.unlockedBy.join('/')}`).join(' | '));
+
+  // The Cathedral takes the Chapel's grandeur; the Chapel stays humble
+  const chapel = byId('apex_chapel'), cathedral = byId('apex_cathedral');
+  ok(!chapel.builtInTraits.includes('Radiant') && !chapel.builtInTraits.includes('Arched'), 'the Chapel no longer has Radiant or Arched');
+  ok(['Radiant', 'Arched', 'Ornate'].every((t) => cathedral.builtInTraits.includes(t)) && cathedral.unlockedBy.join() === 'Stained Glass', 'the Cathedral is Radiant, Arched and Ornate, unlocked by Stained Glass');
+  ok(['Ornate', 'Rustic'].every((t) => byId('grand_antler_chandelier').builtInTraits.includes(t)), 'the Antler Chandelier is both Ornate and Rustic');
+  ok(m.formFamily('apex_cathedral') === 'apex_chapel' && m.ROOM_FORM_IDS.has(m.formFamily('apex_cathedral')) && m.ROOM_FORM_IDS.has(m.formFamily('grand_atheneum')), 'room-form variants count as their base room type');
 }

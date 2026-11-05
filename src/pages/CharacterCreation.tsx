@@ -50,6 +50,7 @@ export default function CharacterCreation() {
     surfaceTraits: [],
     symbolicTraits: [],
     conditionTraits: [],
+    scentTraits: [], // all scents are learned in play
   });
 
   // Forms available at creation: same tier as origin, plus one tier above (±1 rule)

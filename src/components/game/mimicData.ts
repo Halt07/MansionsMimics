@@ -181,6 +181,18 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "lesser_herbalists_chest", name: "Herbalist's Chest", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_chest", unlockedBy: ["Earthy", "Fragrant"],
+      builtInTraits: ["Heavy-Lidded", "Rustic"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Storage", "Rural"],
+      materialSlots: 3, digestCapacityRequired: 3, description: "A chest of little drawers and stoppered jars, sweet with dried herbs. Druids and hedge-folk can't walk past one.",
+      flawProfiles: [
+        { type: "environmental", description: "The herbs never wilt, crumble or lose their smell" },
+        { type: "material", description: "Every drawer smells of the same herb, whatever its label says" },
+        { type: "structure", description: "The drawers slide open without the usual sticking" },
+      ],
+    },
+    {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
       builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
@@ -414,7 +426,7 @@ const FORM_DATA = {
   Grand: [
     {
       id: "grand_personal_library", name: "Personal Library", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Carved", "Ornate", "Whispering"],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Structural", "Knowledge"],
       materialSlots: 6, digestCapacityRequired: 6, description: "An enclosed sanctuary of scholarship.",
       flawProfiles: [
@@ -422,6 +434,19 @@ const FORM_DATA = {
         { type: "environmental", description: "Dust patterns reset subtly between extended observations" },
         { type: "acoustic", description: "Footsteps echo inconsistently relative to wall spacing" },
         { type: "spatial", description: "Shelf depth exceeds plausible wall thickness" },
+      ],
+    },
+    {
+      id: "grand_atheneum", name: "Atheneum", tier: "Grand", baseMassRange: [17, 25],
+      variantOf: "grand_personal_library", unlockedBy: ["Musty", "Runescript"],
+      builtInTraits: ["Carved", "Ornate", "Arched", "Whispering"],
+      baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Structural", "Knowledge", "Authority"],
+      materialSlots: 6, digestCapacityRequired: 6, description: "A domed hall of learning, older than the house around it. Scholars come in and forget to leave.",
+      flawProfiles: [
+        { type: "text", description: "The catalogue lists more books than the shelves could ever hold" },
+        { type: "spatial", description: "The dome is taller inside than the roof is outside" },
+        { type: "acoustic", description: "Pages turn somewhere in the stacks when no one is there" },
+        { type: "environmental", description: "The dust never settles on the reading tables" },
       ],
     },
     {
@@ -458,6 +483,18 @@ const FORM_DATA = {
         { type: "structure", description: "Chain bears no stress despite significant weight" },
         { type: "material", description: "Crystal prisms refract identical rainbow patterns" },
         { type: "presence", description: "Subtle warmth radiates even when unlit" },
+      ],
+    },
+    {
+      id: "grand_antler_chandelier", name: "Antler Chandelier", tier: "Grand", baseMassRange: [17, 25],
+      variantOf: "grand_chandelier", unlockedBy: ["Horn", "Earthy"],
+      builtInTraits: ["Ornate", "Rustic"],
+      baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Rural", "Decor"],
+      materialSlots: 4, digestCapacityRequired: 6, description: "A great crown of antlers hung with candles: a hunting lodge's pride, and a hunter's weakness.",
+      flawProfiles: [
+        { type: "material", description: "No two antlers should match, yet several do" },
+        { type: "structure", description: "The chain doesn't creak under all that bone" },
+        { type: "light", description: "The candles never drip wax" },
       ],
     },
     {
@@ -513,7 +550,7 @@ const FORM_DATA = {
     },
     {
       id: "apex_chapel", name: "Chapel", tier: "Apex", baseMassRange: [28, 45],
-      builtInTraits: ["Carved", "Ornate", "Arched", "Radiant"],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Religious"],
       materialSlots: 8, digestCapacityRequired: 9, description: "Sanctuary to some. Sanctuary from none.",
       flawProfiles: [
@@ -521,6 +558,19 @@ const FORM_DATA = {
         { type: "light", description: "Stained glass projects identical light patterns each day" },
         { type: "material", description: "Stone floor lacks natural wear near pew entrances" },
         { type: "presence", description: "Sacred symbols feel faintly warm or pulse subtly" },
+      ],
+    },
+    {
+      id: "apex_cathedral", name: "Cathedral", tier: "Apex", baseMassRange: [28, 45],
+      variantOf: "apex_chapel", unlockedBy: ["Stained Glass"],
+      builtInTraits: ["Carved", "Ornate", "Arched", "Radiant"],
+      baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Structural", "Religious", "Authority"],
+      materialSlots: 8, digestCapacityRequired: 9, description: "Vaulted, glowing, vast. The faithful arrive by the hundred — and not all of them leave.",
+      flawProfiles: [
+        { type: "light", description: "The rose window throws the same colors at every hour" },
+        { type: "acoustic", description: "The bells ring a beat before the rope is pulled" },
+        { type: "spatial", description: "The nave is longer walking in than walking out" },
+        { type: "presence", description: "Every saint in the glass seems to be looking at the same pew" },
       ],
     },
     {
@@ -703,15 +753,17 @@ export interface AppearanceLimits {
   surfaceTraits: number;
   symbolicTraits: number;
   conditionTraits: number;
+  /** Scents: none at Minor; at Apex a mimic is big enough to smell two ways at once. */
+  scentTraits: number;
 }
 
 export const APPEARANCE_LIMITS: Record<Tier, AppearanceLimits> = {
-  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
-  Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
-  Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1 },
-  Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2 },
-  Grand:    { primaryMaterials: 1, secondaryMaterials: 2, magicalMaterials: 2, surfaceTraits: 3, symbolicTraits: 2, conditionTraits: 2 },
-  Apex:     { primaryMaterials: 2, secondaryMaterials: 2, magicalMaterials: 3, surfaceTraits: 4, symbolicTraits: 3, conditionTraits: 3 },
+  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1, scentTraits: 0 },
+  Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1, scentTraits: 1 },
+  Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1, scentTraits: 1 },
+  Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2, scentTraits: 1 },
+  Grand:    { primaryMaterials: 1, secondaryMaterials: 2, magicalMaterials: 2, surfaceTraits: 3, symbolicTraits: 2, conditionTraits: 2, scentTraits: 1 },
+  Apex:     { primaryMaterials: 2, secondaryMaterials: 2, magicalMaterials: 3, surfaceTraits: 4, symbolicTraits: 3, conditionTraits: 3, scentTraits: 2 },
 };
 
 // ============================================================

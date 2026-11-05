@@ -140,6 +140,9 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
               {(character.currentAppearance.surfaceTraits || []).length > 0 && (
                 <p>Traits: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>
               )}
+              {(character.currentAppearance.scentTraits || []).length > 0 && (
+                <p>Scent: <span className="text-foreground">{character.currentAppearance.scentTraits.join(", ")}</span></p>
+              )}
             </div>
           </div>
         )}

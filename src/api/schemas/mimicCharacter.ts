@@ -35,6 +35,7 @@ const AppearanceSchema = z.strictObject({
   surfaceTraits: z.array(z.enum(TRAITS.surface)).default([]),
   symbolicTraits: z.array(z.enum(TRAITS.symbolic)).default([]),
   conditionTraits: z.array(z.enum(TRAITS.condition)).default([]),
+  scentTraits: z.array(z.enum(TRAITS.scent)).default([]),
 });
 
 /** Fields the game controls. Used to validate `create()` input. */

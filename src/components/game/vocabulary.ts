@@ -38,6 +38,8 @@ export const TRAITS = {
   surface: ["Polished", "Tarnished", "Gilded", "Etched", "Inlaid", "Lacquered", "Rough-Hewn", "Soft", "Wrinkled", "Smooth", "Pitted", "Mossy"],
   symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
   condition: ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence", "Faint Glow"],
+  /** How the object smells. All scents are learned; Minor mimics can't wear one. */
+  scent: ["Musty", "Fresh", "Fragrant", "Foul", "Smoky", "Briny", "Earthy"],
 } as const;
 export const UNLEARNED_TRAITS = {
   structural: ["Reinforced", "Carved", "Ornate", "Minimalist", "Heavy-Lidded", "Iron-Banded", "Upholstered", "Locked", "Rustic", "Arched"],
@@ -53,6 +55,7 @@ export type Trait = LearnableTrait | BuiltInTrait;
 export type SurfaceTrait = (typeof TRAITS)["surface"][number];
 export type SymbolicTrait = (typeof TRAITS)["symbolic"][number];
 export type ConditionTrait = (typeof TRAITS)["condition"][number];
+export type ScentTrait = (typeof TRAITS)["scent"][number];
 
 /**
  * Traits every mimic knows from creation: ordinary finishes and states any object could have.
@@ -69,7 +72,7 @@ export type TeachableTrait = Exclude<LearnableTrait, StartingTrait>;
 
 /** Every trait that can be learned (what Master of Disguise asks for). */
 export const LEARNABLE_TRAITS = [
-  ...TRAITS.surface, ...TRAITS.symbolic, ...TRAITS.condition,
+  ...TRAITS.surface, ...TRAITS.symbolic, ...TRAITS.condition, ...TRAITS.scent,
 ] as const satisfies readonly LearnableTrait[];
 
 /** Every trait, learned or built in (what adventurers can like or dislike). */
