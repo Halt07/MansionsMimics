@@ -4,8 +4,8 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  STARTING_STATS, STARTING_TYPES, TIER_CONFIG, MASTER_FORMS, TRAITS, TIER_ORDER, canAddForm, MAX_FORMS_ABOVE_TIER,
-  type Form, type Material, type StartingType,
+  STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
+  canAddForm, MAX_FORMS_ABOVE_TIER, type Form, type Material, type StartingType,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +15,6 @@ import { ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
 import StatBar from "../components/game/StatBar";
 
 const STEPS = ["Origin", "Name", "Forms", "Appearance", "Confirm"];
-
-const STARTING_MATERIALS: Record<StartingType, readonly [Material, ...Material[]]> = {
-  Minor: ["Oak", "Iron", "Cotton"],
-  Lesser: ["Oak", "Iron", "Cowhide"],
-};
 
 type TraitField = "surfaceTraits" | "conditionTraits";
 
@@ -38,6 +33,14 @@ export default function CharacterCreation() {
   const handleOriginSelect = (type: StartingType) => {
     setOrigin(type);
     setSelectedForms([]); // reset forms when origin changes
+    // Drop any chosen material the new origin doesn't know (e.g. Pine when switching Minor → Lesser),
+    // so a hidden selection can't satisfy "choose a primary material"
+    const known = (m: Material) => STARTING_MATERIALS[type].includes(m);
+    setAppearance(a => ({
+      ...a,
+      primaryMaterials: a.primaryMaterials.filter(known),
+      secondaryMaterials: a.secondaryMaterials.filter(known),
+    }));
   };
   const [name, setName] = useState("");
   const [selectedForms, setSelectedForms] = useState<Form[]>([]);
@@ -47,6 +50,7 @@ export default function CharacterCreation() {
     surfaceTraits: [],
     symbolicTraits: [],
     conditionTraits: [],
+    scentTraits: [], // all scents are learned in play
   });
 
   // Forms available at creation: same tier as origin, plus one tier above (±1 rule)
@@ -54,7 +58,8 @@ export default function CharacterCreation() {
   const startingTier: StartingType = origin || "Minor";
   const tierIndex = TIER_ORDER.indexOf(startingTier);
   const availableForms = TIER_ORDER.reduce<Form[]>((acc, tier, i) => {
-    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier]];
+    // Base forms only: variant forms must be unlocked by learning something in play
+    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier].filter(f => !isVariantForm(f))];
     return acc;
   }, []);
 
@@ -339,7 +344,7 @@ export default function CharacterCreation() {
             <div>
               <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Surface Trait (optional, max 1)</p>
               <div className="flex flex-wrap gap-2">
-                {TRAITS.surface.slice(0, 4).map(trait => (
+                {STARTING_TRAITS.surface.map(trait => (
                   <button
                     key={trait}
                     onClick={() => toggleTrait("surfaceTraits", trait)}
@@ -359,7 +364,7 @@ export default function CharacterCreation() {
             <div>
               <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Condition Trait (optional, max 1)</p>
               <div className="flex flex-wrap gap-2">
-                {TRAITS.condition.map(trait => (
+                {STARTING_TRAITS.condition.map(trait => (
                   <button
                     key={trait}
                     onClick={() => toggleTrait("conditionTraits", trait)}

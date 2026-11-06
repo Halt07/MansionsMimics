@@ -1,8 +1,8 @@
 // Companion wiring: stats come from the option, AP from `ap`, overrides apply, weights work.
 export default async function ({ gameData: m, ok, log }) {
-  const { ADVENTURER_TEMPLATES: T, MATERIALS, TRAITS, BEHAVIORS } = m;
+  const { ADVENTURER_TEMPLATES: T, MATERIALS, BEHAVIORS } = m;
   const allMats = new Set(Object.values(MATERIALS).flat());
-  const allTraits = new Set(Object.values(TRAITS).flat());
+  const allTraits = new Set(m.ALL_TRAITS);
 
   // Every companion option references real data
   let problems = 0;

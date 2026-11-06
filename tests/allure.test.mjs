@@ -4,7 +4,8 @@ export default async function ({ gameData: m, ok, log }) {
   const { ADVENTURER_TEMPLATES: T, MATERIALS, TRAITS, MASTER_FORMS } = m;
   const forms = Object.values(MASTER_FORMS).flat();
   const allMats = new Set(Object.values(MATERIALS).flat());
-  const reachableTraits = new Set([...TRAITS.surface, ...TRAITS.symbolic, ...TRAITS.condition, ...forms.flatMap((f) => f.builtInTraits)]);
+  // Anything wearable in the appearance editor (every learnable category), plus traits built into forms
+  const reachableTraits = new Set([...Object.values(TRAITS).flat(), ...forms.flatMap((f) => f.builtInTraits)]);
   const allTags = new Set(forms.flatMap((f) => f.utilityTags));
 
   // Every like and dislike can actually be matched, and nothing is both liked and disliked

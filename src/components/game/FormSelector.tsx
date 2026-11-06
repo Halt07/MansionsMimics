@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TIER_ORDER, getValidForms, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
+import { ALL_FORMS, TIER_ORDER, formTier, getValidForms, getLockedVariants, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
 import BurnBadge from "./BurnBadge";
 import { Button } from "@/components/ui/button";
 
@@ -13,22 +13,27 @@ interface FormSelectorProps {
 }
 
 export default function FormSelector({ character, onConfirm, onSkip }: FormSelectorProps) {
-  const currentTierIdx = TIER_ORDER.indexOf(character.tier);
-  // Include all forms from tier-1, current tier, and tier+1
-  const validForms = getValidForms(character.tier, character.mass);
+  // Thimblewood shrinks the mimic: forms are chosen as if it were one tier smaller
+  const tier = formTier(character);
+  const currentTierIdx = TIER_ORDER.indexOf(tier);
+  // Include all forms from tier-1, current tier, and tier+1 (plus any variant forms the mimic
+  // has unlocked); variants it hasn't unlocked yet are shown locked, with how to unlock them
+  const validForms = getValidForms(tier, character.mass, character);
+  const lockedVariants = getLockedVariants(tier, character.mass, character);
+  const baseName = (id?: string) => ALL_FORMS.find(f => f.id === id)?.name ?? id;
 
   // Start from the current forms, keeping within the form limit and the one-form-above rule
   const [selected, setSelected] = useState<Form[]>(() => {
     return character.forms
       .flatMap(ref => validForms.filter(f => f.id === ref.formId))
-      .reduce<Form[]>((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, character.tier) ? [...acc, form] : acc), []);
+      .reduce<Form[]>((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, tier) ? [...acc, form] : acc), []);
   });
 
   const toggle = (form: Form) => {
     setSelected(prev => {
       const exists = prev.find(f => f.id === form.id);
       if (exists) return prev.filter(f => f.id !== form.id);
-      if (prev.length >= MAX_FORMS || !canAddForm(prev, form, character.tier)) return prev;
+      if (prev.length >= MAX_FORMS || !canAddForm(prev, form, tier)) return prev;
       return [...prev, form];
     });
   };
@@ -54,6 +59,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
     if (formsInTier.length > 0) acc[tier] = formsInTier;
     return acc;
   }, {});
+  const lockedByTier = (tier: Tier) => lockedVariants.filter(f => f.tier === tier);
 
   return (
     <div className="space-y-4">
@@ -65,6 +71,11 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
         <p className="text-xs text-muted-foreground">
           Selected: {selected.length} / {MAX_FORMS}
         </p>
+        {tier !== character.tier && (
+          <p className="text-xs text-amber-500 mt-1">
+            🪵 Thimblewood shrank you: you're choosing forms as a {tier} mimic, not a {character.tier}.
+          </p>
+        )}
       </div>
 
       {TIER_ORDER.flatMap(tier => { const forms = groupedForms[tier]; return forms ? [[tier, forms] as const] : []; }).map(([tier, forms]) => (
@@ -73,7 +84,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {forms.map(form => {
               const isSelected = !!selected.find(f => f.id === form.id);
-              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, character.tier);
+              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, tier);
               const isDisabled = !isSelected && (selected.length >= MAX_FORMS || blockedByAboveRule);
               return (
                 <button
@@ -96,6 +107,9 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
                       {isSelected && <span className="text-[9px] text-primary">✓</span>}
                     </div>
                   </div>
+                  {form.variantOf && (
+                    <p className="text-[9px] text-teal-300 mb-0.5">🗝️ Variant of {baseName(form.variantOf)}</p>
+                  )}
                   <p className="text-[10px] text-muted-foreground">{form.description}</p>
                   <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                   {blockedByAboveRule && selected.length < MAX_FORMS && (
@@ -105,10 +119,20 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
                     {form.utilityTags.map(tag => (
                       <span key={tag} className="text-[9px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>
                     ))}
+                    {form.builtInTraits.map(t => (
+                      <span key={t} title="Built-in trait — this form always has it" className="text-[9px] border border-dashed border-primary/30 rounded px-1 text-primary/80">{t}</span>
+                    ))}
                   </div>
                 </button>
               );
             })}
+            {lockedByTier(tier).map(form => (
+              <div key={form.id} className="text-left px-3 py-2.5 rounded-lg border border-dashed border-border bg-card/50 text-xs text-muted-foreground/50 cursor-not-allowed">
+                <span className="font-cinzel">🔒 {form.name}</span>
+                <span className="text-[9px] ml-1">— variant of {baseName(form.variantOf)}</span>
+                <p className="text-[10px] mt-0.5">Learn {(form.unlockedBy ?? []).join(", ").replace(/, ([^,]*)$/, " or $1")} to unlock.</p>
+              </div>
+            ))}
           </div>
         </div>
       ))}

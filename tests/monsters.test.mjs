@@ -1,9 +1,9 @@
 // Adventurer data integrity, party eligibility (tier / mass / location gating),
 // AP rewards, and the special behaviors (Keen Hearing, Carrion Scent, etc.).
 export default async function ({ gameData: m, ok, log }) {
-  const { ADVENTURER_TEMPLATES: T, ADVENTURER_GROUPS: G, LOCATIONS: L, MATERIALS, TRAITS, AP_REWARDS, BEHAVIORS, TIER_ORDER } = m;
+  const { ADVENTURER_TEMPLATES: T, ADVENTURER_GROUPS: G, LOCATIONS: L, MATERIALS, AP_REWARDS, BEHAVIORS, TIER_ORDER } = m;
   const allMats = new Set(Object.values(MATERIALS).flat());
-  const allTraits = new Set(Object.values(TRAITS).flat());
+  const allTraits = new Set(m.ALL_TRAITS);
   const locIds = new Set(L.map((l) => l.id));
   const groupIds = new Set(G.map((g) => g.id));
 

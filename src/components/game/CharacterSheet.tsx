@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
+import { ACHIEVEMENTS, lifetimeStats, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,9 +140,42 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
               {(character.currentAppearance.surfaceTraits || []).length > 0 && (
                 <p>Traits: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>
               )}
+              {(character.currentAppearance.scentTraits || []).length > 0 && (
+                <p>Scent: <span className="text-foreground">{character.currentAppearance.scentTraits.join(", ")}</span></p>
+              )}
             </div>
           </div>
         )}
+
+        {/* Lifetime stats */}
+        {(() => {
+          const stats = lifetimeStats(character);
+          const rows: [string, string | number][] = [
+            ["Hunts survived", stats.huntsSurvived],
+            ["Hunts failed", stats.huntsFailed],
+            ["Hunts total", stats.huntsTotal],
+            ["Entities eaten", stats.entitiesEaten],
+            ["Forms used", stats.formsUsed],
+            ["Lifetime AP earned", stats.lifetimeApEarned],
+            ["Closest call", stats.huntsSurvived > 0 ? `${stats.closestCall}/10 suspicion` : "—"],
+            ["Biggest meal", stats.biggestMeal ? `${stats.biggestMeal.name} (${stats.biggestMeal.ap} AP)` : "—"],
+            ["Favorite form", stats.favoriteForm ? `${stats.favoriteForm.name} (${stats.favoriteForm.hunts})` : "—"],
+            ["Favorite hunting ground", stats.favoriteHuntingGround ? `${stats.favoriteHuntingGround.name} (${stats.favoriteHuntingGround.hunts})` : "—"],
+          ];
+          return (
+            <div>
+              <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Lifetime Stats</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                {rows.map(([label, value]) => (
+                  <div key={label} className="flex justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">{label}</span>
+                    <span className="text-foreground font-bold text-right">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Achievements */}
         <div>

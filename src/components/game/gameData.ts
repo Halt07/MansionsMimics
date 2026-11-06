@@ -8,19 +8,19 @@
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
+  ALL_MATERIALS, ALL_STARTING_TRAITS, LEARNABLE_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
   type GameEventType, type MagicMaterial, type Material,
-  type PerceptionSense, type Tier, type Trait, type UtilityTag,
+  type LearnableTrait, type PerceptionSense, type TeachableTrait, type Tier, type Trait, type UtilityTag,
 } from "./vocabulary";
 import {
-  MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
+  ALL_FORMS, MASTER_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type Sickness,
 } from "./mimicData";
 import {
   ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
-  LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId,
+  LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
 } from "./locationData";
 
@@ -33,10 +33,11 @@ export * from "./locationData";
 // ROOM HELPERS
 // ============================================================
 // Get room context modifier for a form in a specific room
-export function getRoomContextMod(formId: FormId, roomName: RoomName): RoomContextMod {
-  const roomMods = ROOM_FORM_MODIFIERS[roomName];
+export function getRoomContextMod(formId: FormId, locationId: LocationId, roomName: RoomName): RoomContextMod {
+  const locationMods = ROOM_FORM_MODIFIERS[locationId] as Partial<Record<RoomName, Partial<Record<FormId, RoomModifier>>>> | undefined;
+  const roomMods = locationMods?.[roomName];
   if (!roomMods) return { plausibility: 0, allure: 0 };
-  const mod = roomMods[formId];
+  const mod = roomMods[formId] ?? roomMods[formFamily(formId)];
   if (!mod) return { plausibility: 0, allure: 0 };
   return { plausibility: mod.plausibility || 0, allure: mod.allure || 0, note: mod.note };
 }
@@ -118,6 +119,35 @@ export function isFormMassGated(form: Form): boolean {
   return form.baseMassRange[0] > TIER_CONFIG[form.tier].massRange[0];
 }
 
+/**
+ * The tier a mimic's forms are judged against. Thimblewood shrinks it one tier (never below
+ * Minor): every form-range and form-penalty rule then treats the mimic as that smaller size.
+ */
+export function formTier(character: { tier: Tier; currentAppearance?: AppearanceLike }): Tier {
+  const idx = TIER_ORDER.indexOf(character.tier);
+  return hasMagic(character.currentAppearance, "Thimblewood") ? TIER_ORDER[Math.max(0, idx - 1)] : character.tier;
+}
+
+/**
+ * Which of a mimic's forms it may still carry at this size (tier, mass, variant unlocks and the
+ * one-form-above limit), in their current order. Used after a tier-up or a Thimblewood change.
+ */
+export function formsStillAllowed<T extends { formId: string }>(
+  forms: readonly T[], tier: Tier, mass: number, knowledge: FormKnowledge,
+): T[] {
+  const valid = getValidForms(tier, mass, knowledge);
+  const kept: T[] = [];
+  const keptForms: Form[] = [];
+  for (const ref of forms) {
+    const form = valid.find(f => f.id === ref.formId);
+    if (form && canAddForm(keptForms, form, tier)) {
+      kept.push(ref);
+      keptForms.push(form);
+    }
+  }
+  return kept;
+}
+
 // Only one of a mimic's forms may come from the tier above its own.
 export const MAX_FORMS_ABOVE_TIER = 1;
 
@@ -131,18 +161,61 @@ export function canAddForm(selectedForms: readonly Pick<Form, "tier">[], form: P
   return selectedForms.filter(f => isFormAboveTier(f, mimicTier)).length < MAX_FORMS_ABOVE_TIER;
 }
 
-export function getValidForms(tierStr: Tier, massVal: number): Form[] {
+// ============================================================
+// VARIANT FORMS
+// A variant (e.g. Grimoire, a variant of Book) is available whenever its base form is,
+// once the mimic knows any one of its unlockedBy materials or traits. It shares its
+// base form's burn and room modifiers; "forms used" counts it separately.
+// ============================================================
+export const VARIANT_FORMS: readonly Form[] = ALL_FORMS.filter(f => f.variantOf);
+
+export function isVariantForm(form: Pick<Form, "variantOf">): boolean {
+  return !!form.variantOf;
+}
+
+/** The base form of a variant (or the form itself): what burns and room modifiers are keyed by. */
+export function formFamily(formId: FormId): FormId {
+  return (ALL_FORMS.find(f => f.id === formId)?.variantOf as FormId | undefined) ?? formId;
+}
+
+/** What a mimic knows, for unlocking variant forms. */
+export type FormKnowledge = Pick<MimicCharacter, "learnedMaterials" | "learnedTraits">;
+
+/** Whether the mimic knows any of the materials or traits that unlock this variant. */
+export function isVariantUnlocked(form: Pick<Form, "unlockedBy">, knowledge: FormKnowledge): boolean {
+  return (form.unlockedBy ?? []).some(x =>
+    (ALL_MATERIALS as readonly string[]).includes(x)
+      ? knowledge.learnedMaterials.includes(x as Material)
+      : knowsTrait(knowledge, x as Trait));
+}
+
+/** Forms whose tier and mass rules allow them, ignoring variant unlocks. */
+function formsInRange(tierStr: Tier, massVal: number): Form[] {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];
-  const validForms: Form[] = [];
+  const forms: Form[] = [];
   TIER_ORDER.forEach((tier, tierIndex) => {
     if (Math.abs(tierIndex - currentTierIndex) > 1) return;
     MASTER_FORMS[tier].forEach((form) => {
       if (isFormMassGated(form) && massVal < form.baseMassRange[0]) return;
-      validForms.push(form);
+      forms.push(form);
     });
   });
-  return validForms;
+  return forms;
+}
+
+/**
+ * Forms a mimic can choose. Base forms by tier and mass; variant forms only when `knowledge`
+ * is given and unlocks them (omit it, e.g. at character creation, for base forms only).
+ */
+export function getValidForms(tierStr: Tier, massVal: number, knowledge?: FormKnowledge): Form[] {
+  return formsInRange(tierStr, massVal).filter(f =>
+    !isVariantForm(f) || (knowledge !== undefined && isVariantUnlocked(f, knowledge)));
+}
+
+/** Variants whose base form is in range but which the mimic hasn't unlocked yet (shown locked). */
+export function getLockedVariants(tierStr: Tier, massVal: number, knowledge: FormKnowledge): Form[] {
+  return formsInRange(tierStr, massVal).filter(f => isVariantForm(f) && !isVariantUnlocked(f, knowledge));
 }
 
 /** Any appearance-shaped object; fields may be missing (e.g. partially built looks). */
@@ -343,6 +416,7 @@ export function calcAllureBreakdown(
     ...(currentAppearance.surfaceTraits || []),
     ...(currentAppearance.symbolicTraits || []),
     ...(currentAppearance.conditionTraits || []),
+    ...(currentAppearance.scentTraits || []),
     ...(form.builtInTraits || []),
   ];
   const formTags: readonly UtilityTag[] = form.utilityTags || [];
@@ -490,6 +564,16 @@ export function discoveryLevel(discoveries: Discoveries, name: string): Discover
   return "unknown";
 }
 
+/** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
+export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
+  return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);
+}
+
+/** Adds a form to the list of forms a mimic has hunted in. */
+export function withFormUsed(list: readonly FormId[], formId: FormId | null | undefined): FormId[] {
+  return formId && !list.includes(formId) ? [...list, formId] : [...list];
+}
+
 /** Adds template names to a discovery list (ignoring companions and anything that isn't a template). */
 export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion">[]): string[] {
   const templateNames = new Set(ADVENTURER_TEMPLATES.map(t => t.name));
@@ -518,8 +602,9 @@ export function burnAfterDiscovery(burns: Burns, locationId: LocationId, formId:
       ...burns.burnedLocations.filter(b => b.id !== locationId),
       { id: locationId, huntsLeft: BURN_HUNTS },
     ],
+    // A variant burns with its base form: the survivors describe the shape, not the details
     burnedForms: formId
-      ? [...burns.burnedForms.filter(b => b.formId !== formId), { formId, huntsLeft: BURN_HUNTS }]
+      ? [...burns.burnedForms.filter(b => b.formId !== formFamily(formId)), { formId: formFamily(formId), huntsLeft: BURN_HUNTS }]
       : burns.burnedForms,
   };
 }
@@ -529,7 +614,7 @@ export function locationBurn(burns: Burns, locationId: LocationId): number {
   return burns.burnedLocations.find(b => b.id === locationId)?.huntsLeft ?? 0;
 }
 export function formBurn(burns: Burns, formId: FormId): number {
-  return burns.burnedForms.find(b => b.formId === formId)?.huntsLeft ?? 0;
+  return burns.burnedForms.find(b => b.formId === formFamily(formId))?.huntsLeft ?? 0;
 }
 
 /** Extra starting suspicion for a hunt at this location in this form. */
@@ -693,7 +778,7 @@ export function isNestCleared(rivals: readonly RivalMimic[]): boolean {
 // ============================================================
 // TREASURE
 // ============================================================
-export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: Trait };
+export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: TeachableTrait };
 
 /** One random prize from the treasure that the mimic doesn't already know, or null if it knows them all. */
 export function pickTreasurePrize(
@@ -748,11 +833,33 @@ export const CULT_CONVERSIONS = 3;
 export const CANNIBAL_MIMICS = 10;
 
 export type AchievementId =
-  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal";
+  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
+  "connoisseur" | "masterOfDisguise" | "curiosityCabinet";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
-  "conversions" | "mimicsConsumed">;
+  "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed">;
+
+/**
+ * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
+ * Disguise needs ALL_MATERIALS and LEARNABLE_TRAITS, so anything missing from these lists is a
+ * content bug: it can never be learned (tests/achievements.test.mjs checks this).
+ */
+export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<LearnableTrait> } {
+  const materials = new Set<Material>();
+  const traits = new Set<LearnableTrait>();
+  for (const t of ADVENTURER_TEMPLATES) {
+    t.lootMaterials.forEach(x => materials.add(x));
+    t.lootTraits.forEach(x => traits.add(x));
+    t.treasure?.materials.forEach(x => materials.add(x));
+    t.treasure?.traits.forEach(x => traits.add(x));
+    for (const o of t.companion?.options ?? []) {
+      o.lootMaterials?.forEach(x => materials.add(x));
+      o.lootTraits?.forEach(x => traits.add(x));
+    }
+  }
+  return { materials, traits };
+}
 
 export interface Achievement {
   id: AchievementId;
@@ -811,7 +918,84 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     isEarned: (c) => c.mimicsConsumed >= CANNIBAL_MIMICS,
     bannerLocation: "mimic_nest",
   },
+  {
+    id: "connoisseur", name: "Connoisseur", icon: "🍽️",
+    description: "Eat at least one of every kind of adventurer (companions don't count). The Codex tracks your progress.",
+    flavor: (n) => `There is no one left that ${n} hasn't tasted. It has opinions about all of them.`,
+    isEarned: (c) => ADVENTURER_TEMPLATES.every(t => c.adventurersEaten.includes(t.name)),
+  },
+  {
+    id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
+    description: "Learn every material and every learnable trait (surface, symbolic and condition) in the game.",
+    flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
+    isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
+      LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
+  },
+  {
+    id: "curiosityCabinet", name: "Curiosity Cabinet", icon: "🗝️",
+    description: "Hunt in every variant form at least once — the shapes you can only take after learning something new.",
+    flavor: (n) => `${n} has been a whispering grimoire, a weeping portrait and a grinning gargoyle. Collectors would pay a fortune — if they knew.`,
+    isEarned: (c) => VARIANT_FORMS.every(f => c.formsUsed.includes(f.id as FormId)),
+  },
 ];
+
+// ============================================================
+// LIFETIME STATS (character sheet)
+// ============================================================
+export interface LifetimeStats {
+  huntsSurvived: number;
+  huntsFailed: number;
+  huntsTotal: number;
+  /** Adventurers, companions and rival mimics eaten. */
+  entitiesEaten: number;
+  formsUsed: number;
+  closestCall: number;
+  biggestMeal: { name: string; ap: number } | null;
+  lifetimeApEarned: number;
+  favoriteForm: { name: string; hunts: number } | null;
+  favoriteHuntingGround: { name: string; hunts: number } | null;
+}
+
+/** The key with the highest count (first one wins a tie), or null if nothing has been counted. */
+export function mostCounted<K extends string>(counts: Partial<Record<K, number>>): { key: K; count: number } | null {
+  let best: { key: K; count: number } | null = null;
+  for (const [key, count] of Object.entries(counts) as [K, number][]) {
+    if (count > 0 && (!best || count > best.count)) best = { key, count };
+  }
+  return best;
+}
+
+/** Adds one to a key's count. */
+export function withCount<K extends string>(counts: Partial<Record<K, number>>, key: K | null | undefined): Partial<Record<K, number>> {
+  if (!key) return { ...counts };
+  return { ...counts, [key]: (counts[key] ?? 0) + 1 };
+}
+
+/** The bigger of the current biggest meal and this one. */
+export function withBiggestMeal(
+  current: { name: string; ap: number } | null, name: string, ap: number,
+): { name: string; ap: number } | null {
+  return !current || ap > current.ap ? { name, ap } : current;
+}
+
+export function lifetimeStats(c: Pick<MimicCharacter,
+  "huntsSurvived" | "huntsFailed" | "partyMembersEaten" | "mimicsConsumed" | "formsUsed" | "closestCall" |
+  "biggestMeal" | "lifetimeApEarned" | "formHuntCounts" | "locationHuntCounts">): LifetimeStats {
+  const form = mostCounted(c.formHuntCounts);
+  const place = mostCounted(c.locationHuntCounts);
+  return {
+    huntsSurvived: c.huntsSurvived,
+    huntsFailed: c.huntsFailed,
+    huntsTotal: c.huntsSurvived + c.huntsFailed,
+    entitiesEaten: c.partyMembersEaten + c.mimicsConsumed,
+    formsUsed: c.formsUsed.length,
+    closestCall: c.closestCall,
+    biggestMeal: c.biggestMeal,
+    lifetimeApEarned: c.lifetimeApEarned,
+    favoriteForm: form ? { name: ALL_FORMS.find(f => f.id === form.key)?.name ?? form.key, hunts: form.count } : null,
+    favoriteHuntingGround: place ? { name: LOCATIONS.find(l => l.id === place.key)?.name ?? place.key, hunts: place.count } : null,
+  };
+}
 
 // ============================================================
 // FROM HATBOX TO LEGEND

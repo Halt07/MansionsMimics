@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, type Material } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "./gameData";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
-type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits";
+type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits" | "scentTraits";
 
 const MATERIAL_FIELDS: readonly MaterialField[] = ["primaryMaterials", "secondaryMaterials"];
 
@@ -27,6 +28,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
     surfaceTraits: character.currentAppearance?.surfaceTraits || [],
     symbolicTraits: character.currentAppearance?.symbolicTraits || [],
     conditionTraits: character.currentAppearance?.conditionTraits || [],
+    scentTraits: character.currentAppearance?.scentTraits || [],
   });
 
   const limits = APPEARANCE_LIMITS[character.tier];
@@ -85,7 +87,25 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
       </button>
     );
   };
-  const learnedTraits = character.learnedTraits || [];
+  // Thimblewood resizes the mimic: warn as soon as it's picked or removed (Apply then opens the form menu)
+  const wearingThimblewood = hasMagic(appearance, "Thimblewood");
+  const thimblewoodSeen = useRef(wearingThimblewood);
+  useEffect(() => {
+    if (thimblewoodSeen.current === wearingThimblewood) return;
+    thimblewoodSeen.current = wearingThimblewood;
+    toast({
+      title: wearingThimblewood ? "🪵 Thimblewood will shrink you" : "🪵 Removing Thimblewood will restore your size",
+      description: "Some of your forms may no longer be available. Applying this appearance will take you to choose your forms.",
+    });
+  }, [wearingThimblewood]);
+
+  // Only traits the mimic knows (starting traits, plus any it has learned) are offered. A trait
+  // already worn but not known (e.g. from an older save) stays listed so it can be taken off.
+  const worn: readonly Trait[] = [
+    ...(appearance.surfaceTraits || []), ...(appearance.symbolicTraits || []), ...(appearance.conditionTraits || []),
+    ...(appearance.scentTraits || []),
+  ];
+  const known = (t: Trait) => knowsTrait(character, t) || worn.includes(t);
 
   // With a limit of 1, picking a new material replaces the current one.
   // With higher limits, extra picks are ignored once the limit is reached.
@@ -168,7 +188,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Surface Traits (max {limits.surfaceTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.surface.map(trait => (
+              {TRAITS.surface.filter(known).map(trait => (
                 <button
                   key={trait}
                   onClick={() => toggleTrait("surfaceTraits", trait, limits.surfaceTraits)}
@@ -192,9 +212,9 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Symbolic Traits — learned only (max {limits.symbolicTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.symbolic.filter(t => learnedTraits.includes(t)).length === 0
+              {TRAITS.symbolic.filter(known).length === 0
                 ? <span className="text-muted-foreground italic">No symbolic traits learned yet.</span>
-                : TRAITS.symbolic.filter(t => learnedTraits.includes(t)).map(trait => (
+                : TRAITS.symbolic.filter(known).map(trait => (
                   <button
                     key={trait}
                     onClick={() => toggleTrait("symbolicTraits", trait, limits.symbolicTraits)}
@@ -219,12 +239,38 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               Condition Traits (max {limits.conditionTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TRAITS.condition.map(trait => (
+              {TRAITS.condition.filter(known).map(trait => (
                 <button
                   key={trait}
                   onClick={() => toggleTrait("conditionTraits", trait, limits.conditionTraits)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all ${
                     (appearance.conditionTraits || []).includes(trait)
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {trait}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Scent — all learned */}
+        {limits.scentTraits > 0 && (
+          <div>
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+              Scent (max {limits.scentTraits})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {TRAITS.scent.filter(known).length === 0
+                ? <span className="text-muted-foreground italic">No scents learned yet.</span>
+                : TRAITS.scent.filter(known).map(trait => (
+                <button
+                  key={trait}
+                  onClick={() => toggleTrait("scentTraits", trait, limits.scentTraits)}
+                  className={`px-2.5 py-1 rounded border text-xs transition-all ${
+                    (appearance.scentTraits || []).includes(trait)
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/30"
                   }`}

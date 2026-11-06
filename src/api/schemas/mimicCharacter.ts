@@ -35,6 +35,7 @@ const AppearanceSchema = z.strictObject({
   surfaceTraits: z.array(z.enum(TRAITS.surface)).default([]),
   symbolicTraits: z.array(z.enum(TRAITS.symbolic)).default([]),
   conditionTraits: z.array(z.enum(TRAITS.condition)).default([]),
+  scentTraits: z.array(z.enum(TRAITS.scent)).default([]),
 });
 
 /** Fields the game controls. Used to validate `create()` input. */
@@ -60,6 +61,26 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */
   hatboxToLegendReached: z.boolean().default(false),
+  // ── Lifetime stats (see lifetimeStats in gameData) ──
+  /** Hunts that ended without being discovered (party gone, goal met, ship sunk, or they left). */
+  huntsSurvived: z.number().int().min(0).default(0),
+  /** Hunts that ended with the mimic discovered. */
+  huntsFailed: z.number().int().min(0).default(0),
+  /** Adventurers and companions eaten (whole, or finished off with bites). Rivals are in mimicsConsumed. */
+  partyMembersEaten: z.number().int().min(0).default(0),
+  /** Every form this mimic has hunted in. */
+  formsUsed: z.array(z.enum(FORM_IDS)).default([]),
+  /** Hunts started in each form / at each location (favorite form and hunting ground). */
+  formHuntCounts: z.partialRecord(z.enum(FORM_IDS), z.number().int().min(0)).default({}),
+  locationHuntCounts: z.partialRecord(
+    z.enum(LOCATIONS.map((l) => l.id) as [LocationId, ...LocationId[]]), z.number().int().min(0),
+  ).default({}),
+  /** Highest suspicion reached in a hunt the mimic survived. */
+  closestCall: z.number().int().min(0).max(10).default(0),
+  /** The single kill worth the most AP. */
+  biggestMeal: z.strictObject({ name: z.string(), ap: z.number().int().min(0) }).nullable().default(null),
+  /** Every AP ever gained (current AP goes down when spent; this never does). */
+  lifetimeApEarned: z.number().int().min(0).default(0),
   /** Adventurer templates (by name) this mimic has met in a hunt, and has eaten (Codex discovery). */
   adventurersMet: z.array(z.string()).default([]),
   adventurersEaten: z.array(z.string()).default([]),

@@ -6,7 +6,7 @@
 // ============================================================
 import {
   MATERIALS, TIER_ORDER,
-  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material,
+  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
   type MaterialRarity, type StartingType, type Tier, type UtilityTag,
 } from "./vocabulary";
 
@@ -32,6 +32,12 @@ interface FormDef {
   readonly digestCapacityRequired: number;
   readonly description: string;
   readonly flawProfiles: readonly FlawProfile[];
+  /**
+   * Variant forms: the base form's id. A variant is available whenever its base is (same tier and
+   * mass rules) AND the mimic knows any one of `unlockedBy`. It shares the base form's burn.
+   */
+  readonly variantOf?: string;
+  readonly unlockedBy?: readonly (Material | Trait)[];
 }
 
 const FORM_DATA = {
@@ -81,6 +87,18 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "minor_grimoire", name: "Grimoire", tier: "Minor", baseMassRange: [1, 4],
+      variantOf: "minor_book", unlockedBy: ["Faint Glow", "Arcane Sigil", "Runescript"],
+      builtInTraits: ["Ornate", "Whispering"],
+      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Knowledge"],
+      materialSlots: 2, digestCapacityRequired: 1, description: "A book that murmurs to itself. Irresistible to anyone who dabbles — and unsettling to anyone who prays.",
+      flawProfiles: [
+        { type: "text", description: "The marginalia rearranges itself between readings" },
+        { type: "acoustic", description: "The whispering stops the moment someone listens closely" },
+        { type: "material", description: "The binding is warm, like something recently held" },
+      ],
+    },
+    {
       id: "minor_jewelry_box", name: "Jewelry Box", tier: "Minor", baseMassRange: [1, 4],
       builtInTraits: ["Ornate", "Heavy-Lidded", "Locked"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Storage"],
@@ -89,6 +107,18 @@ const FORM_DATA = {
         { type: "material", description: "Wood grain pattern appears mirrored on both sides" },
         { type: "structure", description: "Hinges align slightly crooked when opened" },
         { type: "weight", description: "Feels too heavy or too light for its size" },
+      ],
+    },
+    {
+      id: "minor_music_box", name: "Music Box", tier: "Minor", baseMassRange: [1, 4],
+      variantOf: "minor_jewelry_box", unlockedBy: ["Inlaid", "Lacquered"],
+      builtInTraits: ["Ornate", "Heavy-Lidded", "Whispering"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment", "Valuable"],
+      materialSlots: 3, digestCapacityRequired: 2, description: "Plays a half-remembered tune when the lid lifts. Nobody can resist lifting the lid.",
+      flawProfiles: [
+        { type: "acoustic", description: "The tune never quite repeats the same way twice" },
+        { type: "structure", description: "There's no winding key, yet it never runs down" },
+        { type: "weight", description: "Far too heavy for a box of tiny gears" },
       ],
     },
     {
@@ -104,7 +134,7 @@ const FORM_DATA = {
     },
     {
       id: "minor_candlestick", name: "Candlestick", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Radiant"],
       baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 2, digestCapacityRequired: 1, description: "Attractive if silver or gold.",
       flawProfiles: [
@@ -115,7 +145,7 @@ const FORM_DATA = {
     },
     {
       id: "minor_brick", name: "Brick", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Minimalist"],
+      builtInTraits: ["Minimalist", "Cold to Touch"],
       baseAllureModifier: 0, plausibilityModifier: 1, utilityTags: ["Structural"],
       materialSlots: 1, digestCapacityRequired: 1, description: "Low allure, high plausibility.",
       flawProfiles: [
@@ -139,6 +169,30 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "lesser_reliquary", name: "Reliquary", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_chest", unlockedBy: ["Sacred Symbol", "Stained Glass"],
+      builtInTraits: ["Heavy-Lidded", "Locked", "Radiant"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Religious", "Valuable", "Storage"],
+      materialSlots: 3, digestCapacityRequired: 3, description: "A holy chest for holy remains. The faithful lean in close to pray over it.",
+      flawProfiles: [
+        { type: "light", description: "Its glow brightens when someone reaches toward it" },
+        { type: "structure", description: "The relic inside is never quite visible through the glass" },
+        { type: "presence", description: "Candles nearby lean toward it, as if drawn" },
+      ],
+    },
+    {
+      id: "lesser_herbalists_chest", name: "Herbalist's Chest", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_chest", unlockedBy: ["Earthy", "Fragrant"],
+      builtInTraits: ["Heavy-Lidded", "Rustic"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Storage", "Rural"],
+      materialSlots: 3, digestCapacityRequired: 3, description: "A chest of little drawers and stoppered jars, sweet with dried herbs. Druids and hedge-folk can't walk past one.",
+      flawProfiles: [
+        { type: "environmental", description: "The herbs never wilt, crumble or lose their smell" },
+        { type: "material", description: "Every drawer smells of the same herb, whatever its label says" },
+        { type: "structure", description: "The drawers slide open without the usual sticking" },
+      ],
+    },
+    {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
       builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
@@ -147,6 +201,18 @@ const FORM_DATA = {
         { type: "material", description: "Metal bands lack realistic hammering marks" },
         { type: "structure", description: "Staves align too perfectly with no warping" },
         { type: "acoustic", description: "Produces a dull, inconsistent echo when tapped" },
+      ],
+    },
+    {
+      id: "lesser_rum_cask", name: "Rum Cask", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_barrel", unlockedBy: ["Pitted", "Lacquered"],
+      builtInTraits: ["Iron-Banded", "Rustic"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Storage", "Coastal", "Dining"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "A sea-worn cask that smells of spice and molasses. Sailors find it from across the hold.",
+      flawProfiles: [
+        { type: "acoustic", description: "Sounds full when knocked, but nothing sloshes" },
+        { type: "material", description: "The salt crust stops exactly at the waterline, like a painted line" },
+        { type: "environmental", description: "The rum smell is strongest where no tap is" },
       ],
     },
     {
@@ -180,6 +246,18 @@ const FORM_DATA = {
         { type: "material", description: "Brush strokes lack natural variation in thickness" },
         { type: "structure", description: "Canvas does not sag slightly within the frame" },
         { type: "visual", description: "Eyes in the portrait seem subtly misaligned" },
+      ],
+    },
+    {
+      id: "lesser_haunted_portrait", name: "Haunted Portrait", tier: "Lesser", baseMassRange: [5, 8],
+      variantOf: "lesser_painting", unlockedBy: ["Shadowed Presence", "Gravecloth"],
+      builtInTraits: ["Ornate", "Whispering", "Cold to Touch"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Decor", "Valuable"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "A portrait whose eyes follow you. The dead adore it; the devout want it burned.",
+      flawProfiles: [
+        { type: "visual", description: "The eyes follow people a little too eagerly" },
+        { type: "presence", description: "The room feels watched even with the portrait turned to the wall" },
+        { type: "temperature", description: "The frame is colder than the wall it hangs on" },
       ],
     },
     {
@@ -220,7 +298,7 @@ const FORM_DATA = {
     },
     {
       id: "standard_bookshelf", name: "Bookshelf", tier: "Standard", baseMassRange: [9, 12],
-      builtInTraits: ["Carved", "Arched"],
+      builtInTraits: ["Carved", "Arched", "Whispering"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 4, description: "A scholar's temptation.",
       flawProfiles: [
@@ -278,13 +356,25 @@ const FORM_DATA = {
   Greater: [
     {
       id: "greater_statue", name: "Statue", tier: "Greater", baseMassRange: [13, 16],
-      builtInTraits: ["Carved"],
+      builtInTraits: ["Carved", "Cold to Touch"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Valuable"],
       materialSlots: 3, digestCapacityRequired: 5, description: "Imposing and monumental.",
       flawProfiles: [
         { type: "material", description: "Surface weathering appears evenly distributed rather than directional" },
         { type: "structure", description: "Weight distribution feels subtly unbalanced at the base" },
         { type: "environmental", description: "Does not collect dust or bird droppings naturally over time" },
+      ],
+    },
+    {
+      id: "greater_gargoyle", name: "Gargoyle", tier: "Greater", baseMassRange: [13, 16],
+      variantOf: "greater_statue", unlockedBy: ["Etched", "Basalt"],
+      builtInTraits: ["Carved", "Cold to Touch", "Arched"],
+      baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Defensive"],
+      materialSlots: 3, digestCapacityRequired: 5, description: "A grinning stone guardian. Real gargoyles have been known to stop and stare.",
+      flawProfiles: [
+        { type: "structure", description: "No drainage channel runs through its mouth" },
+        { type: "environmental", description: "Pigeons refuse to perch on it" },
+        { type: "visual", description: "Its grin is a little wider every time you look" },
       ],
     },
     {
@@ -304,7 +394,7 @@ const FORM_DATA = {
       baseAllureModifier: 0, plausibilityModifier: 2, utilityTags: ["Structural"],
       materialSlots: 2, digestCapacityRequired: 5, description: "Blends into architecture seamlessly.",
       flawProfiles: [
-        { type: "structure", description: "Mortar seams subtly misalign with adjacent masonry" },
+        { type: "structure", description: "Mortar seams to subtly misalign with adjacent masonry" },
         { type: "environmental", description: "Fails to transmit vibrations when struck like surrounding walls" },
         { type: "spatial", description: "Thickness feels inconsistent when measured or knocked upon" },
       ],
@@ -347,6 +437,19 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "grand_atheneum", name: "Atheneum", tier: "Grand", baseMassRange: [17, 25],
+      variantOf: "grand_personal_library", unlockedBy: ["Musty", "Runescript"],
+      builtInTraits: ["Carved", "Ornate", "Arched", "Whispering"],
+      baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Structural", "Knowledge", "Authority"],
+      materialSlots: 6, digestCapacityRequired: 6, description: "A domed hall of learning, older than the house around it. Scholars come in and forget to leave.",
+      flawProfiles: [
+        { type: "text", description: "The catalogue lists more books than the shelves could ever hold" },
+        { type: "spatial", description: "The dome is taller inside than the roof is outside" },
+        { type: "acoustic", description: "Pages turn somewhere in the stacks when no one is there" },
+        { type: "environmental", description: "The dust never settles on the reading tables" },
+      ],
+    },
+    {
       id: "grand_parlor", name: "Parlor", tier: "Grand", baseMassRange: [17, 25],
       builtInTraits: ["Ornate", "Upholstered"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Structural", "Social"],
@@ -372,7 +475,7 @@ const FORM_DATA = {
     },
     {
       id: "grand_chandelier", name: "Chandelier", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Ornate"],
+      builtInTraits: ["Ornate", "Radiant"],
       baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Valuable"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A glittering centerpiece suspended above prey.",
       flawProfiles: [
@@ -383,8 +486,20 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "grand_antler_chandelier", name: "Antler Chandelier", tier: "Grand", baseMassRange: [17, 25],
+      variantOf: "grand_chandelier", unlockedBy: ["Horn", "Earthy"],
+      builtInTraits: ["Ornate", "Rustic"],
+      baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Rural", "Decor"],
+      materialSlots: 4, digestCapacityRequired: 6, description: "A great crown of antlers hung with candles: a hunting lodge's pride, and a hunter's weakness.",
+      flawProfiles: [
+        { type: "material", description: "No two antlers should match, yet several do" },
+        { type: "structure", description: "The chain doesn't creak under all that bone" },
+        { type: "light", description: "The candles never drip wax" },
+      ],
+    },
+    {
       id: "grand_vault", name: "Vault", tier: "Grand", baseMassRange: [17, 25],
-      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Locked"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Locked", "Cold to Touch"],
       baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 6, digestCapacityRequired: 6, description: "Massive, secure, and hungry.",
       flawProfiles: [
@@ -435,7 +550,7 @@ const FORM_DATA = {
     },
     {
       id: "apex_chapel", name: "Chapel", tier: "Apex", baseMassRange: [28, 45],
-      builtInTraits: ["Carved", "Ornate", "Arched"],
+      builtInTraits: ["Carved", "Ornate"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Religious"],
       materialSlots: 8, digestCapacityRequired: 9, description: "Sanctuary to some. Sanctuary from none.",
       flawProfiles: [
@@ -443,6 +558,19 @@ const FORM_DATA = {
         { type: "light", description: "Stained glass projects identical light patterns each day" },
         { type: "material", description: "Stone floor lacks natural wear near pew entrances" },
         { type: "presence", description: "Sacred symbols feel faintly warm or pulse subtly" },
+      ],
+    },
+    {
+      id: "apex_cathedral", name: "Cathedral", tier: "Apex", baseMassRange: [28, 45],
+      variantOf: "apex_chapel", unlockedBy: ["Stained Glass"],
+      builtInTraits: ["Carved", "Ornate", "Arched", "Radiant"],
+      baseAllureModifier: 5, plausibilityModifier: 0, utilityTags: ["Structural", "Religious", "Authority"],
+      materialSlots: 8, digestCapacityRequired: 9, description: "Vaulted, glowing, vast. The faithful arrive by the hundred — and not all of them leave.",
+      flawProfiles: [
+        { type: "light", description: "The rose window throws the same colors at every hour" },
+        { type: "acoustic", description: "The bells ring a beat before the rope is pulled" },
+        { type: "spatial", description: "The nave is longer walking in than walking out" },
+        { type: "presence", description: "Every saint in the glass seems to be looking at the same pew" },
       ],
     },
     {
@@ -472,7 +600,7 @@ const FORM_DATA = {
     // ── Mass-gated Apex forms ──
     {
       id: "apex_castle_gate", name: "Castle Gate", tier: "Apex", baseMassRange: [35, 99],
-      builtInTraits: ["Reinforced", "Iron-Banded", "Arched"],
+      builtInTraits: ["Reinforced", "Iron-Banded", "Arched", "Cold to Touch"],
       baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive", "Authority"],
       materialSlots: 9, digestCapacityRequired: 10, description: "Imposing, inevitable, and patient as stone.",
       flawProfiles: [
@@ -485,7 +613,7 @@ const FORM_DATA = {
     },
     {
       id: "apex_lighthouse", name: "Lighthouse", tier: "Apex", baseMassRange: [38, 99],
-      builtInTraits: ["Reinforced"],
+      builtInTraits: ["Reinforced", "Radiant"],
       baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Coastal", "Lighting"],
       materialSlots: 9, digestCapacityRequired: 10, description: "A beacon in the dark. A trap for the hopeful.",
       flawProfiles: [
@@ -532,7 +660,7 @@ const FORM_DATA = {
     },
     {
       id: "giant_book", name: "Giant Tome", tier: "Apex", baseMassRange: [30, 99],
-      builtInTraits: ["Ornate"],
+      builtInTraits: ["Ornate", "Whispering"],
       baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Knowledge"],
       materialSlots: 4, digestCapacityRequired: 6, description: "A tome taller than a man — giants read standing up.",
       flawProfiles: [
@@ -625,15 +753,17 @@ export interface AppearanceLimits {
   surfaceTraits: number;
   symbolicTraits: number;
   conditionTraits: number;
+  /** Scents: none at Minor; at Apex a mimic is big enough to smell two ways at once. */
+  scentTraits: number;
 }
 
 export const APPEARANCE_LIMITS: Record<Tier, AppearanceLimits> = {
-  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
-  Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1 },
-  Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1 },
-  Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2 },
-  Grand:    { primaryMaterials: 1, secondaryMaterials: 2, magicalMaterials: 2, surfaceTraits: 3, symbolicTraits: 2, conditionTraits: 2 },
-  Apex:     { primaryMaterials: 2, secondaryMaterials: 2, magicalMaterials: 3, surfaceTraits: 4, symbolicTraits: 3, conditionTraits: 3 },
+  Minor:    { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 0, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1, scentTraits: 0 },
+  Lesser:   { primaryMaterials: 1, secondaryMaterials: 0, magicalMaterials: 1, surfaceTraits: 1, symbolicTraits: 0, conditionTraits: 1, scentTraits: 1 },
+  Standard: { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 1, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 1, scentTraits: 1 },
+  Greater:  { primaryMaterials: 1, secondaryMaterials: 1, magicalMaterials: 2, surfaceTraits: 2, symbolicTraits: 1, conditionTraits: 2, scentTraits: 1 },
+  Grand:    { primaryMaterials: 1, secondaryMaterials: 2, magicalMaterials: 2, surfaceTraits: 3, symbolicTraits: 2, conditionTraits: 2, scentTraits: 1 },
+  Apex:     { primaryMaterials: 2, secondaryMaterials: 2, magicalMaterials: 3, surfaceTraits: 4, symbolicTraits: 3, conditionTraits: 3, scentTraits: 2 },
 };
 
 // ============================================================
@@ -651,6 +781,12 @@ export interface StartingStats {
 export const STARTING_STATS: Record<StartingType, StartingStats> = {
   Minor:  { plausibility: 4, adhesion: 3, patience: 4, mass: 2, digestiveCapacity: 3, baseAllure: 2 },
   Lesser: { plausibility: 2, adhesion: 4, patience: 2, mass: 6, digestiveCapacity: 5, baseAllure: 3 },
+};
+
+/** Materials each origin knows from creation. */
+export const STARTING_MATERIALS: Record<StartingType, readonly [Material, ...Material[]]> = {
+  Minor: ["Pine", "Iron", "Cotton"],
+  Lesser: ["Oak", "Iron", "Cowhide"],
 };
 
 // ============================================================
@@ -695,6 +831,7 @@ export const MAGIC_EFFECTS: Record<MagicMaterial, string> = {
   "Runestone":       "+1 die on Wait's roll to reduce suspicion.",
   "Starforged Iron": "Mimic hunters roll 2 fewer dice on every stealth and flaw check against you.",
   "Soulglass":       "Reveals which room a hidden rival mimic is lurking in.",
+  "Thimblewood":     "Shrinks you one tier: forms two tiers below become available (−1 Patience), forms one tier below lose their penalty, and your own tier's forms count as one above (−2 Plausibility).",
 };
 
 // ============================================================

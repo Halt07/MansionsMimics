@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import {
-  TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, APPEARANCE_LIMITS,
+  ALL_FORMS, TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
-  isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
+  ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { Card, CardContent } from "@/components/ui/card";
@@ -222,6 +222,11 @@ export default function Codex() {
                           +{form.baseAllureModifier} Allure
                         </Badge>
                       </div>
+                      {form.variantOf && (
+                        <p className="text-[11px] text-teal-300 mb-1">
+                          🗝️ Variant of {ALL_FORMS.find((f) => f.id === form.variantOf)?.name} — unlocked by learning any of: {(form.unlockedBy ?? []).join(", ")}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
                       <div className="flex flex-wrap gap-1 mb-2">
                         {form.utilityTags.map((t) =>
@@ -294,6 +299,7 @@ export default function Codex() {
                         <th className="py-1 px-2 font-cinzel text-foreground">Surface</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Symbolic</th>
                         <th className="py-1 px-2 font-cinzel text-foreground">Condition</th>
+                        <th className="py-1 px-2 font-cinzel text-foreground">Scent</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -308,6 +314,7 @@ export default function Codex() {
                             <td className="py-1.5 px-2 text-center">{lim.surfaceTraits}</td>
                             <td className="py-1.5 px-2 text-center">{lim.symbolicTraits}</td>
                             <td className="py-1.5 px-2 text-center">{lim.conditionTraits}</td>
+                            <td className="py-1.5 px-2 text-center">{lim.scentTraits}</td>
                           </tr>);
 
                     })}
@@ -322,12 +329,24 @@ export default function Codex() {
           {activeSection === "Traits" &&
           <div className="space-y-4">
               <h2 className="font-cinzel text-2xl text-foreground mb-4">Traits</h2>
+              <p className="text-sm text-muted-foreground">Surface, symbolic and condition traits are learned from your prey and applied in the appearance editor. Every mimic starts knowing a few ordinary ones (<span className="text-primary">highlighted</span>);</p>
               {Object.entries(TRAITS).map(([category, traits]) =>
             <div key={category}>
                   <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category}</h3>
                   <div className="flex flex-wrap gap-2">
                     {traits.map((t) =>
-                <Badge key={t} variant="outline" className="border-border text-muted-foreground hover:text-foreground transition-colors">{t}</Badge>
+                <Badge key={t} variant="outline" className={ALL_STARTING_TRAITS.includes(t as StartingTrait) ? "border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground transition-colors"}>{t}</Badge>
+                )}
+                  </div>
+                </div>
+            )}
+              <p className="text-sm text-muted-foreground pt-2">Structural and aura traits can't be learned or applied — they're built into forms, so you have them only while wearing a form that does.</p>
+              {Object.entries(UNLEARNED_TRAITS).map(([category, traits]) =>
+            <div key={category}>
+                  <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category} <span className="normal-case tracking-normal text-[10px]">(built into forms)</span></h3>
+                  <div className="flex flex-wrap gap-2">
+                    {traits.map((t) =>
+                <Badge key={t} variant="outline" className="border-dashed border-border text-muted-foreground hover:text-foreground transition-colors">{t}</Badge>
                 )}
                   </div>
                 </div>
@@ -524,6 +543,7 @@ export default function Codex() {
                   <p>Taking a form one tier <span className="text-foreground">above</span> your current tier: <span className="text-red-400">–2 Plausibility</span></p>
                   <p>Taking a form one tier <span className="text-foreground">below</span> your current tier: <span className="text-red-400">–1 Patience</span> (too much mass in too small a container)</p>
                   <p>You may only have <span className="text-foreground">1 greater-tier form</span> in your known forms at once.</p>
+                  <p><span className="text-purple-400">🪵 Thimblewood</span> shrinks you one tier while worn: every rule above treats you as that smaller size. Forms two tiers below open up (at –1 Patience), forms one tier below lose their penalty, and forms of your own tier count as one above (–2 Plausibility, and the one-form limit). Putting it on or taking it off sends you to choose your forms again.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Evolution & Assimilation">

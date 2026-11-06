@@ -51,12 +51,16 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/suspicion.test.mjs` | Suspicion from consuming a party member in front of witnesses |
 | `tests/companions.test.mjs` | Companion stats/AP wiring, per-companion overrides, Changeling familiars, Goose-Keeper geese |
 | `tests/giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
-| `tests/achievements.test.mjs` | The achievement list, From Hatbox to Legend, Cult of Personality and Cannibal thresholds |
+| `tests/achievements.test.mjs` | The achievement list and thresholds, every material/trait being learnable, lifetime stats |
 | `tests/rareLocations.test.mjs` | Rare locations opening/expiring, the Hollow Reliquary roster, Devotion and offerings |
 | `tests/mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
 | `tests/sinkingShip.test.mjs` | Sinking Ship roster, the Captain's strongbox and its guaranteed prize, sinking warnings, Down With the Ship |
 | `tests/burns.test.mjs` | Burned lairs and forms: starting suspicion, stacking, expiry |
 | `tests/discovery.test.mjs` | Codex discovery: met/eaten levels, pooling across mimics, recording parties |
+| `tests/variants.test.mjs` | Variant forms: unlocks, availability, shared burns, Curiosity Cabinet |
+| `tests/scents.test.mjs` | Scent traits: all learned, slots by tier, who reacts, allure |
+| `tests/rooms.test.mjs` | Room modifiers: per-location keys, variant overrides, only wearable forms |
+| `tests/thimblewood.test.mjs` | Thimblewood: shrunk form tier, form range, penalties, forms kept |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and
