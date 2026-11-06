@@ -802,11 +802,11 @@ export interface TierConfig {
 
 export const TIER_CONFIG: Record<Tier, TierConfig> = {
   Minor:    { massRange: [1, 4],   apToEvolve: 10, apToUpgrade: 3,  description: "Tiny, deceptive, patient",         lore: "A fledgling mimic, barely larger than a hatbox. Dangerous only to the unwary." },
-  Lesser:   { massRange: [5, 8],   apToEvolve: 20, apToUpgrade: 5,  description: "Small but deadly",                  lore: "Capable of consuming a full humanoid. Still learning the art of perfect deception." },
-  Standard: { massRange: [9, 12],  apToEvolve: 35, apToUpgrade: 8,  description: "Proven predator",                   lore: "A mid-tier mimic has shed its vulnerability. Now a true ambush hunter." },
-  Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 12, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
-  Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 18, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
-  Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 25, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
+  Lesser:   { massRange: [5, 8],   apToEvolve: 25, apToUpgrade: 7,  description: "Small but deadly",                  lore: "Capable of consuming a full humanoid. Still learning the art of perfect deception." },
+  Standard: { massRange: [9, 12],  apToEvolve: 40, apToUpgrade: 10,  description: "Proven predator",                   lore: "A mid-tier mimic has shed its vulnerability. Now a true ambush hunter." },
+  Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 15, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
+  Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 20, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
+  Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 28, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
 };
 
 // ============================================================
