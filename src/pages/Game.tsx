@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -15,7 +15,9 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   ALL_MATERIALS, LEARNABLE_TRAITS, type Material,
-  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
+  isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
+  PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -158,7 +160,8 @@ export default function Game() {
   const [suspicion, setSuspicion] = useState(0);
   const [phase, setPhase] = useState<Phase>("setup");
   const [gameoverReason, setGameoverReason] = useState<GameoverReason>("discovered");
-  const [loading, setLoading] = useState(true);
+  // Nothing to load without a character id
+  const [loading, setLoading] = useState(!!characterId);
   const [acting, setActing] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   // One purchase per visit to the upgrade screen; reset each time the screen opens
@@ -188,10 +191,7 @@ export default function Game() {
   const [formSelectReturnPhase, setFormSelectReturnPhase] = useState<Phase>("setup");
 
   useEffect(() => {
-    if (!characterId) {
-      setLoading(false);
-      return;
-    }
+    if (!characterId) return;
     db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
       if (res[0]) {
         const char = res[0];
@@ -327,6 +327,8 @@ export default function Game() {
       setCharacter(prev => prev ? { ...prev, ...startUpdates } : prev);
       persist(startUpdates);
       huntRecordedRef.current = false;
+      stillTurnsRef.current = 0;
+      catsThatKnowRef.current = new Set();
       peakSuspicionRef.current = 0;
     }
     setPhase("hunt");
@@ -360,7 +362,7 @@ export default function Game() {
   // Lifetime AP: every increase in current AP counts, whatever caused it (spending AP on
   // upgrades lowers current AP but never this). Starts tracking once a character is loaded.
   const lastApRef = useRef<number | null>(null);
-  useEffect(() => {
+  const trackLifetimeAp = useEffectEvent(() => {
     if (!character) return;
     const prev = lastApRef.current;
     lastApRef.current = character.assimilationPoints;
@@ -368,7 +370,8 @@ export default function Game() {
     const lifetimeApEarned = character.lifetimeApEarned + (character.assimilationPoints - prev);
     setCharacter(c => c ? { ...c, lifetimeApEarned } : c);
     persist({ lifetimeApEarned });
-  }, [character?.assimilationPoints]);
+  });
+  useEffect(() => trackLifetimeAp(), [character?.assimilationPoints]);
 
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
@@ -419,6 +422,9 @@ export default function Game() {
     const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
+      // Now and then, the newcomer acts out one of its quirks on your form
+      const quirk = quirkLine(adv, form.name);
+      if (quirk) addEvent("info", quirk);
       const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, formTier(character), form, adv, roomMod, character.currentAppearance);
       if (result.detectedFlaws.length > 0) {
         result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
@@ -475,8 +481,22 @@ export default function Game() {
   };
 
   // Relocate to an adjacent empty room (+1 suspicion cost)
+  // Easter eggs: consecutive quiet turns (the spiderweb), and cats that have already stared at you
+  const stillTurnsRef = useRef(0);
+  const catsThatKnowRef = useRef(new Set<string>());
+  /**
+   * Counts a Wait or Lure toward the spiderweb: STILLNESS_TURNS of them in a row with nobody
+   * entering your room. Someone arriving, or any other action (Relocate, Strike, changing
+   * form), starts the count over.
+   */
+  const countStillTurn = (someoneArrived: boolean) => {
+    stillTurnsRef.current = someoneArrived ? 0 : stillTurnsRef.current + 1;
+    if (stillTurnsRef.current === STILLNESS_TURNS) addEvent("info", STILLNESS_LINE);
+  };
+
   const doRelocate = (targetRoom: RoomName) => {
     if (!character || !location) return;
+    stillTurnsRef.current = 0;
     setShowMovePanel(false);
     addEvent("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
     setMimicRoom(targetRoom);
@@ -580,6 +600,9 @@ export default function Game() {
     }
     setParty(updatedParty);
 
+    // A Lure that draws nobody into the room still counts as holding still (the spiderweb)
+    countStillTurn(newlyAttracted.length > 0);
+
     // Run stealth check for newly attracted adventurers who just entered the room
     if (newlyAttracted.length > 0) {
       const suspDelta = runStealthChecks(newlyAttracted, mimicRoom);
@@ -610,6 +633,7 @@ export default function Game() {
   // Resolves a Strike. Returns whether it took a turn (false if there was nothing to strike).
   const resolveStrike = (): boolean => {
     if (!character || !location) return false;
+    stillTurnsRef.current = 0;
     // Bonesteel: +1 die on strike rolls
     const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
 
@@ -627,6 +651,8 @@ export default function Game() {
         if (rivalTarget.kind === "elder") {
           addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${apGained} AP.`);
           addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+          // Easter egg: the porter she was searching for
+          if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
         } else {
           addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
         }
@@ -971,7 +997,8 @@ export default function Game() {
   const ceremonyTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => ceremonyTimers.current.forEach(clearTimeout), []);
 
-  useEffect(() => {
+  // An effect event: reads the latest character/location without re-running on their changes
+  const checkDevotion = useEffectEvent(() => {
     if (phase !== "hunt" || !location || !character) return;
     const devotee = findDevotee(party);
     if (!devotee) return;
@@ -997,8 +1024,10 @@ export default function Game() {
         addEvent("consume", `You accept the ${c.name}. +${c.ap} AP.`);
         setCharacter(prev => prev ? { ...prev, assimilationPoints: prev.assimilationPoints + c.ap } : prev);
       }),
+      () => addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`),
+      // Easter egg: the skeptic's treatise gets an ending
+      ...(party.some(a => a.name === DOUBTING_SCHOLAR) ? [() => addEvent("info", SCHOLAR_NOTES_LINE)] : []),
       () => {
-        addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`);
         const total = character.assimilationPoints + apGained;
         persist({ assimilationPoints: total, lastFedAt: new Date().toISOString() });
         if (conversions === CULT_CONVERSIONS) {
@@ -1013,7 +1042,11 @@ export default function Game() {
       },
     ];
     ceremonyTimers.current = steps.map((step, i) => setTimeout(step, i * CEREMONY_STEP_MS));
-  }, [party, phase]);
+  });
+  // Intentional: many different actions can leave the pilgrim as the last one standing, so the
+  // conversion reacts to the party changing rather than being triggered from each action.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => checkDevotion(), [party, phase]);
 
   // Open form selection. returnTo is where confirming or skipping goes afterwards.
   const startFormSelection = (returnTo: Phase = "setup") => {
@@ -1033,6 +1066,7 @@ export default function Game() {
 
   const doChangeForm = (formIndex: number) => {
     if (!character) return;
+    stillTurnsRef.current = 0;
     const formsUsed = phase === "hunt"
       ? withFormUsed(character.formsUsed, character.forms[formIndex]?.formId)
       : character.formsUsed;
@@ -1148,6 +1182,8 @@ export default function Game() {
     });
 
     setParty(updatedParty);
+
+    countStillTurn(newlyArrived.length > 0);
 
     // Auto stealth check for adventurers who just wandered into the mimic's room
     if (newlyArrived.length > 0) {
@@ -1279,9 +1315,20 @@ export default function Game() {
   const isNest = !!location?.rivalNest;
   const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
     (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
+  const recordSurvivedHunt = useEffectEvent(() => recordHunt("survived"));
   useEffect(() => {
-    if (huntOver) recordHunt("survived");
+    if (huntOver) recordSurvivedHunt();
   }, [huntOver]);
+
+  // The cat knows: once per cat per hunt, whenever one is in the mimic's room
+  useEffect(() => {
+    if (phase !== "hunt" || !mimicRoom) return;
+    for (const c of smallCreatures) {
+      if (c.isConsumed || c.location !== mimicRoom || !isCat(c) || catsThatKnowRef.current.has(c.uid)) continue;
+      catsThatKnowRef.current.add(c.uid);
+      addEvent("info", CAT_KNOWS_LINE);
+    }
+  }, [smallCreatures, mimicRoom, phase, addEvent]);
 
   // Announce variant forms the moment something learned unlocks them (not on load)
   const unlockedVariantsRef = useRef<Set<string> | null>(null);
@@ -1296,7 +1343,7 @@ export default function Game() {
       }
     }
     unlockedVariantsRef.current = new Set(unlocked.map(f => f.id));
-  }, [character?.learnedMaterials, character?.learnedTraits]);
+  }, [character, addEvent]); // re-running is harmless: only newly unlocked variants are announced
 
   // Announce achievements that can be completed from several places (bites, meals, the
   // strongbox…) the moment they're earned. The others announce themselves where they happen.
@@ -1312,7 +1359,7 @@ export default function Game() {
       }
     }
     earnedRef.current = earned;
-  }, [character]);
+  }, [character, addEvent]);
   const consumedCount = party.filter(a => a.isConsumed).length;
 
   // Mass-below-tier plausibility penalty
