@@ -15,6 +15,7 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
+  PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -626,6 +627,8 @@ export default function Game() {
         if (rivalTarget.kind === "elder") {
           addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${apGained} AP.`);
           addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+          // Easter egg: the porter she was searching for
+          if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
         } else {
           addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
         }
@@ -996,8 +999,10 @@ export default function Game() {
         addEvent("consume", `You accept the ${c.name}. +${c.ap} AP.`);
         setCharacter(prev => prev ? { ...prev, assimilationPoints: prev.assimilationPoints + c.ap } : prev);
       }),
+      () => addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`),
+      // Easter egg: the skeptic's treatise gets an ending
+      ...(party.some(a => a.name === DOUBTING_SCHOLAR) ? [() => addEvent("info", SCHOLAR_NOTES_LINE)] : []),
       () => {
-        addEvent("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`);
         const total = character.assimilationPoints + apGained;
         persist({ assimilationPoints: total, lastFedAt: new Date().toISOString() });
         if (conversions === CULT_CONVERSIONS) {

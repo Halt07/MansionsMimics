@@ -1063,6 +1063,14 @@ export function nameFlavor(rawName: string): string | null {
   return NAME_REMARKS.find(r => r.names.includes(key))?.line(name) ?? null;
 }
 
+/** Devouring the Elder Mimic with the Missing Porter's Sister in the hunt: what became of her brother. */
+export const PORTER_SISTER = "Missing Porter's Sister";
+export const PORTER_TOKEN_LINE = "Deep inside the Elder, something small and tin: a porter's token.";
+
+/** A conversion at the Reliquary with the Doubting Scholar in the party. */
+export const DOUBTING_SCHOLAR = "Doubting Scholar";
+export const SCHOLAR_NOTES_LINE = "The Doubting Scholar's notes are found later, the last page reading only: it was real.";
+
 /** How often an adventurer entering the mimic's room acts out one of its quirks in the log. */
 export const QUIRK_LINE_CHANCE = 0.3;
 

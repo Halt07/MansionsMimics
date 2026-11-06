@@ -27,4 +27,9 @@ export default async function ({ gameData: m, ok }) {
   ok(m.quirkLine(hunter, 'Chest', () => 0.5) === null, 'and only shows up some of the time');
   ok(m.QUIRK_LINE_CHANCE === 0.3, 'about 30% of the time');
   ok(m.quirkLine({ name: 'Nobody', appliedQuirk: undefined }, 'Chest', () => 0) === null, 'no line for anyone without one (e.g. companions)');
+
+  // The names these easter eggs look for must be real adventurers, in the right places
+  const where = (name) => T.find((t) => t.name === name)?.locations ?? [];
+  ok(where(m.PORTER_SISTER).includes('mimic_nest') && m.PORTER_TOKEN_LINE.includes("porter's token"), "the porter's sister hunts the Mimic Nest, where the Elder is");
+  ok(where(m.DOUBTING_SCHOLAR).includes('hollow_reliquary') && m.SCHOLAR_NOTES_LINE.endsWith('it was real.'), 'the Doubting Scholar visits the Reliquary, where pilgrims convert');
 }
