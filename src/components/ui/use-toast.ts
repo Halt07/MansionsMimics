@@ -3,7 +3,9 @@ import { useState, useEffect, type ReactNode } from "react";
 import type { ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 20;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_DURATION = 5000;
+/** How long a dismissed toast stays (fading out, see toast.tsx's 300ms fade) before being removed (ms). */
+const TOAST_REMOVE_DELAY = 350;
 
 export type ToasterToast = Omit<ToastProps, "title"> & {
   id: string;
@@ -12,6 +14,7 @@ export type ToasterToast = Omit<ToastProps, "title"> & {
   action?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  duration?: number;
 };
 
 type Action =
@@ -140,6 +143,9 @@ function toast({ ...props }: ToastInput) {
       },
     },
   });
+
+  const duration = props.duration ?? TOAST_DURATION;
+  if (Number.isFinite(duration)) setTimeout(dismiss, duration);
 
   return {
     id,
