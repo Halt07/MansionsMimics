@@ -14,6 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
+  ALL_MATERIALS, LEARNABLE_TRAITS, type Material,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -1258,8 +1259,17 @@ export default function Game() {
         hatboxToLegendReached: true, apexPeakReached: true, titanicFeastReached: true, downWithTheShipReached: true,
         conversions: Math.max(character.conversions, CULT_CONVERSIONS),
         mimicsConsumed: Math.max(character.mimicsConsumed, CANNIBAL_MIMICS),
+        adventurersEaten: ADVENTURER_TEMPLATES.map(t => t.name),                            // Connoisseur
+        learnedMaterials: [...ALL_MATERIALS],                                                // Master of Disguise
+        learnedTraits: [...LEARNABLE_TRAITS],
+        formsUsed: [...new Set([...character.formsUsed, ...VARIANT_FORMS.map(f => f.id)])], // Curiosity Cabinet
       }
     : character;
+  // If a new achievement is added and the preview above doesn't earn it, say so
+  if (import.meta.env.DEV && previewAchievements && displayCharacter) {
+    const missed = ACHIEVEMENTS.filter(a => !a.isEarned(displayCharacter)).map(a => a.name);
+    if (missed.length) console.warn(`Dev achievement preview doesn't cover: ${missed.join(", ")}`);
+  }
   const activeAdventurers = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
   // A nest hunt ends when its Elder is devoured (not when the adventurers run out);
   // any other hunt ends when no adventurers remain. Either way, wait for a ceremony to finish.
@@ -1494,6 +1504,34 @@ export default function Game() {
               onClick={() => setPreviewAchievements(p => !p)}
             >
               🛠 Dev: {previewAchievements ? "stop previewing achievements" : "preview all achievements (not saved)"}
+            </Button>
+          )}
+          {/* DEV: give or take away Thimblewood (saved). Taking it while worn takes it off too,
+              which goes through the normal resize flow (forms re-checked, form menu opens). */}
+          {import.meta.env.DEV && phase === "hunt" && character && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+              onClick={() => {
+                const knows = character.learnedMaterials.includes("Thimblewood");
+                const learnedMaterials = knows
+                  ? character.learnedMaterials.filter(x => x !== "Thimblewood")
+                  : [...character.learnedMaterials, "Thimblewood" as const];
+                setCharacter(prev => prev ? { ...prev, learnedMaterials } : prev);
+                persist({ learnedMaterials });
+                addEvent("system", knows ? "🛠 Dev: Thimblewood removed." : "🛠 Dev: Thimblewood learned.");
+                if (knows && hasMagic(character.currentAppearance, "Thimblewood")) {
+                  const strip = (list: readonly Material[]) => list.filter(x => x !== "Thimblewood");
+                  doUpdateAppearance({
+                    ...character.currentAppearance,
+                    primaryMaterials: strip(character.currentAppearance.primaryMaterials),
+                    secondaryMaterials: strip(character.currentAppearance.secondaryMaterials),
+                  });
+                }
+              }}
+            >
+              🛠 Dev: {character.learnedMaterials.includes("Thimblewood") ? "take away Thimblewood (saved)" : "give Thimblewood (saved)"}
             </Button>
           )}
 
@@ -1989,7 +2027,13 @@ export default function Game() {
           )}
 
           {/* Achievement banners */}
-          {displayCharacter && <AchievementBanners character={displayCharacter} huntingAt={phase === "hunt" ? location?.id ?? null : null} />}
+          {displayCharacter && (
+            <AchievementBanners
+              character={displayCharacter}
+              huntingAt={phase === "hunt" ? location?.id ?? null : null}
+              showAll={previewAchievements}
+            />
+          )}
 
           {/* Event log */}
           {phase !== "setup" && (

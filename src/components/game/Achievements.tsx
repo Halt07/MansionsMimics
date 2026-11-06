@@ -18,8 +18,14 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
  * In-game banners: earned achievements whose bannerLocation is where the mimic is hunting.
  * Pass huntingAt as null outside a hunt (nothing shows).
  */
-export function AchievementBanners({ character, huntingAt }: { character: MimicCharacter; huntingAt: LocationId | null }) {
-  const shown = ACHIEVEMENTS.filter(a => a.isEarned(character) && huntingAt !== null && a.bannerLocation === huntingAt);
+export function AchievementBanners({ character, huntingAt, showAll = false }: {
+  character: MimicCharacter;
+  huntingAt: LocationId | null;
+  /** Dev preview: show every earned banner, wherever the mimic is. */
+  showAll?: boolean;
+}) {
+  const shown = ACHIEVEMENTS.filter(a => a.isEarned(character) &&
+    (showAll || (huntingAt !== null && a.bannerLocation === huntingAt)));
   return (
     <>
       {shown.map(a => (
