@@ -334,6 +334,10 @@ export interface AllureResult extends CheckResult {
 // ============================================================
 // COMBAT ENGINE
 // ============================================================
+// Hunt Action Timeframe
+export const ACTION_LIMIT = 50;
+export const ACTION_WARNING = 20;
+
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
 export function stealthCheck(
   plausibility: number, patience: number, formTier: Tier, mimicTier: Tier, form: Form, adventurer: PartyMember,

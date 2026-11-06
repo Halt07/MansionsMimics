@@ -601,6 +601,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   // ── Haunted Inn · all mimics · wearable forms: Minor–Apex ──
   haunted_inn: {
     "Cellar":              { "lesser_barrel":           { plausibility: 1, allure: 1, note: "Barrels are the natural currency of cellars." },
+                             "lesser_rum_cask":         { plausibility: 1, allure: 2, note: "Rum Barrels are particularly loved." },
                              "lesser_crate":            { plausibility: 1, note: "Crates are expected down here." },
                              "lesser_chest":            { plausibility: 1, note: "A storage chest fits in a cellar." },
                              "standard_bookshelf":      { plausibility: -2, note: "Books in a cellar? Deeply suspicious." } },

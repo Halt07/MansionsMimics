@@ -20,7 +20,7 @@ export const MATERIALS = {
   rare: ["Ebonwood", "Ironwood", "Mithril", "Blacksteel", "Boarhide", "Obsidian", "Basalt", "Smoked Glass", "Crystal", "Bloodoak"],
   magic: ["Feywood", "Shadowwood", "Bonesteel", "Starforged Iron", "Dragonhide", "Direwolf Pelt", "Spellweave Silk", "Gravecloth", "Runestone", "Void Marble", "Soulglass", "Aether Crystal", "Thimblewood"],
   // ── Giant-realm materials (unlocked via Giant's Castle location) ──
-  giant: ["Giant Oak", "Giant Iron", "Giant Gold", "Giant Marble", "Giant Granite", "Beanstalk Timber", "Beanstalk Leather", "Cloud Fleece", "Golden Goose Down", "Stormforged Iron"],
+  giant: ["Titan Oak", "Giant Iron", "Sky Gold", "Lightning Marble", "Cumulogranite", "Beanstalk Timber", "Beanstalk Leather", "Cloud Fleece", "Golden Goose Down", "Stormforged Iron"],
 } as const;
 export type MaterialRarity = keyof typeof MATERIALS;
 export type Material = (typeof MATERIALS)[MaterialRarity][number];
@@ -35,9 +35,9 @@ export const ALL_MATERIALS = [
 // UNLEARNED_TRAITS are built into forms (Form.builtInTraits) — you get them only by
 // wearing a form that has them. Both kinds count when adventurers are lured or put off.
 export const TRAITS = {
-  surface: ["Polished", "Tarnished", "Gilded", "Etched", "Inlaid", "Lacquered", "Rough-Hewn", "Soft", "Wrinkled", "Smooth", "Pitted", "Mossy"],
+  surface: ["Polished", "Tarnished", "Rough-Hewn", "Smooth", "Gilded", "Etched", "Inlaid", "Lacquered", "Soft", "Wrinkled", "Pitted", "Mossy"],
   symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
-  condition: ["Worn", "Pristine", "Cracked", "Weathered", "Bloodstained", "Dusty", "Shadowed Presence", "Faint Glow"],
+  condition: ["Worn", "Pristine", "Cracked", "Weathered", "Dusty", "Bloodstained", "Shadowed Presence", "Faint Glow"],
   /** How the object smells. All scents are learned; Minor mimics can't wear one. */
   scent: ["Musty", "Fresh", "Fragrant", "Foul", "Smoky", "Briny", "Earthy"],
 } as const;
