@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -170,7 +170,8 @@ export default function Game() {
   const [suspicion, setSuspicion] = useState(0);
   const [phase, setPhase] = useState<Phase>("setup");
   const [gameoverReason, setGameoverReason] = useState<GameoverReason>("discovered");
-  const [loading, setLoading] = useState(true);
+  // Nothing to load without a character id
+  const [loading, setLoading] = useState(!!characterId);
   const [acting, setActing] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   // One purchase per visit to the upgrade screen; reset each time the screen opens
@@ -197,10 +198,7 @@ export default function Game() {
   const [formSelectReturnPhase, setFormSelectReturnPhase] = useState<Phase>("setup");
 
   useEffect(() => {
-    if (!characterId) {
-      setLoading(false);
-      return;
-    }
+    if (!characterId) return;
     db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
       if (res[0]) {
         const char = res[0];
@@ -371,7 +369,7 @@ export default function Game() {
   // Lifetime AP: every increase in current AP counts, whatever caused it (spending AP on
   // upgrades lowers current AP but never this). Starts tracking once a character is loaded.
   const lastApRef = useRef<number | null>(null);
-  useEffect(() => {
+  const trackLifetimeAp = useEffectEvent(() => {
     if (!character) return;
     const prev = lastApRef.current;
     lastApRef.current = character.assimilationPoints;
@@ -379,7 +377,8 @@ export default function Game() {
     const lifetimeApEarned = character.lifetimeApEarned + (character.assimilationPoints - prev);
     setCharacter(c => c ? { ...c, lifetimeApEarned } : c);
     persist({ lifetimeApEarned });
-  }, [character?.assimilationPoints]);
+  });
+  useEffect(() => trackLifetimeAp(), [character?.assimilationPoints]);
 
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
@@ -1008,7 +1007,8 @@ export default function Game() {
   const ceremonyTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => ceremonyTimers.current.forEach(clearTimeout), []);
 
-  useEffect(() => {
+  // An effect event: reads the latest character/location without re-running on their changes
+  const checkDevotion = useEffectEvent(() => {
     if (phase !== "hunt" || !location || !character) return;
     const devotee = findDevotee(party);
     if (!devotee) return;
@@ -1052,7 +1052,11 @@ export default function Game() {
       },
     ];
     ceremonyTimers.current = steps.map((step, i) => setTimeout(step, i * CEREMONY_STEP_MS));
-  }, [party, phase]);
+  });
+  // Intentional: many different actions can leave the pilgrim as the last one standing, so the
+  // conversion reacts to the party changing rather than being triggered from each action.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => checkDevotion(), [party, phase]);
 
   // Open form selection. returnTo is where confirming or skipping goes afterwards.
   const startFormSelection = (returnTo: Phase = "setup") => {
@@ -1304,8 +1308,9 @@ export default function Game() {
   const isNest = !!location?.rivalNest;
   const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
     (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
+  const recordSurvivedHunt = useEffectEvent(() => recordHunt("survived"));
   useEffect(() => {
-    if (huntOver) recordHunt("survived");
+    if (huntOver) recordSurvivedHunt();
   }, [huntOver]);
 
   // The cat knows: once per cat per hunt, whenever one is in the mimic's room
@@ -1316,7 +1321,7 @@ export default function Game() {
       catsThatKnowRef.current.add(c.uid);
       addEvent("info", CAT_KNOWS_LINE);
     }
-  }, [smallCreatures, mimicRoom, phase]);
+  }, [smallCreatures, mimicRoom, phase, addEvent]);
 
   // Announce variant forms the moment something learned unlocks them (not on load)
   const unlockedVariantsRef = useRef<Set<string> | null>(null);
@@ -1331,7 +1336,7 @@ export default function Game() {
       }
     }
     unlockedVariantsRef.current = new Set(unlocked.map(f => f.id));
-  }, [character?.learnedMaterials, character?.learnedTraits]);
+  }, [character, addEvent]); // re-running is harmless: only newly unlocked variants are announced
 
   // Announce achievements that can be completed from several places (bites, meals, the
   // strongbox…) the moment they're earned. The others announce themselves where they happen.
@@ -1347,7 +1352,7 @@ export default function Game() {
       }
     }
     earnedRef.current = earned;
-  }, [character]);
+  }, [character, addEvent]);
   const consumedCount = party.filter(a => a.isConsumed).length;
 
   // Mass-below-tier plausibility penalty
