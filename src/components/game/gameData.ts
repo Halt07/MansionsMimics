@@ -1063,6 +1063,17 @@ export function nameFlavor(rawName: string): string | null {
   return NAME_REMARKS.find(r => r.names.includes(key))?.line(name) ?? null;
 }
 
+/** How often an adventurer entering the mimic's room acts out one of its quirks in the log. */
+export const QUIRK_LINE_CHANCE = 0.3;
+
+/** The adventurer's applied quirk, filled in for this form — or null if it has none or the roll misses. */
+export function quirkLine(
+  adventurer: Pick<PartyMember, "name" | "appliedQuirk">, formName: string, random: () => number = Math.random,
+): string | null {
+  if (!adventurer.appliedQuirk || random() >= QUIRK_LINE_CHANCE) return null;
+  return adventurer.appliedQuirk.replaceAll("{name}", adventurer.name).replaceAll("{form}", formName);
+}
+
 // ============================================================
 // TITANIC FEAST
 // Achievement for consuming every giant of the Cloud Kingdom Outpost whole

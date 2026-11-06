@@ -14,7 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -415,6 +415,9 @@ export default function Game() {
     const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
+      // Now and then, the newcomer acts out one of its quirks on your form
+      const quirk = quirkLine(adv, form.name);
+      if (quirk) addEvent("info", quirk);
       const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, formTier(character), form, adv, roomMod, character.currentAppearance);
       if (result.detectedFlaws.length > 0) {
         result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
