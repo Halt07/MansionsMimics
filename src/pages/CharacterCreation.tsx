@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import { toast } from "@/components/ui/use-toast";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
-  canAddForm, MAX_FORMS_ABOVE_TIER, type Form, type Material, type StartingType,
+  canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, type Form, type Material, type StartingType,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,6 +127,10 @@ export default function CharacterCreation() {
     };
     try {
       const created = await db.entities.MimicCharacter.create(charData);
+      // A remark on certain names (Hatbox, Mimic, Tiny…). The toaster lives outside the
+      // routes, so it stays on screen as the game page opens.
+      const remark = nameFlavor(created.name);
+      if (remark) toast({ title: remark });
       navigate(createPageUrl(`Game?characterId=${created.id}`));
     } catch (err) {
       console.error("Failed to create character:", err);

@@ -76,6 +76,17 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "minor_teapot", name: "Teapot", tier: "Minor", baseMassRange: [1, 4],
+      builtInTraits: ["Ornate"],
+      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Dining"],
+      materialSlots: 2, digestCapacityRequired: 1, description: "Common in civilized spaces.",
+      flawProfiles: [
+        { type: "material", description: "Glaze has tiny cracks that do not follow natural patterns" },
+        { type: "structure", description: "Lid does not sit flush when placed on top" },
+        { type: "weight", description: "Spout angle feels slightly incorrect when pouring" },
+      ],
+    },
+    {
       id: "minor_book", name: "Book", tier: "Minor", baseMassRange: [1, 4],
       builtInTraits: ["Ornate"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Knowledge"],
@@ -119,17 +130,6 @@ const FORM_DATA = {
         { type: "acoustic", description: "The tune never quite repeats the same way twice" },
         { type: "structure", description: "There's no winding key, yet it never runs down" },
         { type: "weight", description: "Far too heavy for a box of tiny gears" },
-      ],
-    },
-    {
-      id: "minor_teapot", name: "Teapot", tier: "Minor", baseMassRange: [1, 4],
-      builtInTraits: ["Ornate"],
-      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Dining"],
-      materialSlots: 2, digestCapacityRequired: 1, description: "Common in civilized spaces.",
-      flawProfiles: [
-        { type: "material", description: "Glaze has tiny cracks that do not follow natural patterns" },
-        { type: "structure", description: "Lid does not sit flush when placed on top" },
-        { type: "weight", description: "Spout angle feels slightly incorrect when pouring" },
       ],
     },
     {
@@ -193,6 +193,17 @@ const FORM_DATA = {
       ],
     },
     {
+      id: "lesser_crate", name: "Crate", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Reinforced", "Minimalist", "Rustic"],
+      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "Stacked and overlooked in storage rooms.",
+      flawProfiles: [
+        { type: "material", description: "Nail heads appear slightly misaligned or duplicated" },
+        { type: "structure", description: "Does not creak or flex under shifting weight" },
+        { type: "weight", description: "Too evenly balanced when lifted from one corner" },
+      ],
+    },
+    {
       id: "lesser_barrel", name: "Barrel", tier: "Lesser", baseMassRange: [5, 8],
       builtInTraits: ["Iron-Banded", "Rustic"],
       baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
@@ -216,28 +227,6 @@ const FORM_DATA = {
       ],
     },
     {
-      id: "lesser_crate", name: "Crate", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Reinforced", "Minimalist", "Rustic"],
-      baseAllureModifier: 1, plausibilityModifier: 0, utilityTags: ["Storage"],
-      materialSlots: 2, digestCapacityRequired: 2, description: "Stacked and overlooked in storage rooms.",
-      flawProfiles: [
-        { type: "material", description: "Nail heads appear slightly misaligned or duplicated" },
-        { type: "structure", description: "Does not creak or flex under shifting weight" },
-        { type: "weight", description: "Too evenly balanced when lifted from one corner" },
-      ],
-    },
-    {
-      id: "lesser_chair", name: "Chair", tier: "Lesser", baseMassRange: [5, 8],
-      builtInTraits: ["Carved", "Upholstered"],
-      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Seating"],
-      materialSlots: 2, digestCapacityRequired: 2, description: "Invites close and prolonged contact.",
-      flawProfiles: [
-        { type: "structure", description: "Legs remain perfectly level even on uneven flooring" },
-        { type: "material", description: "Cushion padding resists compression slightly too long" },
-        { type: "acoustic", description: "Fails to creak under a seated person's weight" },
-      ],
-    },
-    {
       id: "lesser_painting", name: "Painting", tier: "Lesser", baseMassRange: [5, 8],
       builtInTraits: ["Ornate"],
       baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Valuable", "Decor"],
@@ -258,6 +247,17 @@ const FORM_DATA = {
         { type: "visual", description: "The eyes follow people a little too eagerly" },
         { type: "presence", description: "The room feels watched even with the portrait turned to the wall" },
         { type: "temperature", description: "The frame is colder than the wall it hangs on" },
+      ],
+    },
+    {
+      id: "lesser_chair", name: "Chair", tier: "Lesser", baseMassRange: [5, 8],
+      builtInTraits: ["Carved", "Upholstered"],
+      baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Seating"],
+      materialSlots: 2, digestCapacityRequired: 2, description: "Invites close and prolonged contact.",
+      flawProfiles: [
+        { type: "structure", description: "Legs remain perfectly level even on uneven flooring" },
+        { type: "material", description: "Cushion padding resists compression slightly too long" },
+        { type: "acoustic", description: "Fails to creak under a seated person's weight" },
       ],
     },
     {
@@ -653,7 +653,7 @@ const FORM_DATA = {
       baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Storage", "Valuable"],
       materialSlots: 5, digestCapacityRequired: 8, description: "A treasure chest large enough to swallow a horse — and hungry for giants.",
       flawProfiles: [
-        { type: "material", description: "The giant oak grain doesn't follow the natural curve of the trunk" },
+        { type: "material", description: "The Titan Oak grain doesn't follow the natural curve of the trunk" },
         { type: "structure", description: "The lid opens with no hinge resistance despite its enormous weight" },
         { type: "weight", description: "The chest doesn't creak or settle when enormous weight is placed on top" },
       ],
@@ -802,11 +802,11 @@ export interface TierConfig {
 
 export const TIER_CONFIG: Record<Tier, TierConfig> = {
   Minor:    { massRange: [1, 4],   apToEvolve: 10, apToUpgrade: 3,  description: "Tiny, deceptive, patient",         lore: "A fledgling mimic, barely larger than a hatbox. Dangerous only to the unwary." },
-  Lesser:   { massRange: [5, 8],   apToEvolve: 20, apToUpgrade: 5,  description: "Small but deadly",                  lore: "Capable of consuming a full humanoid. Still learning the art of perfect deception." },
-  Standard: { massRange: [9, 12],  apToEvolve: 35, apToUpgrade: 8,  description: "Proven predator",                   lore: "A mid-tier mimic has shed its vulnerability. Now a true ambush hunter." },
-  Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 12, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
-  Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 18, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
-  Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 25, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
+  Lesser:   { massRange: [5, 8],   apToEvolve: 25, apToUpgrade: 7,  description: "Small but deadly",                  lore: "Capable of consuming a full humanoid. Still learning the art of perfect deception." },
+  Standard: { massRange: [9, 12],  apToEvolve: 40, apToUpgrade: 10,  description: "Proven predator",                   lore: "A mid-tier mimic has shed its vulnerability. Now a true ambush hunter." },
+  Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 15, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
+  Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 20, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
+  Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 28, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
 };
 
 // ============================================================

@@ -2,10 +2,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
-  ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier } from
+  ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier, 
+  ACTION_WARNING,
+  ACTION_LIMIT} from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
 const LOCATION_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
+
+/** The Codex's "whose discoveries" choice: a mimic id, or this for everything all mimics know. */
+const ALL_MIMICS = "all";
+const CODEX_VIEWING_KEY = "codex.viewing";
 
 const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"] as const;
 type Section = (typeof SECTIONS)[number];
@@ -49,17 +56,31 @@ function Collapsible({ title, subtitle, children, defaultOpen = false }: Collaps
 export default function Codex() {
   const [activeSection, setActiveSection] = useState<Section>("Overview");
   const [selectedTier, setSelectedTier] = useState<Tier>("Minor");
-  // Adventurers are only described once one of your mimics has met them (see CODEX DISCOVERY)
-  const [savedDiscoveries, setDiscoveries] = useState<Discoveries>({ met: new Set(), eaten: new Set() });
+  // Adventurers are only described once a mimic has met them (see CODEX DISCOVERY). The pill
+  // next to the title picks whose discoveries to show: one mimic, or everything all of them know.
+  // Opening the Codex from a hunt (?characterId=) picks that mimic; otherwise the last choice is kept.
+  const [characters, setCharacters] = useState<MimicCharacter[]>([]);
+  const [viewing, setViewing] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("characterId");
+    if (fromUrl) return fromUrl;
+    try { return localStorage.getItem(CODEX_VIEWING_KEY) ?? ALL_MIMICS; } catch { return ALL_MIMICS; }
+  });
+  useEffect(() => {
+    db.entities.MimicCharacter.list("-updated_date")
+      .then(setCharacters)
+      .catch(err => console.error("Failed to load mimics for the Codex:", err));
+  }, []);
+  const chooseViewing = (id: string) => {
+    setViewing(id);
+    try { localStorage.setItem(CODEX_VIEWING_KEY, id); } catch { /* storage unavailable: just don't remember */ }
+  };
+  const viewedMimic = characters.find(c => c.id === viewing) ?? null;
+  // An unknown id (e.g. a deleted mimic) falls back to all mimics
+  const savedDiscoveries: Discoveries = pooledDiscoveries(viewedMimic ? [viewedMimic] : characters);
   // DEV ONLY (achievement-preview branch): show every adventurer as if eaten. Display only — nothing is saved.
   const [revealAll, setRevealAll] = useState(false);
   const allNames = new Set(ADVENTURER_TEMPLATES.map(a => a.name));
   const discoveries: Discoveries = revealAll ? { met: allNames, eaten: allNames } : savedDiscoveries;
-  useEffect(() => {
-    db.entities.MimicCharacter.list()
-      .then(chars => setDiscoveries(pooledDiscoveries(chars)))
-      .catch(err => console.error("Failed to load discoveries:", err));
-  }, []);
   const metCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length;
   const eatenCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) === "eaten").length;
 
@@ -71,6 +92,20 @@ export default function Codex() {
         </Link>
         <div className="h-4 w-px bg-border" />
         <h1 className="font-cinzel text-foreground text-sm">The Codex of Forms</h1>
+        {characters.length > 0 && (
+          <label className="relative inline-flex items-center" title="Whose discoveries the Codex shows">
+            <span className="sr-only">Show the Codex as known by</span>
+            <select
+              value={viewedMimic ? viewedMimic.id : ALL_MIMICS}
+              onChange={(e) => chooseViewing(e.target.value)}
+              className="appearance-none cursor-pointer rounded-full border border-primary/30 bg-primary/5 py-1 pl-3 pr-7 text-xs font-cinzel text-primary hover:bg-primary/10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              <option value={ALL_MIMICS}>All mimics</option>
+              {characters.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.tier}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 w-3 h-3 text-primary" />
+          </label>
+        )}
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
@@ -121,13 +156,18 @@ export default function Codex() {
               </Collapsible>
               <Collapsible title="Turn Structure">
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                  You may perform 1 of 5 actions at a time.
                   <li><span className="text-foreground">Relocate</span> — Slip to an adjacent empty room (+1 suspicion). Triggers a stealth check against anyone in the target room. Counts toward the action limit.</li>
                   <li><span className="text-foreground">Lure</span> — Attempt to attract adventurers within range (1 room, or 2 at high Allure). Success pulls them into your room. Counts toward the action limit.</li>
                   <li><span className="text-foreground">Strike!</span> — Snap at an attracted adventurer or a revealed Rival Mimic. Success consumes them. <span className="text-foreground">Resets the action counter.</span></li>
                   <li><span className="text-foreground">Wait</span> — Patience check to reduce suspicion. Adventurers and small creatures wander. Counts toward the action limit.</li>
-                  <li><span className="text-foreground">Change Form / Appearance</span> — Shift to a different prepared form (+1 suspicion) or adjust surface appearance at any time.</li>
                   <li><span className="text-foreground">Consume Creatures</span> — Small creatures in your room can be snapped up for quick AP. Resets the action counter and the mass decay timer.</li>
                 </ol>
+                <ul className="mt-5 space-y-2 text-sm text-muted-foreground list-inside">
+                  These do not count as an action and can be performed at any time.
+                  <li>• <span className="text-foreground">Change Form</span> — Shift to a different prepared form (+1 suspicion).</li>
+                  <li>• <span className="text-foreground">Change Appearance</span> — Adjust surface appearance.</li>
+                </ul>
                 <p className="text-xs text-muted-foreground mt-3">⏳ After <span className="text-foreground">50 actions</span> without a Strike, the party gives up and leaves — ending the hunt automatically.</p>
               </Collapsible>
               <Collapsible title="Dice System">
@@ -329,7 +369,7 @@ export default function Codex() {
           {activeSection === "Traits" &&
           <div className="space-y-4">
               <h2 className="font-cinzel text-2xl text-foreground mb-4">Traits</h2>
-              <p className="text-sm text-muted-foreground">Surface, symbolic and condition traits are learned from your prey and applied in the appearance editor. Every mimic starts knowing a few ordinary ones (<span className="text-primary">highlighted</span>);</p>
+              <p className="text-sm text-muted-foreground">Surface, symbolic and condition traits are learned from your prey and applied in the appearance editor. Every mimic begins knowing those <span className="text-primary">highlighted</span>;</p>
               {Object.entries(TRAITS).map(([category, traits]) =>
             <div key={category}>
                   <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category}</h3>
@@ -340,7 +380,7 @@ export default function Codex() {
                   </div>
                 </div>
             )}
-              <p className="text-sm text-muted-foreground pt-2">Structural and aura traits can't be learned or applied — they're built into forms, so you have them only while wearing a form that does.</p>
+              <p className="text-sm text-muted-foreground pt-2">Structural and aura traits can't be learned or applied — they're built into forms, so you have them only while wearing a form that includes them.</p>
               {Object.entries(UNLEARNED_TRAITS).map(([category, traits]) =>
             <div key={category}>
                   <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category} <span className="normal-case tracking-normal text-[10px]">(built into forms)</span></h3>
@@ -361,7 +401,7 @@ export default function Codex() {
                 Parties are randomly assembled from these templates. Each adventurer has unique perception affinities and luring preferences. Entries marked <span className="text-primary">✦</span> may bring a companion.
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                The Codex only knows what your mimics have learned: an adventurer is described once you've <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once you've <span className="text-foreground">eaten</span> one.
+                The Codex only knows what {viewedMimic ? <span className="text-foreground">{viewedMimic.name}</span> : "your mimics"} {viewedMimic ? "has" : "have"} learned: an adventurer is described once {viewedMimic ? "it has" : "one of them has"} <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once {viewedMimic ? "it has" : "one has"} <span className="text-foreground">eaten</span> one. Switch whose knowledge you're reading with the pill at the top.
               </p>
               <p className="text-xs font-cinzel text-primary mb-2">
                 Met {metCount}/{ADVENTURER_TEMPLATES.length} · Eaten {eatenCount}/{ADVENTURER_TEMPLATES.length}
@@ -526,7 +566,7 @@ export default function Codex() {
               </Collapsible>
               <Collapsible title="Room Context Modifiers">
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>Certain forms gain or lose plausibility and allure based on the room you inhabit. This reflects how natural or out-of-place an object looks in its surroundings.</p>
+                  <p>Certain forms gain or lose plausibility and allure based on the room you inhabit. This reflects how natural or out-of-place an object looks in its surroundings. This is exemplified by, but not limited to, the following:</p>
                   <ul className="space-y-1 ml-4 text-xs">
                     <li>• <span className="text-foreground">Barrel in a Cellar</span>: +1 Plausibility, +1 Allure</li>
                     <li>• <span className="text-foreground">Bookshelf in a Cellar</span>: –2 Plausibility</li>
@@ -540,8 +580,8 @@ export default function Codex() {
               </Collapsible>
               <Collapsible title="Form Tier Penalties">
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>Taking a form one tier <span className="text-foreground">above</span> your current tier: <span className="text-red-400">–2 Plausibility</span></p>
-                  <p>Taking a form one tier <span className="text-foreground">below</span> your current tier: <span className="text-red-400">–1 Patience</span> (too much mass in too small a container)</p>
+                  <p>Taking a form one tier <span className="text-foreground">above</span> your current tier: <span className="text-red-400">–2 Plausibility</span> (not enough mass to fully fill the form)</p>
+                  <p>Taking a form one tier <span className="text-foreground">below</span> your current tier: <span className="text-red-400">–1 Patience</span> (too much mass in too small a space)</p>
                   <p>You may only have <span className="text-foreground">1 greater-tier form</span> in your known forms at once.</p>
                   <p><span className="text-purple-400">🪵 Thimblewood</span> shrinks you one tier while worn: every rule above treats you as that smaller size. Forms two tiers below open up (at –1 Patience), forms one tier below lose their penalty, and forms of your own tier count as one above (–2 Plausibility, and the one-form limit). Putting it on or taking it off sends you to choose your forms again.</p>
                 </div>
@@ -583,6 +623,7 @@ export default function Codex() {
               <Collapsible title="Suspicion from Combat">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p><span className="text-foreground">Successful consumption</span> raises suspicion by <span className="text-red-400">+1</span> — a party member has gone missing.</p>
+                  <p><span className="text-foreground">Successful consumption in the presence of others</span> raises suspicion by <span className="text-red-400">+2-3</span> — one or more people may have seen your true form as you ate.</p>
                   <p><span className="text-foreground">Failed strike</span> raises suspicion by <span className="text-red-400">+4</span> — the target saw you lunge and knows exactly what you are.</p>
                   <p>Partial bites (Minor mimics, or any mimic biting a giant it can't yet swallow) raise suspicion by <span className="text-red-400">+2</span> per hit, and <span className="text-red-400">+3</span> if the target flees.</p>
                 </div>
@@ -590,7 +631,7 @@ export default function Codex() {
               <Collapsible title="Burned Lairs & Forms">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>When a party discovers you, the survivors talk. The <span className="text-foreground">location</span> and the <span className="text-foreground">form you were caught in</span> are both <span className="text-orange-400">🔥 burned</span> for your next <span className="text-foreground">{BURN_HUNTS} hunts</span>.</p>
-                  <p>Hunting at a burned location starts you at <span className="text-foreground">+{BURN_SUSPICION} suspicion</span>, and so does starting a hunt in a burned form. They stack: going back to the same place in the same shape starts you at +{BURN_SUSPICION * 2}. Burned cards are marked on the hunting-ground and form screens. Being discovered again resets the count.</p>
+                  <p>Hunting at a burned location starts you at <span className="text-red-400">+{BURN_SUSPICION} suspicion</span>, and so does starting a hunt in a burned form. They stack: going back to the same place in the same shape starts you at <span className="text-red-400">+{BURN_SUSPICION * 2}</span>. Burned cards are marked on the hunting-ground and form screens. Being discovered again resets the count.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Bounty Hunts (Legendary Reputation)">
@@ -616,6 +657,7 @@ export default function Codex() {
                     <li>If you miss, the rival retreats and re-hides. Track it again.</li>
                   </ol>
                   <p>A rival indicator appears in the left panel once you have received a clue.</p>
+                  <p>If you consume all the adventurers before finding your rival <span className="text-foreground">the hunt will end</span> and you will lose your chance.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Low-Mass Plausibility Penalty">
@@ -641,8 +683,8 @@ export default function Codex() {
               </Collapsible>
               <Collapsible title="Hunt Time Limit (Adventurer Patience)">
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>Adventurers will not search forever. If you perform <span className="text-foreground">50 actions</span> (Lure, Wait, Relocate) without landing a Strike, the party grows bored and leaves — ending the hunt.</p>
-                  <p>A warning appears in the left panel at 30 actions remaining, turning red as the limit approaches. Striking any target (adventurer or rival mimic) or consuming a creature resets the counter.</p>
+                  <p>Adventurers will not search forever. If you perform <span className="text-foreground">{ACTION_LIMIT} actions</span> (Lure, Wait, Relocate) without landing a Strike, the party grows bored and leaves — ending the hunt.</p>
+                  <p>A warning appears in the left panel at {ACTION_WARNING} actions remaining, turning red as the limit approaches. Striking any target (adventurer or rival mimic) or consuming a creature resets the counter.</p>
                   <p>This prevents frustrating dead-end hunts where remaining adventurers cannot be lured — the hunt simply ends and you move on to fresh prey.</p>
                 </div>
               </Collapsible>
@@ -693,7 +735,7 @@ export default function Codex() {
                   <p>A floating fortress of cloud-stone and stormforged iron, reachable only by beanstalk or sorcery. No ordinary adventurers make the climb: parties are tiny (2–3) and drawn only from its five resident giants — the Giant Lord, Cloud Forge Smith, Cloud Eagle Rider, Cloud Giant Scout and Storm Giant Wanderer. Storm Elementals, Cloud Eagles and Cloud Goslings drift through its halls. The highest-risk, highest-reward location in the game.</p>
                   <p><span className="text-amber-400 font-semibold">🍖 Titanic Feast:</span> consume all five Cloud Kingdom giants <span className="text-foreground">whole</span> — finishing one off with bites doesn't count.</p>
                   <p className="font-semibold text-foreground mt-2">Giant-realm materials</p>
-                  <p>Giant-kin carry exclusive materials: <span className="text-amber-400">Giant Oak, Giant Iron, Giant Gold, Giant Marble, Giant Granite, Beanstalk Timber, Beanstalk Leather, Cloud Fleece, Golden Goose Down, Stormforged Iron</span>. These can only be obtained in these locations.</p>
+                  <p>Giant-kin carry exclusive materials: <span className="text-amber-400">Titan Oak, Giant Iron, Sky Gold, Lightning Marble, Cumulogranite, Beanstalk Timber, Beanstalk Leather, Cloud Fleece, Golden Goose Down, Stormforged Iron</span>. These can only be obtained in these locations.</p>
                   <p className="font-semibold text-foreground mt-2">Giant forms</p>
                   <p>Giant forms are mass-gated Apex forms designed to be plausible in giant-scaled environments. Using a standard Minor/Lesser form (e.g. a normal Pillow) in the Giant's Castle would look absurdly small — Giant Forms resolve this. They require higher digestive capacity and have more material slots.</p>
                   <ul className="space-y-1 ml-4 text-xs">

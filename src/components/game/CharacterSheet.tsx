@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, lifetimeStats, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
+import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,9 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle className="font-cinzel text-xl text-foreground">{character.name}</CardTitle>
+          {nameFlavor(character.name) && (
+            <p className="text-xs text-muted-foreground/80 italic flavor-text">{nameFlavor(character.name)}</p>
+          )}
           <p className="text-xs text-muted-foreground">{character.startingType} Origin · {character.tier} Tier</p>
         </div>
         {onClose && (

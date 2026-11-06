@@ -61,6 +61,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/scents.test.mjs` | Scent traits: all learned, slots by tier, who reacts, allure |
 | `tests/rooms.test.mjs` | Room modifiers: per-location keys, variant overrides, only wearable forms |
 | `tests/thimblewood.test.mjs` | Thimblewood: shrunk form tier, form range, penalties, forms kept |
+| `tests/easterEggs.test.mjs` | Name remarks at creation, the rival wearing your shape |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

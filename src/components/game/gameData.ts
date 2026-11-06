@@ -334,6 +334,10 @@ export interface AllureResult extends CheckResult {
 // ============================================================
 // COMBAT ENGINE
 // ============================================================
+// Hunt Action Timeframe
+export const ACTION_LIMIT = 50;
+export const ACTION_WARNING = 20;
+
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
 export function stealthCheck(
   plausibility: number, patience: number, formTier: Tier, mimicTier: Tier, form: Form, adventurer: PartyMember,
@@ -926,7 +930,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   },
   {
     id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
-    description: "Learn every material and every learnable trait (surface, symbolic and condition) in the game.",
+    description: "Learn every material and every learnable trait (surface, symbolic, condition, and scent) in the game.",
     flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
     isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
       LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
@@ -1007,6 +1011,56 @@ export function earnsHatboxToLegend(
   character: Pick<MimicCharacter, "startingType" | "hatboxToLegendReached">, newTier: Tier,
 ): boolean {
   return newTier === "Apex" && character.startingType === "Minor" && !character.hatboxToLegendReached;
+}
+
+// ============================================================
+// EASTER EGGS
+// ============================================================
+/** Chance that a rival mimic, when found, turns out to be wearing your shape. */
+export const RIVAL_SAME_SHAPE_CHANCE = 0.2;
+export const RIVAL_SAME_SHAPE_LINE = "It's wearing your shape. You both pretend not to notice.";
+
+/**
+ * Remarks on particular names, shown as a toast when the mimic is created and as a
+ * subtitle on its character sheet. Names match ignoring case and extra spaces; `line`
+ * gets the name as the player typed it.
+ */
+const NAME_REMARKS: readonly { names: readonly string[]; line: (name: string) => string }[] = [
+  { names: ["hatbox"], line: () => "Hatbox the mimic, eh? You'll be a legend in no time." },
+  { names: ["mimic"], line: () => "Mimic… how original." },
+  {
+    names: ["puny", "mini", "tiny", "teeny", "teeny-tiny", "itty-bitty", "wee", "little", "smol", "petite", "pip", "squeak"],
+    line: (n) => `${n}, how cute!`,
+  },
+  { names: ["rex", "rover", "buddy", "lucky"], line: (n) => `${n}? You're a mimic, not a dog.` },
+  // Too honest for a disguise
+  { names: ["jaws", "chomper", "teeth", "fangs"], line: () => "A little on the nose for something that's meant to look harmless." },
+  { names: ["trap", "bait"], line: () => "Well, at least you're honest." },
+  { names: ["not a mimic", "definitely a chest", "just a chair"], line: () => "Very convincing. No notes." },
+  { names: ["hungry", "starving"], line: () => "Aren't we all." },
+  // Named after the furniture
+  { names: ["chest", "box", "trunk"], line: (n) => `A ${n.toLowerCase()} named ${n}. Subtle.` },
+  { names: ["chair", "barrel", "crate"], line: () => "Bold, naming yourself after your best disguise." },
+  // Aggressively ordinary
+  { names: ["bob", "steve", "gary", "dave"], line: () => "A perfectly ordinary name for a perfectly ordinary chest. Nothing to see here." },
+  // Wishful thinking
+  { names: ["treasure", "loot", "gold"], line: () => "Truth in advertising — just not the way they think." },
+  { names: ["snack", "lunch", "dinner"], line: () => "Planning the menu already?" },
+  { names: ["hero", "adventurer"], line: () => "The best disguise yet." },
+  // Nods to the game
+  { names: ["elder"], line: () => "Ambitious. The Elder Mimic may have something to say about that." },
+  { names: ["captain"], line: () => "The captain never abandons ship. Neither, it seems, do you." },
+  { names: ["gargoyle"], line: () => "Wrong monster. Though in time, you might pass for one." },
+  { names: ["thimble"], line: () => "Shrinking already? You'll want some Thimblewood for that." },
+  { names: ["pandora"], line: () => "Some boxes should stay closed." },
+  { names: ["luggage"], line: () => "It has hundreds of little legs, and it will follow you anywhere." },
+];
+
+/** A remark on the mimic's name — or null for an unremarkable name. */
+export function nameFlavor(rawName: string): string | null {
+  const name = rawName.trim().replace(/\s+/g, " ");
+  const key = name.toLowerCase();
+  return NAME_REMARKS.find(r => r.names.includes(key))?.line(name) ?? null;
 }
 
 // ============================================================

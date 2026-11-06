@@ -15,6 +15,7 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   ALL_MATERIALS, LEARNABLE_TRAITS, type Material,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -22,6 +23,8 @@ import {
   type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
   type RoomName, type Sickness, type Tier,
+  ACTION_LIMIT,
+  ACTION_WARNING,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +53,6 @@ interface SmallCreature extends LocationCreature {
   location: RoomName;
 }
 
-const ACTION_LIMIT = 50;
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
 /** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
@@ -491,6 +493,7 @@ export default function Game() {
         addEvent("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
         addEvent("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
       }
+      if (Math.random() < RIVAL_SAME_SHAPE_CHANCE) addEvent("info", RIVAL_SAME_SHAPE_LINE);
       setRivals(prev => prev.map(r => r.id === found.id ? { ...r, revealed: true } : r));
     }
 
@@ -1393,7 +1396,7 @@ export default function Game() {
           <Button variant="ghost" size="sm" onClick={() => setShowSheet(!showSheet)} className="text-muted-foreground hover:text-foreground text-xs gap-1">
             <BookOpen className="w-3 h-3" /> Sheet
           </Button>
-          <Link to={createPageUrl("Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
+          <Link to={createPageUrl(character ? `Codex?characterId=${character.id}` : "Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
             <Eye className="w-3 h-3" /> Codex
           </Link>
         </div>
@@ -1582,8 +1585,8 @@ export default function Game() {
           })()}
 
           {/* Action counter warning */}
-          {phase === "hunt" && actionCount >= 30 && (
-            <div className={`px-3 py-2 rounded border text-xs ${actionCount >= 40 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
+          {phase === "hunt" && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
+            <div className={`px-3 py-2 rounded border text-xs ${ACTION_LIMIT - actionCount <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
               <span className="font-cinzel">⏳ {ACTION_LIMIT - actionCount} actions remaining</span>
               <p className="text-[10px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
             </div>
@@ -1623,7 +1626,7 @@ export default function Game() {
                           <Badge className="text-[9px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
                         )}
                         {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
-                          <span className="text-[9px] text-destructive/70">{adv.hitsTaken}/{maxHits}hp</span>
+                          <span className="text-[9px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
                         )}
                         {dist !== null && (
                           <span title={adv.location} className={`text-[9px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
