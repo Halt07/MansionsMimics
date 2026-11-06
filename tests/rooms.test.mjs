@@ -39,4 +39,8 @@ export default async function ({ gameData: m, ok, log }) {
   // Thimblewood makes a Throne reachable in the Apex-only Abandoned Castle (an Apex mimic shrinks to Grand)
   ok(m.getValidForms(m.formTier({ tier: 'Apex', currentAppearance: { primaryMaterials: ['Thimblewood'] } }), 35).some((f) => f.id === 'greater_throne'),
     'a shrunk Apex mimic can wear a Throne, so the Abandoned Castle dungeon Throne modifier can apply');
+
+  // Among hundreds of candles, a Candlestick hides well but draws no one in
+  const candle = m.getRoomContextMod('minor_candlestick', 'hollow_reliquary', 'Candle Gallery');
+  ok(candle.plausibility === 2 && candle.allure === -1, 'a Candlestick in the Candle Gallery: +2 plausibility, −1 allure');
 }
