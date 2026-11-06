@@ -13,11 +13,11 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {/* open / onOpenChange are toast state, not DOM attributes: dismissed toasts are hidden */}
-      {toasts.map(function ({ id, title, description, action, open, onOpenChange: _onOpenChange, ...props }) {
-        if (!open) return null;
+      {/* open / onOpenChange / duration are toast state, not DOM attributes. A dismissed toast stays
+          rendered as data-state="closed" so it can fade out before use-toast removes it. */}
+      {toasts.map(function ({ id, title, description, action, open, onOpenChange: _onOpenChange, duration: _duration, ...props }) {
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} data-state={open ? "open" : "closed"} {...props}>
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
