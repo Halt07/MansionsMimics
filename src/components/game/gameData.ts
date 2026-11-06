@@ -926,7 +926,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   },
   {
     id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
-    description: "Learn every material and every learnable trait (surface, symbolic and condition) in the game.",
+    description: "Learn every material and every learnable trait (surface, symbolic, condition, and scent) in the game.",
     flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
     isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
       LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
