@@ -19,9 +19,11 @@ interface AppearanceEditorProps {
   character: MimicCharacter;
   onSave: (appearance: Appearance) => void;
   onClose: () => void;
+  /** DEV ONLY (achievement-preview branch): learn or unlearn a material, saved immediately. */
+  onDevToggleLearnedMaterial?: (material: Material) => void;
 }
 
-export default function AppearanceEditor({ character, onSave, onClose }: AppearanceEditorProps) {
+export default function AppearanceEditor({ character, onSave, onClose, onDevToggleLearnedMaterial }: AppearanceEditorProps) {
   const [appearance, setAppearance] = useState<Appearance>({
     primaryMaterials: character.currentAppearance?.primaryMaterials || [],
     secondaryMaterials: character.currentAppearance?.secondaryMaterials || [],
@@ -32,7 +34,12 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
   });
 
   const limits = APPEARANCE_LIMITS[character.tier];
-  const learned = character.learnedMaterials || [];
+  // Learned materials, plus any still worn in the saved appearance but no longer learned (only
+  // possible with the dev Thimblewood button) so they can be taken off
+  const learned = [...new Set([
+    ...(character.learnedMaterials || []),
+    ...MATERIAL_FIELDS.flatMap(f => character.currentAppearance?.[f] ?? []),
+  ])];
   const hasLearnedMagic = learned.some(isMagicMaterial);
   const magicInUse = countMagicMaterials(appearance);
   const wornMagic = MATERIAL_FIELDS.flatMap(f => appearance[f]).filter(isMagicMaterial);
@@ -137,6 +144,31 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         </Button>
       </CardHeader>
       <CardContent className="space-y-4 text-xs">
+
+        {/* DEV ONLY (achievement-preview branch): give or take away Thimblewood. Taking it away
+            also deselects it here; as in play, nothing resizes until you Apply. */}
+        {import.meta.env.DEV && onDevToggleLearnedMaterial && (() => {
+          const knows = character.learnedMaterials.includes("Thimblewood");
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+              onClick={() => {
+                if (knows) {
+                  setAppearance(a => ({
+                    ...a,
+                    primaryMaterials: a.primaryMaterials.filter(x => x !== "Thimblewood"),
+                    secondaryMaterials: a.secondaryMaterials.filter(x => x !== "Thimblewood"),
+                  }));
+                }
+                onDevToggleLearnedMaterial("Thimblewood");
+              }}
+            >
+              🛠 Dev: {knows ? "take away Thimblewood (saved)" : "give Thimblewood (saved)"}
+            </Button>
+          );
+        })()}
 
         {/* Primary Material */}
         <div>

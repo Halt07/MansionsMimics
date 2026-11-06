@@ -492,6 +492,19 @@ export default function Game() {
   };
 
   // Relocate to an adjacent empty room (+1 suspicion cost)
+  // DEV ONLY (achievement-preview branch): learn or unlearn a material for testing (saved).
+  // Used by the appearance editor's Thimblewood button.
+  const devToggleLearnedMaterial = (material: Material) => {
+    if (!character) return;
+    const knows = character.learnedMaterials.includes(material);
+    const learnedMaterials = knows
+      ? character.learnedMaterials.filter(x => x !== material)
+      : [...character.learnedMaterials, material];
+    setCharacter(prev => prev ? { ...prev, learnedMaterials } : prev);
+    persist({ learnedMaterials });
+    addEvent("system", `🛠 Dev: ${material} ${knows ? "removed" : "learned"}.`);
+  };
+
   // TEMPORARY dev preview of DiceRollDisplay (see the button under the Suspicion card)
   const [dicePreview, setDicePreview] = useState<DicePreview | null>(null);
 
@@ -1570,34 +1583,6 @@ export default function Game() {
               🛠 Dev: {previewAchievements ? "stop previewing achievements" : "preview all achievements (not saved)"}
             </Button>
           )}
-          {/* DEV: give or take away Thimblewood (saved). Taking it while worn takes it off too,
-              which goes through the normal resize flow (forms re-checked, form menu opens). */}
-          {import.meta.env.DEV && phase === "hunt" && character && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
-              onClick={() => {
-                const knows = character.learnedMaterials.includes("Thimblewood");
-                const learnedMaterials = knows
-                  ? character.learnedMaterials.filter(x => x !== "Thimblewood")
-                  : [...character.learnedMaterials, "Thimblewood" as const];
-                setCharacter(prev => prev ? { ...prev, learnedMaterials } : prev);
-                persist({ learnedMaterials });
-                addEvent("system", knows ? "🛠 Dev: Thimblewood removed." : "🛠 Dev: Thimblewood learned.");
-                if (knows && hasMagic(character.currentAppearance, "Thimblewood")) {
-                  const strip = (list: readonly Material[]) => list.filter(x => x !== "Thimblewood");
-                  doUpdateAppearance({
-                    ...character.currentAppearance,
-                    primaryMaterials: strip(character.currentAppearance.primaryMaterials),
-                    secondaryMaterials: strip(character.currentAppearance.secondaryMaterials),
-                  });
-                }
-              }}
-            >
-              🛠 Dev: {character.learnedMaterials.includes("Thimblewood") ? "take away Thimblewood (saved)" : "give Thimblewood (saved)"}
-            </Button>
-          )}
           {/* TEMPORARY (dev builds only): preview the unused DiceRollDisplay component with a sample
               Strike, to decide whether to show rolls in the hunt. Remove once decided. */}
           {import.meta.env.DEV && (
@@ -1909,6 +1894,7 @@ export default function Game() {
                   character={character}
                   onSave={doUpdateAppearance}
                   onClose={() => setShowAppearancePanel(false)}
+                  onDevToggleLearnedMaterial={import.meta.env.DEV ? devToggleLearnedMaterial : undefined}
                 />
               )}
 
