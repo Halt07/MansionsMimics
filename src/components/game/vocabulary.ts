@@ -18,7 +18,7 @@ export const MATERIALS = {
   mundane: ["Oak", "Pine", "Walnut", "Birch", "Iron", "Steel", "Brass", "Cotton", "Wool", "Burlap", "Linen", "Cowhide", "Goatskin", "Limestone", "Clear Glass", "Horn"],
   valuable: ["Mahogany", "Silver", "Gold", "Silk", "Velvet", "Satin", "Deerskin", "Tanned Hide", "Granite", "Marble", "Stained Glass"],
   rare: ["Ebonwood", "Ironwood", "Mithril", "Blacksteel", "Boarhide", "Obsidian", "Basalt", "Smoked Glass", "Crystal", "Bloodoak"],
-  magic: ["Feywood", "Shadowwood", "Bonesteel", "Starforged Iron", "Dragonhide", "Direwolf Pelt", "Spellweave Silk", "Gravecloth", "Runestone", "Void Marble", "Soulglass", "Aether Crystal"],
+  magic: ["Feywood", "Shadowwood", "Bonesteel", "Starforged Iron", "Dragonhide", "Direwolf Pelt", "Spellweave Silk", "Gravecloth", "Runestone", "Void Marble", "Soulglass", "Aether Crystal", "Thimblewood"],
   // ── Giant-realm materials (unlocked via Giant's Castle location) ──
   giant: ["Giant Oak", "Giant Iron", "Giant Gold", "Giant Marble", "Giant Granite", "Beanstalk Timber", "Beanstalk Leather", "Cloud Fleece", "Golden Goose Down", "Stormforged Iron"],
 } as const;

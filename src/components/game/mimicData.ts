@@ -831,6 +831,7 @@ export const MAGIC_EFFECTS: Record<MagicMaterial, string> = {
   "Runestone":       "+1 die on Wait's roll to reduce suspicion.",
   "Starforged Iron": "Mimic hunters roll 2 fewer dice on every stealth and flaw check against you.",
   "Soulglass":       "Reveals which room a hidden rival mimic is lurking in.",
+  "Thimblewood":     "Shrinks you one tier: forms two tiers below become available (−1 Patience), forms one tier below lose their penalty, and your own tier's forms count as one above (−2 Plausibility).",
 };
 
 // ============================================================

@@ -119,6 +119,35 @@ export function isFormMassGated(form: Form): boolean {
   return form.baseMassRange[0] > TIER_CONFIG[form.tier].massRange[0];
 }
 
+/**
+ * The tier a mimic's forms are judged against. Thimblewood shrinks it one tier (never below
+ * Minor): every form-range and form-penalty rule then treats the mimic as that smaller size.
+ */
+export function formTier(character: { tier: Tier; currentAppearance?: AppearanceLike }): Tier {
+  const idx = TIER_ORDER.indexOf(character.tier);
+  return hasMagic(character.currentAppearance, "Thimblewood") ? TIER_ORDER[Math.max(0, idx - 1)] : character.tier;
+}
+
+/**
+ * Which of a mimic's forms it may still carry at this size (tier, mass, variant unlocks and the
+ * one-form-above limit), in their current order. Used after a tier-up or a Thimblewood change.
+ */
+export function formsStillAllowed<T extends { formId: string }>(
+  forms: readonly T[], tier: Tier, mass: number, knowledge: FormKnowledge,
+): T[] {
+  const valid = getValidForms(tier, mass, knowledge);
+  const kept: T[] = [];
+  const keptForms: Form[] = [];
+  for (const ref of forms) {
+    const form = valid.find(f => f.id === ref.formId);
+    if (form && canAddForm(keptForms, form, tier)) {
+      kept.push(ref);
+      keptForms.push(form);
+    }
+  }
+  return kept;
+}
+
 // Only one of a mimic's forms may come from the tier above its own.
 export const MAX_FORMS_ABOVE_TIER = 1;
 

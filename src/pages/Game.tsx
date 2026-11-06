@@ -14,7 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  VARIANT_FORMS, isVariantUnlocked, formFamily,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -413,7 +413,7 @@ export default function Game() {
     const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
-      const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, character.tier, form, adv, roomMod, character.currentAppearance);
+      const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, formTier(character), form, adv, roomMod, character.currentAppearance);
       if (result.detectedFlaws.length > 0) {
         result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
       }
@@ -1045,9 +1045,23 @@ export default function Game() {
 
   const doUpdateAppearance = (newAppearance: Appearance) => {
     if (!character) return;
-    const updatedChar = { ...character, currentAppearance: newAppearance };
+    // Thimblewood changes the mimic's size: forms that no longer fit are dropped, and (like a
+    // tier-up) the form menu opens so new ones can be chosen. The editor warned with a toast.
+    const resized = hasMagic(newAppearance, "Thimblewood") !== hasMagic(character.currentAppearance, "Thimblewood");
+    let formUpdates: Partial<MimicCharacter> = {};
+    if (resized) {
+      const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: newAppearance }), character.mass, character);
+      const activeId = character.forms[character.activeFormIndex]?.formId;
+      formUpdates = { forms: kept, activeFormIndex: Math.max(0, kept.findIndex(f => f.formId === activeId)) };
+      addEvent("evolve", hasMagic(newAppearance, "Thimblewood")
+        ? "🪵 The Thimblewood draws you in. You are one size smaller now."
+        : "🪵 You let the Thimblewood go and swell back to your full size.");
+      const lost = character.forms.filter(f => !kept.includes(f)).map(f => f.name);
+      if (lost.length > 0) addEvent("evolve", `These forms no longer fit you and have been lost: ${lost.join(", ")}. Choose replacements.`);
+    }
+    const updatedChar = { ...character, currentAppearance: newAppearance, ...formUpdates };
     setCharacter(updatedChar);
-    persist({ currentAppearance: newAppearance });
+    persist({ currentAppearance: newAppearance, ...formUpdates });
     addEvent("info", `You adjust your surface appearance.`);
     const soulglassNew = hasMagic(newAppearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
     const hidden = rivals.filter(r => !r.consumed && !r.revealed);
@@ -1056,6 +1070,7 @@ export default function Game() {
       addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : `The ${RIVAL_STATS[sensed.kind].name}`} hides in the ${sensed.room}.`);
     }
     setShowAppearancePanel(false);
+    if (resized) startFormSelection(phase === "hunt" ? "hunt" : "setup");
   };
 
   const checkActionLimit = (newCount: number) => {
@@ -1186,13 +1201,10 @@ export default function Game() {
         updates[statToReduce] = newVal;
         addEvent("evolve", `The strain of growth weakens your ${statToReduce} by 1 (now ${newVal}). Choose your next hunts carefully.`);
 
-        // Invalidate forms that are now out of range (more than 1 tier from new tier)
-        const newTierIdx = TIER_ORDER.indexOf(nextTier);
+        // Invalidate forms that are now out of range at the new size (Thimblewood still shrinks it)
         const currentForms = character.forms;
-        const validForms = currentForms.filter(ref => {
-          const formTierIdx = TIER_ORDER.indexOf(ref.tier);
-          return Math.abs(formTierIdx - newTierIdx) <= 1;
-        });
+        const validForms = formsStillAllowed(
+          currentForms, formTier({ ...character, tier: nextTier }), updates.mass ?? character.mass, character);
         if (validForms.length < currentForms.length) {
           updates.forms = validForms;
           updates.activeFormIndex = 0;
@@ -1295,7 +1307,7 @@ export default function Game() {
   const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
   const activeForm = character ? getActiveForm(character) : null;
   // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
-  const formTierPenalties = activeForm && character ? getFormTierPenalties(activeForm.tier, character.tier) : { plausibility: 0, patience: 0 };
+  const formTierPenalties = activeForm && character ? getFormTierPenalties(activeForm.tier, formTier(character)) : { plausibility: 0, patience: 0 };
   const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
   const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
   const cfg = character ? TIER_CONFIG[character.tier] : null;

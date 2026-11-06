@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, knowsTrait, type Material, type Trait } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "./gameData";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
 type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits" | "scentTraits";
@@ -86,6 +87,18 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
       </button>
     );
   };
+  // Thimblewood resizes the mimic: warn as soon as it's picked or removed (Apply then opens the form menu)
+  const wearingThimblewood = hasMagic(appearance, "Thimblewood");
+  const thimblewoodSeen = useRef(wearingThimblewood);
+  useEffect(() => {
+    if (thimblewoodSeen.current === wearingThimblewood) return;
+    thimblewoodSeen.current = wearingThimblewood;
+    toast({
+      title: wearingThimblewood ? "🪵 Thimblewood will shrink you" : "🪵 Removing Thimblewood will restore your size",
+      description: "Some of your forms may no longer be available. Applying this appearance will take you to choose your forms.",
+    });
+  }, [wearingThimblewood]);
+
   // Only traits the mimic knows (starting traits, plus any it has learned) are offered. A trait
   // already worn but not known (e.g. from an older save) stays listed so it can be taken off.
   const worn: readonly Trait[] = [

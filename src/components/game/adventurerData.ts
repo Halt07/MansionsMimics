@@ -281,7 +281,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Speaks to animals before entering", "Uncomfortable indoors"],
     alluringQualities: { materials: ["Oak", "Feywood"], traits: ["Rustic", "Carved", "Earthy"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 2 },
-    lootMaterials: ["Feywood", "Oak", "Wool"],
+    lootMaterials: ["Thimblewood", "Oak", "Wool"],
     lootTraits: ["Earthy"],
     partialLoot: ["strip of bark-cloth robe", "a vine cord", "torn leaf-pattern cloak"],
   },
@@ -788,7 +788,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Its face never quite settles on one shape", "Feels the moment anything nearby changes its form", "Cannot resist pretty, delicate things"],
     alluringQualities: { materials: ["Feywood", "Silk"], traits: ["Mossy", "Inlaid", "Faint Glow", "Fragrant"], tags: ["Decor", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 1, magical: 2, social: 3, spatial: 1, environmental: 1, acoustic: 1, presence: 3 },
-    lootMaterials: ["Feywood", "Spellweave Silk"],
+    lootMaterials: ["Feywood", "Spellweave Silk", "Thimblewood"],
     lootTraits: ["Mossy", "Fragrant"],
     partialLoot: ["a lock of shifting, silver hair", "scrap of dew-damp silk", "a petal-shaped scale"],
     companion: {

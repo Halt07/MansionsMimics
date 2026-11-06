@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_FORMS, TIER_ORDER, getValidForms, getLockedVariants, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
+import { ALL_FORMS, TIER_ORDER, formTier, getValidForms, getLockedVariants, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
 import BurnBadge from "./BurnBadge";
 import { Button } from "@/components/ui/button";
 
@@ -13,25 +13,27 @@ interface FormSelectorProps {
 }
 
 export default function FormSelector({ character, onConfirm, onSkip }: FormSelectorProps) {
-  const currentTierIdx = TIER_ORDER.indexOf(character.tier);
+  // Thimblewood shrinks the mimic: forms are chosen as if it were one tier smaller
+  const tier = formTier(character);
+  const currentTierIdx = TIER_ORDER.indexOf(tier);
   // Include all forms from tier-1, current tier, and tier+1 (plus any variant forms the mimic
   // has unlocked); variants it hasn't unlocked yet are shown locked, with how to unlock them
-  const validForms = getValidForms(character.tier, character.mass, character);
-  const lockedVariants = getLockedVariants(character.tier, character.mass, character);
+  const validForms = getValidForms(tier, character.mass, character);
+  const lockedVariants = getLockedVariants(tier, character.mass, character);
   const baseName = (id?: string) => ALL_FORMS.find(f => f.id === id)?.name ?? id;
 
   // Start from the current forms, keeping within the form limit and the one-form-above rule
   const [selected, setSelected] = useState<Form[]>(() => {
     return character.forms
       .flatMap(ref => validForms.filter(f => f.id === ref.formId))
-      .reduce<Form[]>((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, character.tier) ? [...acc, form] : acc), []);
+      .reduce<Form[]>((acc, form) => (acc.length < MAX_FORMS && canAddForm(acc, form, tier) ? [...acc, form] : acc), []);
   });
 
   const toggle = (form: Form) => {
     setSelected(prev => {
       const exists = prev.find(f => f.id === form.id);
       if (exists) return prev.filter(f => f.id !== form.id);
-      if (prev.length >= MAX_FORMS || !canAddForm(prev, form, character.tier)) return prev;
+      if (prev.length >= MAX_FORMS || !canAddForm(prev, form, tier)) return prev;
       return [...prev, form];
     });
   };
@@ -69,6 +71,11 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
         <p className="text-xs text-muted-foreground">
           Selected: {selected.length} / {MAX_FORMS}
         </p>
+        {tier !== character.tier && (
+          <p className="text-xs text-amber-500 mt-1">
+            🪵 Thimblewood shrank you: you're choosing forms as a {tier} mimic, not a {character.tier}.
+          </p>
+        )}
       </div>
 
       {TIER_ORDER.flatMap(tier => { const forms = groupedForms[tier]; return forms ? [[tier, forms] as const] : []; }).map(([tier, forms]) => (
@@ -77,7 +84,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {forms.map(form => {
               const isSelected = !!selected.find(f => f.id === form.id);
-              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, character.tier);
+              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, tier);
               const isDisabled = !isSelected && (selected.length >= MAX_FORMS || blockedByAboveRule);
               return (
                 <button

@@ -531,6 +531,7 @@ export default function Codex() {
                   <p>Taking a form one tier <span className="text-foreground">above</span> your current tier: <span className="text-red-400">–2 Plausibility</span></p>
                   <p>Taking a form one tier <span className="text-foreground">below</span> your current tier: <span className="text-red-400">–1 Patience</span> (too much mass in too small a container)</p>
                   <p>You may only have <span className="text-foreground">1 greater-tier form</span> in your known forms at once.</p>
+                  <p><span className="text-purple-400">🪵 Thimblewood</span> shrinks you one tier while worn: every rule above treats you as that smaller size. Forms two tiers below open up (at –1 Patience), forms one tier below lose their penalty, and forms of your own tier count as one above (–2 Plausibility, and the one-form limit). Putting it on or taking it off sends you to choose your forms again.</p>
                 </div>
               </Collapsible>
               <Collapsible title="Evolution & Assimilation">
