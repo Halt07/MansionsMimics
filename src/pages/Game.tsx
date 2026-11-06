@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
+  rollDice, rollDiceVerbose, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
@@ -40,6 +40,7 @@ import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
+import DiceRollDisplay from "../components/game/DiceRollDisplay";
 import BurnBadge from "../components/game/BurnBadge";
 import { AchievementBanners } from "../components/game/Achievements";
 
@@ -54,6 +55,16 @@ interface SmallCreature extends LocationCreature {
   isConsumed: boolean;
   location: RoomName;
 }
+
+/** TEMPORARY: a sample Strike for the dev dice preview (your Adhesion vs. the Elusive Captain's 5 dice). */
+interface DicePreview {
+  mimic: { rolls: number[]; total: number };
+  target: { rolls: number[]; total: number };
+}
+const rollDicePreview = (adhesion: number): DicePreview => ({
+  mimic: rollDiceVerbose(adhesion),
+  target: rollDiceVerbose(5),
+});
 
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
@@ -481,6 +492,9 @@ export default function Game() {
   };
 
   // Relocate to an adjacent empty room (+1 suspicion cost)
+  // TEMPORARY dev preview of DiceRollDisplay (see the button under the Suspicion card)
+  const [dicePreview, setDicePreview] = useState<DicePreview | null>(null);
+
   // Easter eggs: consecutive quiet turns (the spiderweb), and cats that have already stared at you
   const stillTurnsRef = useRef(0);
   const catsThatKnowRef = useRef(new Set<string>());
@@ -1583,6 +1597,35 @@ export default function Game() {
             >
               🛠 Dev: {character.learnedMaterials.includes("Thimblewood") ? "take away Thimblewood (saved)" : "give Thimblewood (saved)"}
             </Button>
+          )}
+          {/* TEMPORARY (dev builds only): preview the unused DiceRollDisplay component with a sample
+              Strike, to decide whether to show rolls in the hunt. Remove once decided. */}
+          {import.meta.env.DEV && (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+                onClick={() => setDicePreview(p => p ? null : rollDicePreview(character?.adhesion ?? 4))}
+              >
+                🛠 Dev: {dicePreview ? "hide dice preview" : "preview dice"}
+              </Button>
+              {dicePreview && (
+                <Card className="bg-card border-dashed border-amber-400/40">
+                  <CardContent className="p-3 space-y-3">
+                    <DiceRollDisplay rolls={dicePreview.mimic.rolls} label={`Your Strike (Adhesion ${dicePreview.mimic.rolls.length}d6)`} animate />
+                    <DiceRollDisplay rolls={dicePreview.target.rolls} label="Captain resists (4d6 + 1 Elusive die)" color="text-destructive" animate />
+                    <p className="text-xs text-muted-foreground">
+                      {dicePreview.mimic.total >= dicePreview.target.total ? "✓ The Strike lands." : "✗ The Captain slips free."}
+                    </p>
+                    <Button variant="outline" size="sm" className="w-full text-[10px]"
+                      onClick={() => setDicePreview(rollDicePreview(character?.adhesion ?? 4))}>
+                      Re-roll
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
 
           {/* Rival mimic / nest status */}
