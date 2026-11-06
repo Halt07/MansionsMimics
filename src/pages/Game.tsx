@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
+  rollDice, rollDiceVerbose, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
@@ -15,6 +15,7 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
+  isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
@@ -38,6 +39,7 @@ import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
+import DiceRollDisplay from "../components/game/DiceRollDisplay";
 import BurnBadge from "../components/game/BurnBadge";
 import { AchievementBanners } from "../components/game/Achievements";
 
@@ -52,6 +54,16 @@ interface SmallCreature extends LocationCreature {
   isConsumed: boolean;
   location: RoomName;
 }
+
+/** TEMPORARY: a sample Strike for the dev dice preview (your Adhesion vs. the Elusive Captain's 5 dice). */
+interface DicePreview {
+  mimic: { rolls: number[]; total: number };
+  target: { rolls: number[]; total: number };
+}
+const rollDicePreview = (adhesion: number): DicePreview => ({
+  mimic: rollDiceVerbose(adhesion),
+  target: rollDiceVerbose(5),
+});
 
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
@@ -324,6 +336,8 @@ export default function Game() {
       setCharacter(prev => prev ? { ...prev, ...startUpdates } : prev);
       persist(startUpdates);
       huntRecordedRef.current = false;
+      stillTurnsRef.current = 0;
+      catsThatKnowRef.current = new Set();
       peakSuspicionRef.current = 0;
     }
     setPhase("hunt");
@@ -475,8 +489,25 @@ export default function Game() {
   };
 
   // Relocate to an adjacent empty room (+1 suspicion cost)
+  // TEMPORARY dev preview of DiceRollDisplay (see the button under the Suspicion card)
+  const [dicePreview, setDicePreview] = useState<DicePreview | null>(null);
+
+  // Easter eggs: consecutive quiet turns (the spiderweb), and cats that have already stared at you
+  const stillTurnsRef = useRef(0);
+  const catsThatKnowRef = useRef(new Set<string>());
+  /**
+   * Counts a Wait or Lure toward the spiderweb: STILLNESS_TURNS of them in a row with nobody
+   * entering your room. Someone arriving, or any other action (Relocate, Strike, changing
+   * form), starts the count over.
+   */
+  const countStillTurn = (someoneArrived: boolean) => {
+    stillTurnsRef.current = someoneArrived ? 0 : stillTurnsRef.current + 1;
+    if (stillTurnsRef.current === STILLNESS_TURNS) addEvent("info", STILLNESS_LINE);
+  };
+
   const doRelocate = (targetRoom: RoomName) => {
     if (!character || !location) return;
+    stillTurnsRef.current = 0;
     setShowMovePanel(false);
     addEvent("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
     setMimicRoom(targetRoom);
@@ -580,6 +611,9 @@ export default function Game() {
     }
     setParty(updatedParty);
 
+    // A Lure that draws nobody into the room still counts as holding still (the spiderweb)
+    countStillTurn(newlyAttracted.length > 0);
+
     // Run stealth check for newly attracted adventurers who just entered the room
     if (newlyAttracted.length > 0) {
       const suspDelta = runStealthChecks(newlyAttracted, mimicRoom);
@@ -610,6 +644,7 @@ export default function Game() {
   // Resolves a Strike. Returns whether it took a turn (false if there was nothing to strike).
   const resolveStrike = (): boolean => {
     if (!character || !location) return false;
+    stillTurnsRef.current = 0;
     // Bonesteel: +1 die on strike rolls
     const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
 
@@ -1037,6 +1072,7 @@ export default function Game() {
 
   const doChangeForm = (formIndex: number) => {
     if (!character) return;
+    stillTurnsRef.current = 0;
     const formsUsed = phase === "hunt"
       ? withFormUsed(character.formsUsed, character.forms[formIndex]?.formId)
       : character.formsUsed;
@@ -1152,6 +1188,8 @@ export default function Game() {
     });
 
     setParty(updatedParty);
+
+    countStillTurn(newlyArrived.length > 0);
 
     // Auto stealth check for adventurers who just wandered into the mimic's room
     if (newlyArrived.length > 0) {
@@ -1269,6 +1307,16 @@ export default function Game() {
   useEffect(() => {
     if (huntOver) recordHunt("survived");
   }, [huntOver]);
+
+  // The cat knows: once per cat per hunt, whenever one is in the mimic's room
+  useEffect(() => {
+    if (phase !== "hunt" || !mimicRoom) return;
+    for (const c of smallCreatures) {
+      if (c.isConsumed || c.location !== mimicRoom || !isCat(c) || catsThatKnowRef.current.has(c.uid)) continue;
+      catsThatKnowRef.current.add(c.uid);
+      addEvent("info", CAT_KNOWS_LINE);
+    }
+  }, [smallCreatures, mimicRoom, phase]);
 
   // Announce variant forms the moment something learned unlocks them (not on load)
   const unlockedVariantsRef = useRef<Set<string> | null>(null);
@@ -1483,6 +1531,36 @@ export default function Game() {
               </div>
             </CardContent>
           </Card>
+
+          {/* TEMPORARY (dev builds only): preview the unused DiceRollDisplay component with a sample
+              Strike, to decide whether to show rolls in the hunt. Remove once decided. */}
+          {import.meta.env.DEV && (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+                onClick={() => setDicePreview(p => p ? null : rollDicePreview(character?.adhesion ?? 4))}
+              >
+                🛠 Dev: {dicePreview ? "hide dice preview" : "preview dice"}
+              </Button>
+              {dicePreview && (
+                <Card className="bg-card border-dashed border-amber-400/40">
+                  <CardContent className="p-3 space-y-3">
+                    <DiceRollDisplay rolls={dicePreview.mimic.rolls} label={`Your Strike (Adhesion ${dicePreview.mimic.rolls.length}d6)`} animate />
+                    <DiceRollDisplay rolls={dicePreview.target.rolls} label="Captain resists (4d6 + 1 Elusive die)" color="text-destructive" animate />
+                    <p className="text-xs text-muted-foreground">
+                      {dicePreview.mimic.total >= dicePreview.target.total ? "✓ The Strike lands." : "✗ The Captain slips free."}
+                    </p>
+                    <Button variant="outline" size="sm" className="w-full text-[10px]"
+                      onClick={() => setDicePreview(rollDicePreview(character?.adhesion ?? 4))}>
+                      Re-roll
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* Rival mimic / nest status */}
           {phase === "hunt" && !huntOver && rivals.some(r => !r.consumed) && (() => {

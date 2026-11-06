@@ -32,4 +32,15 @@ export default async function ({ gameData: m, ok }) {
   const where = (name) => T.find((t) => t.name === name)?.locations ?? [];
   ok(where(m.PORTER_SISTER).includes('mimic_nest') && m.PORTER_TOKEN_LINE.includes("porter's token"), "the porter's sister hunts the Mimic Nest, where the Elder is");
   ok(where(m.DOUBTING_SCHOLAR).includes('hollow_reliquary') && m.SCHOLAR_NOTES_LINE.endsWith('it was real.'), 'the Doubting Scholar visits the Reliquary, where pilgrims convert');
+
+  // Hatbox callback on From Hatbox to Legend
+  const hatbox = m.ACHIEVEMENTS.find((a) => a.id === 'hatboxToLegend');
+  ok(hatbox.flavor('Hatbox') === 'Told you. Hatbox, the legend.' && hatbox.flavor('Chesty').includes('small enough to overlook'), 'a mimic named Hatbox gets the callback banner line');
+
+  // The cat knows: every cat-type small creature counts, nothing else does
+  const creatures = m.LOCATIONS.flatMap((l) => l.locationCreatures);
+  const cats = [...new Set(creatures.filter((c) => m.isCat(c)).map((c) => c.name))];
+  ok(cats.length >= 6 && !m.isCat({ name: 'Bat' }) && !m.isCat({ name: 'Catfish' }), `cats: ${cats.join(', ')}`);
+
+  ok(m.STILLNESS_TURNS === 15 && m.STILLNESS_LINE.includes('spider'), 'the spiderweb after 15 quiet Waits in a row');
 }

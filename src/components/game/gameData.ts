@@ -885,7 +885,10 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: "hatboxToLegend", name: "From Hatbox to Legend", icon: "📦",
     description: "Begin as a Minor mimic and evolve all the way to the Apex tier. Mimics that started at Lesser don't qualify.",
-    flavor: (n) => `${n} was once small enough to overlook. No one makes that mistake anymore.`,
+    // A mimic named Hatbox was promised this at creation ("You'll be a legend in no time")
+    flavor: (n) => n.trim().toLowerCase() === "hatbox"
+      ? "Told you. Hatbox, the legend."
+      : `${n} was once small enough to overlook. No one makes that mistake anymore.`,
     isEarned: (c) => c.hatboxToLegendReached,
   },
   {
@@ -1070,6 +1073,17 @@ export const PORTER_TOKEN_LINE = "Deep inside the Elder, something small and tin
 /** A conversion at the Reliquary with the Doubting Scholar in the party. */
 export const DOUBTING_SCHOLAR = "Doubting Scholar";
 export const SCHOLAR_NOTES_LINE = "The Doubting Scholar's notes are found later, the last page reading only: it was real.";
+
+/** Any small creature that's a cat (Cat, Estate Cat, Temple Cat, Ship's Cat, Giant's Cat…). */
+export function isCat(creature: { name: string }): boolean {
+  return /\bCat$/.test(creature.name);
+}
+/** Shown once per cat per hunt when one is in the mimic's room. Nobody listens to the cat. */
+export const CAT_KNOWS_LINE = "The cat stares directly at you. It knows.";
+
+/** Consecutive Waits with nobody entering the mimic's room before it's taken for furniture. */
+export const STILLNESS_TURNS = 15;
+export const STILLNESS_LINE = "You've held still so long that a spider has strung a web across you.";
 
 /** How often an adventurer entering the mimic's room acts out one of its quirks in the log. */
 export const QUIRK_LINE_CHANCE = 0.3;
