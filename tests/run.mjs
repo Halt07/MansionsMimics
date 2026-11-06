@@ -19,7 +19,7 @@
  * Their thresholds have wide margins, but a very rare flaky failure is possible —
  * rerun before assuming something broke.
  */
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { createServer } from 'vite';
@@ -40,9 +40,14 @@ globalThis.window = {
   },
 };
 
+// Use the app's own Vite config, whatever its extension
+const configFile = ['vite.config.mjs', 'vite.config.js', 'vite.config.ts']
+  .map((name) => path.join(root, name))
+  .find((file) => existsSync(file));
+
 const server = await createServer({
   root,
-  configFile: path.join(root, 'vite.config.js'),
+  configFile,
   server: { middlewareMode: true, hmr: false },
   appType: 'custom',
   logLevel: 'error',

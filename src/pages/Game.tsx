@@ -1375,7 +1375,7 @@ export default function Game() {
           <Button variant="ghost" size="sm" onClick={() => setShowSheet(!showSheet)} className="text-muted-foreground hover:text-foreground text-xs gap-1">
             <BookOpen className="w-3 h-3" /> Sheet
           </Button>
-          <Link to={createPageUrl("Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
+          <Link to={createPageUrl(character ? `Codex?characterId=${character.id}` : "Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
             <Eye className="w-3 h-3" /> Codex
           </Link>
         </div>

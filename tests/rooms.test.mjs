@@ -25,8 +25,9 @@ export default async function ({ gameData: m, ok, log }) {
       for (const formId of Object.keys(forms)) {
         count++;
         const form = ALL_FORMS.find((f) => f.id === formId);
-        // Wearable if some tier the mimic can have here is within one tier of the form's
-        if (!form || TIER_ORDER.indexOf(form.tier) < minIdx - 1) { ok(false, `${loc.name} / ${room}: ${form?.name ?? formId} can never be worn here`); problems++; }
+        // Wearable if some tier the mimic can have here is within one tier of the form's. Thimblewood
+        // shrinks a mimic one tier, so the lowest reachable form tier is two below the location's minimum.
+        if (!form || TIER_ORDER.indexOf(form.tier) < minIdx - 2) { ok(false, `${loc.name} / ${room}: ${form?.name ?? formId} can never be worn here`); problems++; }
       }
     }
   }
@@ -34,4 +35,8 @@ export default async function ({ gameData: m, ok, log }) {
   const covered = Object.keys(MODS).length;
   ok(covered === LOCATIONS.length, `every location has room modifiers (${covered}/${LOCATIONS.length})`);
   log(LOCATIONS.filter((l) => !MODS[l.id]).map((l) => l.name).join(', ') || 'all covered');
+
+  // Thimblewood makes a Throne reachable in the Apex-only Abandoned Castle (an Apex mimic shrinks to Grand)
+  ok(m.getValidForms(m.formTier({ tier: 'Apex', currentAppearance: { primaryMaterials: ['Thimblewood'] } }), 35).some((f) => f.id === 'greater_throne'),
+    'a shrunk Apex mimic can wear a Throne, so the Abandoned Castle dungeon Throne modifier can apply');
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_ORDER, TIER_CONFIG, MASTER_FORMS, MATERIALS, MATERIAL_COLORS, TRAITS, UNLEARNED_TRAITS, APPEARANCE_LIMITS,
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
@@ -15,6 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
 const LOCATION_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
+
+/** The Codex's "whose discoveries" choice: a mimic id, or this for everything all mimics know. */
+const ALL_MIMICS = "all";
+const CODEX_VIEWING_KEY = "codex.viewing";
 
 const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"] as const;
 type Section = (typeof SECTIONS)[number];
@@ -51,13 +56,27 @@ function Collapsible({ title, subtitle, children, defaultOpen = false }: Collaps
 export default function Codex() {
   const [activeSection, setActiveSection] = useState<Section>("Overview");
   const [selectedTier, setSelectedTier] = useState<Tier>("Minor");
-  // Adventurers are only described once one of your mimics has met them (see CODEX DISCOVERY)
-  const [discoveries, setDiscoveries] = useState<Discoveries>({ met: new Set(), eaten: new Set() });
+  // Adventurers are only described once a mimic has met them (see CODEX DISCOVERY). The pill
+  // next to the title picks whose discoveries to show: one mimic, or everything all of them know.
+  // Opening the Codex from a hunt (?characterId=) picks that mimic; otherwise the last choice is kept.
+  const [characters, setCharacters] = useState<MimicCharacter[]>([]);
+  const [viewing, setViewing] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("characterId");
+    if (fromUrl) return fromUrl;
+    try { return localStorage.getItem(CODEX_VIEWING_KEY) ?? ALL_MIMICS; } catch { return ALL_MIMICS; }
+  });
   useEffect(() => {
-    db.entities.MimicCharacter.list()
-      .then(chars => setDiscoveries(pooledDiscoveries(chars)))
-      .catch(err => console.error("Failed to load discoveries:", err));
+    db.entities.MimicCharacter.list("-updated_date")
+      .then(setCharacters)
+      .catch(err => console.error("Failed to load mimics for the Codex:", err));
   }, []);
+  const chooseViewing = (id: string) => {
+    setViewing(id);
+    try { localStorage.setItem(CODEX_VIEWING_KEY, id); } catch { /* storage unavailable: just don't remember */ }
+  };
+  const viewedMimic = characters.find(c => c.id === viewing) ?? null;
+  // An unknown id (e.g. a deleted mimic) falls back to all mimics
+  const discoveries: Discoveries = pooledDiscoveries(viewedMimic ? [viewedMimic] : characters);
   const metCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length;
   const eatenCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) === "eaten").length;
 
@@ -69,6 +88,20 @@ export default function Codex() {
         </Link>
         <div className="h-4 w-px bg-border" />
         <h1 className="font-cinzel text-foreground text-sm">The Codex of Forms</h1>
+        {characters.length > 0 && (
+          <label className="relative inline-flex items-center" title="Whose discoveries the Codex shows">
+            <span className="sr-only">Show the Codex as known by</span>
+            <select
+              value={viewedMimic ? viewedMimic.id : ALL_MIMICS}
+              onChange={(e) => chooseViewing(e.target.value)}
+              className="appearance-none cursor-pointer rounded-full border border-primary/30 bg-primary/5 py-1 pl-3 pr-7 text-xs font-cinzel text-primary hover:bg-primary/10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              <option value={ALL_MIMICS}>All mimics</option>
+              {characters.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.tier}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 w-3 h-3 text-primary" />
+          </label>
+        )}
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
@@ -364,7 +397,7 @@ export default function Codex() {
                 Parties are randomly assembled from these templates. Each adventurer has unique perception affinities and luring preferences. Entries marked <span className="text-primary">✦</span> may bring a companion.
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                The Codex only knows what your mimics have learned: an adventurer is described once you've <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once you've <span className="text-foreground">eaten</span> one.
+                The Codex only knows what {viewedMimic ? <span className="text-foreground">{viewedMimic.name}</span> : "your mimics"} {viewedMimic ? "has" : "have"} learned: an adventurer is described once {viewedMimic ? "it has" : "one of them has"} <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once {viewedMimic ? "it has" : "one has"} <span className="text-foreground">eaten</span> one. Switch whose knowledge you're reading with the pill at the top.
               </p>
               <p className="text-xs font-cinzel text-primary mb-2">
                 Met {metCount}/{ADVENTURER_TEMPLATES.length} · Eaten {eatenCount}/{ADVENTURER_TEMPLATES.length}
