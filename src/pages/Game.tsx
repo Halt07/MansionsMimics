@@ -14,6 +14,7 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
@@ -487,6 +488,7 @@ export default function Game() {
         addEvent("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
         addEvent("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
       }
+      if (Math.random() < RIVAL_SAME_SHAPE_CHANCE) addEvent("info", RIVAL_SAME_SHAPE_LINE);
       setRivals(prev => prev.map(r => r.id === found.id ? { ...r, revealed: true } : r));
     }
 
