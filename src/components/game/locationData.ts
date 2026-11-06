@@ -638,7 +638,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "lesser_crate":            { plausibility: 1, note: "Equipment crates are normal in armories." },
                              "greater_throne":          { plausibility: -2, note: "A throne in an armory is deeply suspicious." } },
   },
-  // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex ──
+  // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex(Standard with Thimblewood) ──
   hidden_grove: {
     "Ancient Altar":       { "greater_statue":          { plausibility: 1, note: "Old forest altars are often watched over by weathered statues." } },
     "Collapsed Shrine":    { "apex_chapel":             { plausibility: -1, note: "An intact chapel among the ruins raises questions." },
@@ -647,7 +647,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "grand_antler_chandelier": { plausibility: -2, note: "Antlers belong on stags out here, not hanging from the sky." } },
     "Old Well":            { "greater_wall":            { plausibility: 1, note: "Old well-stones are easy to mistake for a stretch of wall." } },
   },
-  // ── Country Road & Waystation · Grand+ mimics · wearable forms: Greater–Apex ──
+  // ── Country Road & Waystation · Grand+ mimics · wearable forms: Greater–Apex(Standard with Thimblewood) ──
   country_road: {
     "Road West":           { "grand_carriage":          { plausibility: 1, allure: 1, note: "A stopped carriage on the road draws curious travelers." } },
     "Road East":           { "grand_carriage":          { plausibility: 1, allure: 1, note: "A stopped carriage on the road draws curious travelers." } },
@@ -657,7 +657,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "Ditch & Hedgerow":    { "greater_wall":            { plausibility: 1, note: "Old field walls run along every hedgerow." },
                              "greater_piano":           { plausibility: -2, note: "Nobody leaves a piano in a ditch." } },
   },
-  // ── The Crossroads · Grand+ mimics · wearable forms: Greater–Apex ──
+  // ── The Crossroads · Grand+ mimics · wearable forms: Greater–Apex(Standard with Thimblewood) ──
   crossroads: {
     "Centre Stone":        { "greater_statue":          { plausibility: 1, note: "Crossroads are often marked with a statue or shrine." } },
     "North Road":          { "grand_carriage":          { plausibility: 1, note: "Carriages pass through every crossroads." } },
@@ -666,20 +666,20 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "West Road":           { "grand_carriage":          { plausibility: 1, note: "Carriages pass through every crossroads." } },
     "Hanging Tree":        { "greater_gargoyle":        { plausibility: -1, note: "A gargoyle with no building to guard looks wrong out here." } },
   },
-  // ── Ruined Watermill · Grand+ mimics · wearable forms: Greater–Apex ──
+  // ── Ruined Watermill · Grand+ mimics · wearable forms: Greater–Apex(Standard with Thimblewood) ──
   ruined_mill: {
     "Smuggler's Cellar":   { "grand_vault":             { plausibility: 1, allure: 1, note: "A smuggler's stash — of course there's a vault down here." } },
     "Mill House":          { "greater_bed":             { plausibility: 1, note: "The miller had to sleep somewhere." },
                              "grand_personal_library":  { plausibility: -1, note: "A scholar's library in a mill house is out of place." } },
     "River Crossing":      { "grand_carriage":          { plausibility: 1, note: "Carriages wait at the crossing for the ford to clear." } },
   },
-  // ── Border Guardhouse · Apex mimics only, mass 33+ · wearable forms: Grand–Apex ──
+  // ── Border Guardhouse · Apex mimics only, mass 33+ · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   border_guardhouse: {
     "Gate Arch":           { "apex_castle_gate":        { plausibility: 1, note: "A border post's gate is expected to be heavy and fortified." } },
     "Storeroom":           { "grand_vault":             { plausibility: 1, note: "Guardhouses lock away seized goods." } },
     "Stable Yard":         { "grand_carriage":          { plausibility: 1, note: "Carriages are inspected in the stable yard." } },
   },
-  // ── Ruined City Quarter · Apex mimics only, mass 30+ · wearable forms: Grand–Apex ──
+  // ── Ruined City Quarter · Apex mimics only, mass 30+ · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   ruined_city: {
     "Market Square":       { "grand_carriage":          { plausibility: 1, note: "Abandoned carts and carriages litter the old market." } },
     "Merchant Row":        { "grand_vault":             { plausibility: 1, allure: 1, note: "Merchant houses kept their strongrooms — and someone may have left something." } },
@@ -687,16 +687,17 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "apex_cathedral":          { plausibility: -2, note: "A whole cathedral standing in the rubble of a temple?" } },
     "City Gate":           { "apex_castle_gate":        { plausibility: 1, note: "A great gate is exactly what a city gate should be." } },
   },
-  // ── Abandoned Castle · Apex mimics only, mass 35+ · wearable forms: Grand–Apex ──
+  // ── Abandoned Castle · Apex mimics only, mass 35+ · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   abandoned_castle: {
     "Great Hall":          { "grand_chandelier":        { plausibility: 1, note: "Every great hall had its chandelier." },
                              "grand_antler_chandelier": { plausibility: 1, note: "Castle halls were fond of hunting trophies." },
                              "giant_throne":            { plausibility: -2, note: "This throne was built for something much larger than any lord." } },
     "Courtyard":           { "grand_carriage":          { plausibility: 1, note: "Carriages pull into the courtyard." } },
     "Dungeon":             { "grand_chandelier":        { plausibility: -2, note: "A chandelier in the dungeon?" },
+                             "greater_throne":          { plausibility: -2, note: "A throne...in the dungeon." },
                              "giant_throne":            { plausibility: -2, note: "A throne in the dungeon — and a giant one at that." } },
   },
-  // ── Giant's Castle · Apex mimics only, mass 28+ · wearable forms: Grand–Apex ──
+  // ── Giant's Castle · Apex mimics only, mass 28+ · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   giants_castle: {
     "Great Hall":          { "giant_throne":            { plausibility: 2, allure: 1, note: "The giant's throne, right where it belongs." },
                              "grand_chandelier":        { plausibility: -1, note: "Comically small for a giant's hall." } },
@@ -707,7 +708,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "giant_pillow":            { plausibility: 1, note: "Pillows heaped on the giant's bed." } },
     "Goose Chamber":       { "giant_pillow":            { plausibility: 1, note: "Stuffed with the geese's own down." } },
   },
-  // ── Cloud Kingdom Outpost · Apex mimics only, mass 38+ · wearable forms: Grand–Apex ──
+  // ── Cloud Kingdom Outpost · Apex mimics only, mass 38+ · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   cloud_kingdom: {
     "Storm Throne Room":   { "giant_throne":            { plausibility: 2, note: "The storm lord's seat." } },
     "Giant's Larder":      { "giant_barrel":            { plausibility: 1, note: "Larders are lined with barrels this size." },
@@ -715,14 +716,14 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "High Nest":           { "giant_pillow":            { plausibility: 1, note: "Soft enough to be part of the nest." } },
     "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." } },
   },
-  // ── Lonely Moor Shelter · Apex mimics only · wearable forms: Grand–Apex ──
+  // ── Lonely Moor Shelter · Apex mimics only · wearable forms: Grand–Apex(Greater with Thimblewood) ──
   lonely_moor: {
     "Bothy Interior":      { "giant_bed":               { plausibility: -2, note: "A giant's bed in a one-room bothy?" },
                              "giant_throne":            { plausibility: -2, note: "There's barely room to stand, let alone for a throne." } },
     "Standing Stones":     { "apex_castle_gate":        { plausibility: -2, note: "A castle gate among the standing stones, with no castle?" },
                              "apex_chapel":             { plausibility: -1, note: "The old stones predate any chapel." } },
   },
-  // ── The Hollow Reliquary · Standard+ mimics · wearable forms: Lesser–Apex ──
+  // ── The Hollow Reliquary · Standard+ mimics · wearable forms: Lesser–Apex(Minor with Thimblewood) ──
   hollow_reliquary: {
     "Reliquary Vault":     { "lesser_reliquary":        { plausibility: 2, allure: 1, note: "Exactly what the vault was built to hold." },
                              "lesser_chest":            { plausibility: 1, note: "Offerings are stored in chests here." },
@@ -739,7 +740,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "lesser_reliquary":        { plausibility: 1, note: "Relics are often kept with the bones." } },
     "Bell Loft":           { "standard_wardrobe":       { plausibility: -2, note: "How would anyone get a wardrobe up into the bell loft?" } },
   },
-  // ── The Mimic Nest · Greater+ mimics · wearable forms: Standard–Apex ──
+  // ── The Mimic Nest · Greater+ mimics · wearable forms: Standard–Apex(Lesser with Thimblewood) ──
   mimic_nest: {
     "Foreman's Office":    { "standard_writing_desk":   { plausibility: 1, note: "The foreman's desk." },
                              "standard_grand_chair":    { plausibility: -1, note: "Far too grand for a warehouse office." } },
