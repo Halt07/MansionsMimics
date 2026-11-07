@@ -21,7 +21,7 @@
   --secondary-foreground: 45 30% 90%;
 
   --muted: 260 15% 18%;
-  --muted-foreground: 260 10% 55%;
+  --muted-foreground: 260 10% 62%;
 
   --accent: 280 40% 30%;
   --accent-foreground: 45 30% 90%;
@@ -68,7 +68,7 @@
   --secondary-foreground: 45 30% 90%;
 
   --muted: 260 15% 15%;
-  --muted-foreground: 260 10% 50%;
+  --muted-foreground: 260 10% 58%;
 
   --accent: 280 40% 28%;
   --accent-foreground: 45 30% 90%;
@@ -137,4 +137,147 @@
 .flavor-text {
   font-family: 'Crimson Text', serif;
   font-style: italic;
+}
+/* ============================================================
+   HUNT EFFECTS
+   The game only sets a few attributes and one variable:
+     --suspicion       on .hunt-stage (0–10)
+     data-suspicion    on .hunt-stage (same number, for exact matches)
+     data-fx / data-fx-turn  on .hunt-stage, from the latest turn's events
+   Everything below is CSS reacting to them.
+   ============================================================ */
+
+/* Red vignette that creeps in from the edges from suspicion 7 upward */
+.suspicion-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, hsla(0, 80%, 35%, 0.55) 100%);
+  opacity: clamp(0, calc((var(--suspicion, 0) - 6) / 4), 1);
+  transition: opacity 0.8s ease;
+}
+/* One step from discovery: the vignette breathes */
+[data-suspicion="9"] .suspicion-vignette {
+  animation: vignette-breathe 1.6s ease-in-out infinite;
+}
+@keyframes vignette-breathe {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
+}
+
+/* A botched strike: the panels jolt. Two identical keyframes alternate by turn parity, because
+   changing animation-name is what restarts a CSS animation without remounting anything. */
+[data-fx="shake"][data-fx-turn="0"] .fx-shake { animation: shake-a 0.4s ease-in-out; }
+[data-fx="shake"][data-fx-turn="1"] .fx-shake { animation: shake-b 0.4s ease-in-out; }
+@keyframes shake-a {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-0.4deg); }
+  40% { transform: translateX(5px) rotate(0.3deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes shake-b {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-0.4deg); }
+  40% { transform: translateX(5px) rotate(0.3deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Full-screen effect layer, remounted (by key) for each turn that has an effect */
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* A meal: jaws snap shut across the screen, teeth interlocking in the middle. Teeth are conic-gradient wedges tiled along the edge. */
+.fx-layer[data-fx="chomp"]::before,
+.fx-layer[data-fx="chomp"]::after {
+  --tooth: hsl(45, 35%, 86%);
+  --gum: hsl(340, 45%, 14%);
+  --tooth-size: 28px;
+  /* How far each jaw reaches when shut. 50vh meets in the middle; the extra half tooth lets
+     the teeth interlock. Each jaw is exactly this tall, so it stays attached to its edge. */
+  --jaw-reach: calc(50vh + var(--tooth-size) / 2);
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--jaw-reach);
+}
+.fx-layer[data-fx="chomp"]::before {
+  top: 0;
+  background:
+    conic-gradient(from -45deg at 50% 100%, var(--tooth) 90deg, transparent 0) bottom / var(--tooth-size) var(--tooth-size) repeat-x,
+    linear-gradient(var(--gum), var(--gum)) top / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
+  animation: jaw-top 0.55s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+.fx-layer[data-fx="chomp"]::after {
+  bottom: 0;
+  background:
+    conic-gradient(from 135deg at 50% 0%, var(--tooth) 90deg, transparent 0) calc(var(--tooth-size) / 2) top / var(--tooth-size) var(--tooth-size) repeat-x,
+    linear-gradient(var(--gum), var(--gum)) bottom / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
+  animation: jaw-bottom 0.55s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+@keyframes jaw-top {
+  0% { transform: translateY(-100%); }
+  45%, 55% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes jaw-bottom {
+  0% { transform: translateY(100%); }
+  45%, 55% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* Found out: a flare of torchlight that fades to dark red */
+.fx-layer[data-fx="discovered"] {
+  background: radial-gradient(ellipse at center, hsla(25, 95%, 55%, 0.35), hsla(0, 85%, 25%, 0.6));
+  animation: torchlight 1.4s ease-out forwards;
+}
+@keyframes torchlight {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Event log: each new line fades in as it arrives */
+.log-line {
+  animation: log-in 0.3s ease-out both;
+}
+@keyframes log-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   MOBILE ACTION BAR
+   Below lg, the hunt actions sit in a bar fixed to the bottom of the screen, with a
+   thin suspicion strip on top. From lg up it's the normal 2×2 grid.
+   ============================================================ */
+.action-bar-suspicion {
+  width: calc(var(--suspicion, 0) * 10%);
+  transition: width 0.7s ease, background-color 0.7s ease;
+  background: hsl(140, 60%, 45%);
+}
+[data-suspicion="4"] .action-bar-suspicion,
+[data-suspicion="5"] .action-bar-suspicion { background: hsl(48, 90%, 55%); }
+[data-suspicion="6"] .action-bar-suspicion,
+[data-suspicion="7"] .action-bar-suspicion { background: hsl(25, 90%, 55%); }
+[data-suspicion="8"] .action-bar-suspicion,
+[data-suspicion="9"] .action-bar-suspicion,
+[data-suspicion="10"] .action-bar-suspicion { background: hsl(0, 75%, 52%); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fx="shake"] .fx-shake,
+  .fx-layer[data-fx="chomp"]::before,
+  .fx-layer[data-fx="chomp"]::after,
+  [data-suspicion="9"] .suspicion-vignette,
+  .log-line {
+    animation: none;
+  }
 }
