@@ -80,7 +80,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
 
       {TIER_ORDER.flatMap(tier => { const forms = groupedForms[tier]; return forms ? [[tier, forms] as const] : []; }).map(([tier, forms]) => (
         <div key={tier}>
-          <p className={`text-[10px] font-cinzel uppercase tracking-widest mb-2 ${tierMeta[tier]?.color}`}>{tierLabel(tier)}</p>
+          <p className={`text-[11px] font-cinzel uppercase tracking-widest mb-2 ${tierMeta[tier]?.color}`}>{tierLabel(tier)}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {forms.map(form => {
               const isSelected = !!selected.find(f => f.id === form.id);
@@ -102,25 +102,25 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
                     <span className="font-cinzel">{form.name}</span>
                     <div className="flex gap-1 items-center">
                       {form.baseAllureModifier > 0 && (
-                        <span className="text-[9px] text-yellow-400">✦ Allure +{form.baseAllureModifier}</span>
+                        <span className="text-[10px] text-yellow-400">✦ Allure +{form.baseAllureModifier}</span>
                       )}
-                      {isSelected && <span className="text-[9px] text-primary">✓</span>}
+                      {isSelected && <span className="text-[10px] text-primary">✓</span>}
                     </div>
                   </div>
                   {form.variantOf && (
-                    <p className="text-[9px] text-teal-300 mb-0.5">🗝️ Variant of {baseName(form.variantOf)}</p>
+                    <p className="text-[10px] text-teal-300 mb-0.5">🗝️ Variant of {baseName(form.variantOf)}</p>
                   )}
-                  <p className="text-[10px] text-muted-foreground">{form.description}</p>
+                  <p className="text-[11px] text-muted-foreground">{form.description}</p>
                   <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                   {blockedByAboveRule && selected.length < MAX_FORMS && (
-                    <p className="text-[9px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
+                    <p className="text-[10px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
                   )}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {form.utilityTags.map(tag => (
-                      <span key={tag} className="text-[9px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>
+                      <span key={tag} className="text-[10px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>
                     ))}
                     {form.builtInTraits.map(t => (
-                      <span key={t} title="Built-in trait — this form always has it" className="text-[9px] border border-dashed border-primary/30 rounded px-1 text-primary/80">{t}</span>
+                      <span key={t} title="Built-in trait — this form always has it" className="text-[10px] border border-dashed border-primary/30 rounded px-1 text-primary/80">{t}</span>
                     ))}
                   </div>
                 </button>
@@ -129,8 +129,8 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
             {lockedByTier(tier).map(form => (
               <div key={form.id} className="text-left px-3 py-2.5 rounded-lg border border-dashed border-border bg-card/50 text-xs text-muted-foreground/50 cursor-not-allowed">
                 <span className="font-cinzel">🔒 {form.name}</span>
-                <span className="text-[9px] ml-1">— variant of {baseName(form.variantOf)}</span>
-                <p className="text-[10px] mt-0.5">Learn {(form.unlockedBy ?? []).join(", ").replace(/, ([^,]*)$/, " or $1")} to unlock.</p>
+                <span className="text-[10px] ml-1">— variant of {baseName(form.variantOf)}</span>
+                <p className="text-[11px] mt-0.5">Learn {(form.unlockedBy ?? []).join(", ").replace(/, ([^,]*)$/, " or $1")} to unlock.</p>
               </div>
             ))}
           </div>

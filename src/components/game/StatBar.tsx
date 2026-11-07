@@ -34,7 +34,7 @@ export default function StatBar({
       onMouseLeave={() => setShowTooltip(false)}
     >
       <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground font-cinzel tracking-wide uppercase text-[10px]">{label}</span>
+        <span className="text-muted-foreground font-cinzel tracking-wide uppercase text-[11px]">{label}</span>
         <span className={`font-bold ${penalty > 0 ? "text-red-400" : "text-foreground"}`}>
           {penalty > 0 ? `${effectiveValue} (${value}-${penalty})` : `${value}/${max}`}
         </span>
@@ -69,7 +69,7 @@ export default function StatBar({
       </div>
       {/* Tooltip */}
       {showTooltip && penalty > 0 && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 w-52 bg-card border border-border rounded px-2 py-1.5 text-[10px] text-muted-foreground pointer-events-none shadow-lg">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 w-52 bg-card border border-border rounded px-2 py-1.5 text-[11px] text-muted-foreground pointer-events-none shadow-lg">
           {massPenalty > 0 && (
             <>
               <span className="text-red-400 font-bold">–{massPenalty} mass penalty</span>

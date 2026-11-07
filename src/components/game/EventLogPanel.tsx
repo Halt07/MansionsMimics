@@ -39,7 +39,7 @@ export default function EventLogPanel({ events = [] }: { events?: GameEvent[] })
           {events.map((event, i) => {
             const style = EVENT_STYLES[event.type];
             return (
-              <div key={i} className={`text-xs flex gap-2 leading-relaxed ${i === events.length - 1 ? "opacity-100" : "opacity-70"}`}>
+              <div key={i} className={`log-line text-xs flex gap-2 leading-relaxed ${i === events.length - 1 ? "opacity-100" : "opacity-70"}`}>
                 <span className={`${style.color} shrink-0 font-bold`}>{style.prefix}</span>
                 <span className={`${style.color}`}>{event.message}</span>
               </div>

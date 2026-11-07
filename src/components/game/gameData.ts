@@ -1078,6 +1078,48 @@ export const SCHOLAR_NOTES_LINE = "The Doubting Scholar's notes are found later,
 export function isCat(creature: { name: string }): boolean {
   return /\bCat$/.test(creature.name);
 }
+/** Emoji for small creatures, matched on a word in the name. The first match wins. */
+const CREATURE_EMOJI: readonly [RegExp, string][] = [
+  [/\bZombie Cat\b/, "🐈‍⬛"],
+  [/\bCat\b/, "🐈"],
+  [/\bMouse\b/, "🐁"],
+  [/\bRat\b/, "🐀"],
+  [/\bBat\b/, "🦇"],
+  [/\b(Crow|Gull|Parrot|Pigeon)\b/, "🐦"],
+  [/\bDove\b/, "🕊️"],
+  [/\bEagle\b/, "🦅"],
+  [/\bGosling\b/, "🪿"],
+  [/\bBeetle\b/, "🪲"],
+  [/\bSpider\b/, "🕷️"],
+  [/\b(Eel|Adder)\b/, "🐍"],
+  [/\bWill-o'-Wisp\b/, "🔥"],
+  [/\bSprite\b/, "🧚"],
+  [/\bSkeleton\b/, "💀"],
+  [/\bZombie\b/, "🧟"],
+  [/\bHand\b/, "✋"],
+  [/\b(Imp|Familiar)\b/, "😈"],
+  [/\bHomunculus\b/, "🧸"],
+  [/\bShade\b/, "👻"],
+  [/\b(Hound|Dog)\b/, "🐕"],
+  [/\bBoar\b/, "🐗"],
+  [/\bFox\b/, "🦊"],
+  [/\bFrog\b/, "🐸"],
+  [/\bRabbit\b/, "🐇"],
+  [/\bOtter\b/, "🦦"],
+  [/\bWeasel\b/, "🦡"], // no weasel emoji; the badger is family
+  [/\bCrab\b/, "🦀"],
+  [/\bLamb\b/, "🐑"],
+  [/\bWarhorse\b/, "🐎"],
+  [/\bElemental\b/, "🌩️"],
+];
+/** Fallback when no word in the name matches. */
+export const CREATURE_EMOJI_FALLBACK = "🐾";
+
+/** The emoji shown for a small creature in the hunt. */
+export function creatureEmoji(name: string): string {
+  return CREATURE_EMOJI.find(([pattern]) => pattern.test(name))?.[1] ?? CREATURE_EMOJI_FALLBACK;
+}
+
 /** Shown once per cat per hunt when one is in the mimic's room. Nobody listens to the cat. */
 export const CAT_KNOWS_LINE = "The cat stares directly at you. It knows.";
 

@@ -204,7 +204,7 @@ export default function Home() {
                     <div className="text-2xl mb-1">🏆</div>
                     <h3 className="font-cinzel text-primary mb-0.5">{char.name}</h3>
                     <p className="text-xs text-muted-foreground">Mass {char.mass} · Apex Tier</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1 flavor-text italic">
+                    <p className="text-[11px] text-muted-foreground/60 mt-1 flavor-text italic">
                       PL {char.plausibility} · AD {char.adhesion} · PA {char.patience}
                     </p>
                   </CardContent>

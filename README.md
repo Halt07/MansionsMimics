@@ -62,6 +62,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/rooms.test.mjs` | Room modifiers: per-location keys, variant overrides, only wearable forms |
 | `tests/thimblewood.test.mjs` | Thimblewood: shrunk form tier, form range, penalties, forms kept |
 | `tests/easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
+| `tests/creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |
 
 Each test file default-exports `async function ({ gameData, db, storage, ok, log })`; see
 `tests/run.mjs` for details. Some checks are statistical (they roll dice thousands of times and

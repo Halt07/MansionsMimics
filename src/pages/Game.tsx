@@ -1,4 +1,4 @@
-import { useState, useEffect, useEffectEvent, useCallback, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useCallback, useRef, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -15,7 +15,7 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
-  isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
+  isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
@@ -214,8 +214,12 @@ export default function Game() {
     }).finally(() => setLoading(false));
   }, [characterId]);
 
+  // Every event is stamped with the turn it happened in, so the
+  // screen effects can react to what the latest turn did. beginTurn() starts a new one.
+  const turnRef = useRef(0);
+  const beginTurn = () => { turnRef.current += 1; };
   const addEvent = useCallback((type: GameEventType, message: string) => {
-    setEvents(prev => [...prev, { turn: prev.length + 1, type, message }]);
+    setEvents(prev => [...prev, { turn: turnRef.current, type, message }]);
   }, []);
 
   // Save changes to the character. The game never waits on this; a failed save is
@@ -244,6 +248,7 @@ export default function Game() {
   };
 
   const confirmRoom = (room: RoomName, loc: HuntLocation) => {
+    beginTurn();
     // Rare locations tell their own story: no bounty hunters or rival mimics there
     const bounty = !loc.rare && shouldTriggerBountyHunt(character?.mass ?? 0);
     // Rival mimic: ~1 in 7 chance, only on non-bounty hunts, Greater tier+
@@ -492,6 +497,7 @@ export default function Game() {
 
   const doRelocate = (targetRoom: RoomName) => {
     if (!character || !location) return;
+    beginTurn();
     stillTurnsRef.current = 0;
     setShowMovePanel(false);
     addEvent("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
@@ -537,6 +543,7 @@ export default function Game() {
 
   const doAllureTurn = () => {
     if (!character || !location || !mimicRoom) return;
+    beginTurn();
     const newCount = actionCount + 1;
     setActionCount(newCount);
     setActing(true);
@@ -963,11 +970,13 @@ export default function Game() {
   };
 
   const doStrikeTurn = () => {
+    beginTurn();
     if (resolveStrike()) advanceShip();
   };
 
   const doConsumeCreature = (creature: SmallCreature) => {
     if (!character) return;
+    beginTurn();
     addEvent("consume", `You snap up the ${creature.name} — a modest feast. +${creature.ap} AP.`);
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
     setActionCount(0); // Eating resets the stagnation counter
@@ -1005,6 +1014,7 @@ export default function Game() {
     setParty(prev => prev.map(a => a.id === devotee.id
       ? { ...a, name: zealot, isAlive: false, isAttracted: false, isConverted: true }
       : a));
+    beginTurn();
     setCeremonyRunning(true);
     setActing(true);
     // Counted straight away, so leaving mid-ceremony can't lose it
@@ -1062,6 +1072,7 @@ export default function Game() {
 
   const doChangeForm = (formIndex: number) => {
     if (!character) return;
+    beginTurn();
     stillTurnsRef.current = 0;
     const formsUsed = phase === "hunt"
       ? withFormUsed(character.formsUsed, character.forms[formIndex]?.formId)
@@ -1087,6 +1098,7 @@ export default function Game() {
 
   const doUpdateAppearance = (newAppearance: Appearance) => {
     if (!character) return;
+    beginTurn();
     // Thimblewood changes the mimic's size: forms that no longer fit are dropped, and (like a
     // tier-up) the form menu opens so new ones can be chosen. The editor warned with a toast.
     const resized = hasMagic(newAppearance, "Thimblewood") !== hasMagic(character.currentAppearance, "Thimblewood");
@@ -1127,6 +1139,7 @@ export default function Game() {
 
   const doWaitTurn = () => {
     if (!character || !location) return;
+    beginTurn();
     // Increment action counter
     const newCount = actionCount + 1;
     setActionCount(newCount);
@@ -1216,6 +1229,7 @@ export default function Game() {
   // to upgrade again you have to reach the AP threshold again.
   const handleEvolution = (choice: UpgradeChoice) => {
     if (!character || upgradeChosenRef.current) return;
+    beginTurn();
     let updates: Partial<MimicCharacter> = {};
     const cfg = TIER_CONFIG[character.tier];
 
@@ -1368,6 +1382,15 @@ export default function Game() {
   const cfg = character ? TIER_CONFIG[character.tier] : null;
   const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
 
+  // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):
+  // jaws for a meal, a jolt when prey gets away, torchlight when you're found out.
+  const latestTurn = events.at(-1)?.turn ?? 0;
+  const latestTypes = new Set(events.filter(e => e.turn === latestTurn).map(e => e.type));
+  const fx = phase === "gameover" && gameoverReason === "discovered" ? "discovered"
+    : latestTypes.has("consume") ? "chomp"
+    : latestTypes.has("escape") ? "shake"
+    : null;
+
   // Filter locations by minTier and minMass
   const availableLocations = character
     ? LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation))
@@ -1411,7 +1434,16 @@ export default function Game() {
   ) : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={`hunt-stage min-h-screen bg-background ${phase === "hunt" ? "pb-28 lg:pb-0" : ""}`}
+      style={{ "--suspicion": suspicion } as CSSProperties}
+      data-suspicion={suspicion}
+      data-fx={fx ?? undefined}
+      data-fx-turn={latestTurn % 2}
+    >
+      {phase === "hunt" && <div className="suspicion-vignette" aria-hidden />}
+      {/* Remounted for each turn with an effect, which replays its animation */}
+      {fx && fx !== "shake" && <div key={`${latestTurn}-${fx}`} className="fx-layer" data-fx={fx} aria-hidden />}
       {MassDecayBanner}
       {/* Top bar */}
       <div className="border-b border-border bg-card/50 px-4 py-2 flex items-center justify-between">
@@ -1421,7 +1453,7 @@ export default function Game() {
           </Link>
           <div className="h-4 w-px bg-border" />
           <span className="font-cinzel text-foreground text-sm">{character.name}</span>
-          <Badge variant="outline" className="border-primary/30 text-primary text-[10px]">{character.tier}</Badge>
+          <Badge variant="outline" className="border-primary/30 text-primary text-[11px]">{character.tier}</Badge>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setShowSheet(!showSheet)} className="text-muted-foreground hover:text-foreground text-xs gap-1">
@@ -1450,7 +1482,7 @@ export default function Game() {
               <div className="flex items-center justify-between">
                 <span className="font-cinzel text-xs text-muted-foreground uppercase tracking-wide">Active Form</span>
                 {activeForm ? (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 border text-[10px]">{activeForm.name}</Badge>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 border text-[11px]">{activeForm.name}</Badge>
                 ) : (
                   <span className="text-xs text-destructive">None</span>
                 )}
@@ -1459,7 +1491,7 @@ export default function Game() {
                 <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
               )}
               {activeForm && activeForm.builtInTraits.length > 0 && (
-                <p className="text-[10px] text-muted-foreground mb-1">
+                <p className="text-[11px] text-muted-foreground mb-1">
                   Built-in: <span className="text-primary">{activeForm.builtInTraits.join(", ")}</span>
                 </p>
               )}
@@ -1474,14 +1506,14 @@ export default function Game() {
                     {mats.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {mats.map(m => (
-                          <span key={m} className="text-[9px] bg-accent/20 text-accent-foreground rounded px-1.5 py-0.5 border border-accent/20">{m}</span>
+                          <span key={m} className="text-[10px] bg-accent/20 text-accent-foreground rounded px-1.5 py-0.5 border border-accent/20">{m}</span>
                         ))}
                       </div>
                     )}
                     {traits.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {traits.map(t => (
-                          <span key={t} className="text-[9px] bg-primary/10 text-primary/80 rounded px-1.5 py-0.5 border border-primary/20">{t}</span>
+                          <span key={t} className="text-[10px] bg-primary/10 text-primary/80 rounded px-1.5 py-0.5 border border-primary/20">{t}</span>
                         ))}
                       </div>
                     )}
@@ -1510,18 +1542,18 @@ export default function Game() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
+          <Card className="fx-shake bg-card border-border">
             <CardContent className="p-4 space-y-3">
               <SuspicionMeter value={suspicion} max={10} />
               <div className="border-t border-border pt-3">
                 <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-muted-foreground font-cinzel uppercase tracking-wide text-[10px]">Assimilation</span>
+                  <span className="text-muted-foreground font-cinzel uppercase tracking-wide text-[11px]">Assimilation</span>
                   <span className="text-foreground font-bold">{character.assimilationPoints} AP</span>
                 </div>
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-accent rounded-full transition-all duration-700" style={{ width: `${apProgress}%` }} />
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                <p className="text-[11px] text-muted-foreground mt-1 text-right">
                   {`${character.assimilationPoints} / ${cfg?.apToEvolve} AP`}
                 </p>
               </div>
@@ -1541,20 +1573,20 @@ export default function Game() {
                 <CardContent className="p-3 space-y-1">
                   <p className="font-cinzel text-xs text-orange-400/90">{isNest ? "🕸 The Nest" : "⚠ Rival Mimic"}</p>
                   {isNest && (
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       Mimics devoured: {devoured}{elder && !elder.revealed ? " · The Elder still hides." : ""}
                     </p>
                   )}
                   {exposed.map(r => (
-                    <p key={r.id} className="text-[10px] text-orange-400/80">
+                    <p key={r.id} className="text-[11px] text-orange-400/80">
                       {r.kind === "elder" ? "The Elder Mimic" : `A ${RIVAL_STATS[r.kind].name}`} is exposed in the <span className="font-bold">{r.room}</span>. Strike to devour it!
                     </p>
                   ))}
                   {tracked && (
-                    <p className="text-[10px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to where they vanished.</p>
+                    <p className="text-[11px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to where they vanished.</p>
                   )}
                   {!tracked && exposed.length === 0 && (
-                    <p className="text-[10px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
+                    <p className="text-[11px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
                   )}
                 </CardContent>
               </Card>
@@ -1579,13 +1611,13 @@ export default function Game() {
           {phase === "hunt" && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
             <div className={`px-3 py-2 rounded border text-xs ${ACTION_LIMIT - actionCount <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
               <span className="font-cinzel">⏳ {ACTION_LIMIT - actionCount} actions remaining</span>
-              <p className="text-[10px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
+              <p className="text-[11px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
             </div>
           )}
 
           {/* Party status */}
           {phase !== "setup" && party.length > 0 && (
-            <Card className="bg-card border-border">
+            <Card className="fx-shake bg-card border-border">
               <CardHeader className="pb-1 pt-3 px-4">
                 <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
                   Party ({activeAdventurers.length} active / {consumedCount} consumed)
@@ -1610,17 +1642,17 @@ export default function Game() {
                         {adv.name}
                       </span>
                       <div className="flex items-center gap-1">
-                        {fled && <span className="text-[9px] text-muted-foreground">Fled</span>}
-                        {disappeared && <span className="text-[9px] text-purple-400/60">Disappeared</span>}
-                        {adv.isConsumed && <span className="text-[9px] text-muted-foreground">Consumed</span>}
+                        {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
+                        {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
+                        {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
                         {adv.isAttracted && !adv.isConsumed && (
-                          <Badge className="text-[9px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
+                          <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
                         )}
                         {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
-                          <span className="text-[9px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
+                          <span className="text-[10px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
                         )}
                         {dist !== null && (
-                          <span title={adv.location} className={`text-[9px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
+                          <span title={adv.location} className={`text-[10px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
                             <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
                           </span>
                         )}
@@ -1642,7 +1674,7 @@ export default function Game() {
               <h2 className="font-cinzel text-xl text-foreground mb-1">Choose Your Hunting Ground</h2>
               <p className="text-muted-foreground text-sm mb-1 flavor-text italic">Where will you lie in wait?</p>
               {character && TIER_ORDER.indexOf(character.tier) < TIER_ORDER.indexOf("Grand") && (
-                <p className="text-[10px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
+                <p className="text-[11px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...availableLocations].sort((a, b) => Number(!!b.rare) - Number(!!a.rare)).map(loc => (
@@ -1656,7 +1688,7 @@ export default function Game() {
                     <CardContent className="p-4">
                       {character && <BurnBadge huntsLeft={locationBurn(character, loc.id)} />}
                       {loc.rare && character?.rareLocation && (
-                        <p className="text-[10px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
+                        <p className="text-[11px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
                           ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
                         </p>
                       )}
@@ -1664,11 +1696,11 @@ export default function Game() {
                       <p className="text-xs text-muted-foreground mb-2">{loc.description}</p>
                       <p className="flavor-text text-[11px] text-muted-foreground/70 italic mb-3 line-clamp-2">{loc.flavorText}</p>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                        <span className="text-[11px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
                           {loc.partySize[0]}–{loc.partySize[1]} adventurers
                         </span>
                         {loc.advantageTags.slice(0, 2).map(t => (
-                          <span key={t} className="text-[10px] text-primary border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5">{t}</span>
+                          <span key={t} className="text-[11px] text-primary border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5">{t}</span>
                         ))}
                       </div>
                     </CardContent>
@@ -1695,7 +1727,7 @@ export default function Game() {
                     >
                       <CardContent className="p-4">
                         <h3 className="font-cinzel text-sm text-foreground group-hover:text-primary transition-colors mb-1">{room}</h3>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[11px] text-muted-foreground">
                           Adjacent: {adjacent.join(", ")}
                         </p>
                       </CardContent>
@@ -1775,7 +1807,7 @@ export default function Game() {
               {/* Form switcher panel */}
               {showFormPanel && character.forms.length > 0 && (
                 <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-2">
-                  <p className="text-[10px] text-muted-foreground font-cinzel uppercase tracking-widest">Select Active Form (costs 1 suspicion)</p>
+                  <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest">Select Active Form (costs 1 suspicion)</p>
                   {character.forms.map((ref, i) => {
                     const form = ALL_FORMS.find(f => f.id === ref.formId);
                     if (!form) return null;
@@ -1792,11 +1824,11 @@ export default function Game() {
                         <div className="flex items-center justify-between">
                           <span className="font-cinzel">{form.name}</span>
                           <div className="flex gap-1">
-                            <span className="text-[9px] border border-border rounded px-1">{form.tier}</span>
-                            {isActive && <span className="text-[9px] text-primary">Active</span>}
+                            <span className="text-[10px] border border-border rounded px-1">{form.tier}</span>
+                            {isActive && <span className="text-[10px] text-primary">Active</span>}
                           </div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{form.description}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
                         <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                       </button>
                     );
@@ -1822,7 +1854,7 @@ export default function Game() {
                 );
                 return (
                   <div className="bg-muted/20 border border-blue-400/20 rounded-lg p-3 space-y-2">
-                    <p className="text-[10px] text-blue-400/70 font-cinzel uppercase tracking-widest">Relocate — Choose Destination</p>
+                    <p className="text-[11px] text-blue-400/70 font-cinzel uppercase tracking-widest">Relocate — Choose Destination</p>
                     {openRooms.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic">There are too many people nearby — moving now would be too risky.</p>
                     ) : (
@@ -1833,7 +1865,7 @@ export default function Game() {
                           className="w-full text-left px-3 py-2 rounded border border-border text-xs text-muted-foreground hover:border-blue-400/40 hover:text-foreground transition-all"
                         >
                           <span className="font-cinzel">{room}</span>
-                          <span className="text-[9px] text-muted-foreground ml-2">(+1 suspicion)</span>
+                          <span className="text-[10px] text-muted-foreground ml-2">(+1 suspicion)</span>
                         </button>
                       ))
                     )}
@@ -1841,8 +1873,10 @@ export default function Game() {
                 );
               })()}
 
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Action buttons: a bar fixed to the bottom of the screen below lg, a 2×2 grid above */}
+              <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 backdrop-blur lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
+              <div className="h-1 bg-muted lg:hidden" aria-hidden><div className="action-bar-suspicion h-full" /></div>
+              <div className="grid grid-cols-4 gap-2 p-2 lg:grid-cols-2 lg:gap-3 lg:p-0">
                 <Button
                   onClick={() => {
                     const inMyRoom = activeAdventurers.filter(a => a.location === mimicRoom);
@@ -1853,42 +1887,43 @@ export default function Game() {
                   }}
                   disabled={acting || huntOver || activeAdventurers.some(a => a.location === mimicRoom)}
                   variant="outline"
-                  className="h-auto py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
+                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
                 >
                   <MoveRight className="w-5 h-5 text-muted-foreground" />
                   <span className="text-xs font-cinzel">Relocate</span>
-                  <span className="text-[10px] text-muted-foreground">Slip to empty room</span>
+                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Slip to empty room</span>
                 </Button>
                 <Button
                   onClick={doAllureTurn}
                   disabled={acting || huntOver || activeAdventurers.length === 0}
                   variant="outline"
-                  className="h-auto py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
+                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
                 >
                   <Zap className="w-5 h-5 text-yellow-400/70" />
                   <span className="text-xs font-cinzel">Lure</span>
-                  <span className="text-[10px] text-muted-foreground">Attract adventurers</span>
+                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Attract adventurers</span>
                 </Button>
                 <Button
                   onClick={doStrikeTurn}
                   disabled={acting || huntOver || (!party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) && !rivalInRoom(rivals, mimicRoom)?.revealed)}
-                  className="h-auto py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
+                  className="h-auto py-2 lg:py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
                   variant="ghost"
                 >
                   <Shield className="w-5 h-5" />
                   <span className="text-xs font-cinzel">Strike!</span>
-                  <span className="text-[10px]">Consume attracted prey</span>
+                  <span className="hidden lg:inline text-[11px]">Consume attracted prey</span>
                 </Button>
                 <Button
                   onClick={doWaitTurn}
                   disabled={acting || huntOver}
                   variant="outline"
-                  className="h-auto py-3 flex-col gap-1 border-border hover:border-purple-400/30"
+                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-purple-400/30"
                 >
                   <RefreshCw className="w-5 h-5 text-muted-foreground" />
                   <span className="text-xs font-cinzel">Wait</span>
-                  <span className="text-[10px] text-muted-foreground">Rest & reduce suspicion</span>
+                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Rest & reduce suspicion</span>
                 </Button>
+              </div>
               </div>
 
               {/* Small creatures — only show those currently in mimic's room */}
@@ -1897,7 +1932,7 @@ export default function Game() {
                 if (inRoom.length === 0) return null;
                 return (
                   <div className="bg-muted/10 border border-border rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground font-cinzel uppercase tracking-widest mb-2">
+                    <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest mb-2">
                       Creatures of Opportunity
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1909,7 +1944,7 @@ export default function Game() {
                           className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-border bg-card hover:border-primary/40 hover:text-primary transition-all text-muted-foreground"
                           title={creature.description}
                         >
-                          🐀 {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
+                          {creatureEmoji(creature.name)} {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
                         </button>
                       ))}
                     </div>
@@ -2025,7 +2060,7 @@ export default function Game() {
 
           {/* Event log */}
           {phase !== "setup" && (
-            <div className="h-64">
+            <div className="fx-shake h-64">
               <EventLogPanel events={events} />
             </div>
           )}
