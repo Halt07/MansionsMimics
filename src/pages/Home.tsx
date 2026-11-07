@@ -7,16 +7,40 @@ import { TIER_ORDER, TIER_CONFIG } from "../components/game/gameData";
 import { AchievementBadges } from "../components/game/Achievements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, BookOpen, Sword, User, Trophy } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Eye, BookOpen, Sword, User, Trophy, Trash2 } from "lucide-react";
+
+/** Up to this many mimics sit in a grid; any more and the row scrolls sideways. */
+const GRID_MAX = 5;
 
 export default function Home() {
   const [characters, setCharacters] = useState<MimicCharacter[]>([]);
   const [peakMimics, setPeakMimics] = useState<MimicCharacter[]>([]);
   const [loading, setLoading] = useState(true);
+  // The mimic waiting on delete confirmation, if any
+  const [pendingDelete, setPendingDelete] = useState<MimicCharacter | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const { id, name } = pendingDelete;
+    db.entities.MimicCharacter.delete(id).then(() => {
+      setCharacters(prev => prev.filter(c => c.id !== id));
+      setPeakMimics(prev => prev.filter(c => c.id !== id));
+      setDeleteError(null);
+    }).catch(err => {
+      console.error("Failed to delete mimic:", err);
+      setDeleteError(`Could not delete ${name}: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    setPendingDelete(null);
+  };
 
   useEffect(() => {
     Promise.all([
-      db.entities.MimicCharacter.list("-created_date", 5),
+      db.entities.MimicCharacter.list("-created_date"),
       db.entities.MimicCharacter.filter({ apexPeakReached: true }, "-updated_date", 3),
     ]).then(([chars, peaks]) => {
       setCharacters(chars);
@@ -103,17 +127,29 @@ export default function Home() {
             <h2 className="font-cinzel text-2xl text-foreground mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-primary" /> Your Mimics
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deleteError && <p className="text-xs text-destructive mb-3">{deleteError}</p>}
+            <div className={characters.length > GRID_MAX
+              ? "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4"
+              : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"}>
               {characters.map(char => (
-                <Card key={char.id} className="bg-card border-border hover:border-primary/30 transition-colors cursor-pointer group">
+                <Card key={char.id} className={`bg-card border-border hover:border-primary/30 transition-colors group
+                  ${characters.length > GRID_MAX ? "w-72 shrink-0 snap-start" : ""}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors">{char.name}</h3>
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors min-w-0 truncate">{char.name}</h3>
+                      <div className="flex items-center gap-1 shrink-0">
                         <AchievementBadges character={char} />
                         <span className="text-xs px-2 py-0.5 rounded border border-primary/30 bg-primary/5 text-primary font-cinzel">
                           {char.tier}
                         </span>
+                        <button
+                          onClick={() => setPendingDelete(char)}
+                          title={`Delete ${char.name}`}
+                          aria-label={`Delete ${char.name}`}
+                          className="p-1 rounded text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mb-3">
@@ -133,6 +169,24 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        <AlertDialog open={!!pendingDelete} onOpenChange={open => { if (!open) setPendingDelete(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-cinzel">Delete {pendingDelete?.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This mimic, its forms, its learned materials and its achievements will be gone for good.
+                Adventurers only it has met will also drop out of the Codex. This can&apos;t be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Hall of Fame */}
         {peakMimics.length > 0 && (

@@ -5,7 +5,7 @@ import type { GameEvent, GameEventType } from "./vocabulary";
 // A Record over every event type, so a new type can't be added without a style
 const EVENT_STYLES: Record<GameEventType, { prefix: string; color: string }> = {
   attack:   { prefix: "⚔", color: "text-red-400" },
-  consume:  { prefix: "🔒", color: "text-primary" },
+  consume:  { prefix: "🍗", color: "text-primary" },
   stealth:  { prefix: "👁", color: "text-muted-foreground" },
   allure:   { prefix: "✨", color: "text-yellow-400" },
   escape:   { prefix: "💨", color: "text-orange-400" },

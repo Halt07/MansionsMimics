@@ -1074,7 +1074,12 @@ export default function Game() {
       addEvent("info", `You flow seamlessly into the form of a ${newForm?.name || "new shape"} — the Feywood makes the shift effortless.`);
     } else {
       addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
-      setSuspicion(s => Math.min(s + 1, 10)); // shifting takes time, slight suspicion risk
+      // Shifting takes time, slight suspicion risk
+      setSuspicion(s => {
+        const next = Math.min(s + 1, 10);
+        if (next >= 10) triggerHuntEnd();
+        return next;
+      });
     }
     applyBehaviorReactions("formChange");
     setShowFormPanel(false);
