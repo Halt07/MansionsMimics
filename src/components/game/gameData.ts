@@ -28,6 +28,7 @@ export * from "./vocabulary";
 export * from "./mimicData";
 export * from "./adventurerData";
 export * from "./locationData";
+export * from "./roomLayouts";
 
 // ============================================================
 // ROOM HELPERS

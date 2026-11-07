@@ -40,6 +40,7 @@ import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
 import BurnBadge from "../components/game/BurnBadge";
+import RoomMap from "../components/game/RoomMap";
 import { AchievementBanners } from "../components/game/Achievements";
 
 // ── Game-screen state types ──
@@ -1507,14 +1508,9 @@ export default function Game() {
                       <div className="flex flex-wrap gap-1">
                         {mats.map(m => (
                           <span key={m} className="text-[10px] bg-accent/20 text-accent-foreground rounded px-1.5 py-0.5 border border-accent/20">{m}</span>
-                        ))}
-                      </div>
-                    )}
-                    {traits.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {traits.map(t => (
+                        ))}{traits.length > 0 && (<>{traits.map(t => (
                           <span key={t} className="text-[10px] bg-primary/10 text-primary/80 rounded px-1.5 py-0.5 border border-primary/20">{t}</span>
-                        ))}
+                        ))}</>)}
                       </div>
                     )}
                   </div>
@@ -1663,6 +1659,29 @@ export default function Game() {
               </CardContent>
             </Card>
           )}
+
+          {/* Room map */}
+          {phase !== "setup" && location && mimicRoom && party.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2 pt-3 px-4">
+                <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
+                  {location.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <RoomMap
+                  location={location}
+                  mimicRoom={mimicRoom}
+                  lureRange={getAllureRange()}
+                  adventurers={activeAdventurers}
+                  creatures={smallCreatures.filter(c => !c.isConsumed)}
+                  rivals={rivals}
+                  formName={activeForm?.name}
+                />
+              </CardContent>
+            </Card>
+          )}
+
         </div>
 
         {/* Center: Main action area */}

@@ -23,6 +23,7 @@ The game's content lives in `src/components/game/`:
 | `mimicData.ts` | Forms, appearance limits, starting stats, tier config, magic effects, sicknesses |
 | `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks |
 | `locationData.ts` | Hunting grounds, rooms, local creatures, room/form modifiers |
+| `roomLayouts.ts` | Where each location's rooms sit on the hunt's floor plan (doors and stairs follow from the room graph) |
 | `gameData.ts` | The rules (dice, checks, bites, spawning, behavior reactions…). Re-exports all of the above, so the rest of the app imports from here |
 
 Names are type-checked everywhere, so a misspelled material, trait, form, location or room is a compile error.
@@ -60,6 +61,7 @@ npm test -- --verbose    # also print each passing check and extra info
 | `tests/variants.test.mjs` | Variant forms: unlocks, availability, shared burns, Curiosity Cabinet |
 | `tests/scents.test.mjs` | Scent traits: all learned, slots by tier, who reacts, allure |
 | `tests/rooms.test.mjs` | Room modifiers: per-location keys, variant overrides, only wearable forms |
+| `tests/roomLayouts.test.mjs` | Floor plans: one cell per room, doors only between connected rooms, every connection shown |
 | `tests/thimblewood.test.mjs` | Thimblewood: shrunk form tier, form range, penalties, forms kept |
 | `tests/easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
 | `tests/creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |

@@ -281,3 +281,147 @@
     animation: none;
   }
 }
+
+/* ============================================================
+   ROOM MAP
+   The hunt's floor plan (RoomMap.tsx). Rooms sit on a grid; the component sets
+     data-here         on your room
+     data-in-range     on other rooms within lure range
+     data-door-right / data-door-down  where a door leads to the next room
+   ============================================================ */
+.room-map {
+  --room-gap: 10px;
+  --door-width: 14px;
+  display: grid;
+  gap: var(--room-gap);
+}
+.room-cell {
+  position: relative;
+  min-height: 3.75rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--muted) / 0.25);
+  transition: border-color 0.4s ease, background-color 0.4s ease, box-shadow 0.4s ease;
+}
+.room-cell[data-in-range] {
+  border-color: hsl(48 90% 55% / 0.35);
+  background: hsl(48 90% 55% / 0.06);
+}
+.room-cell[data-here] {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.25);
+}
+
+/* Doors: a short passage across the gap to the next room */
+.room-cell[data-door-right]::before,
+.room-cell[data-door-down]::after {
+  content: "";
+  position: absolute;
+  background: hsl(var(--border));
+}
+.room-cell[data-door-right]::before {
+  top: 50%;
+  left: 100%;
+  width: calc(var(--room-gap) + 2px);
+  height: var(--door-width);
+  transform: translateY(-50%);
+}
+.room-cell[data-door-down]::after {
+  left: 50%;
+  top: 100%;
+  width: var(--door-width);
+  height: calc(var(--room-gap) + 2px);
+  transform: translateX(-50%);
+}
+
+.room-name {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  line-height: 1.2;
+  color: hsl(var(--muted-foreground));
+}
+.room-cell[data-here] .room-name {
+  color: hsl(var(--primary));
+}
+.room-occupants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 0.3rem;
+}
+.room-stairs {
+  margin-top: 0.25rem;
+  font-size: 10px;
+  line-height: 1.2;
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+/* Markers. They pop in whenever someone arrives, since moving rooms remounts them. */
+.occupant {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1;
+  animation: occupant-in 0.3s ease-out both;
+}
+.occupant-you {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 700;
+}
+/* Each adventurer type tints its marker: set --type-h (hue) and --type-s (saturation) below.
+   A test checks every type has a rule here. */
+.occupant-adventurer {
+  --type-h: 260;
+  --type-s: 10%;
+  border: 1px solid hsl(var(--type-h) var(--type-s) 42%);
+  background: hsl(var(--type-h) var(--type-s) 22%);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+.occupant-adventurer[data-type="Rogue"]          { --type-h: 220; --type-s: 12%; }
+.occupant-adventurer[data-type="Assassin"]       { --type-h: 350; --type-s: 45%; }
+.occupant-adventurer[data-type="Warrior"]        { --type-h: 12;  --type-s: 60%; }
+.occupant-adventurer[data-type="Paladin"]        { --type-h: 205; --type-s: 50%; }
+.occupant-adventurer[data-type="Cleric"]         { --type-h: 40;  --type-s: 12%; }
+.occupant-adventurer[data-type="Wizard"]         { --type-h: 240; --type-s: 50%; }
+.occupant-adventurer[data-type="Artificer"]      { --type-h: 28;  --type-s: 55%; }
+.occupant-adventurer[data-type="Bard"]           { --type-h: 320; --type-s: 50%; }
+.occupant-adventurer[data-type="Ranger"]         { --type-h: 80;  --type-s: 40%; }
+.occupant-adventurer[data-type="Druid"]          { --type-h: 145; --type-s: 50%; }
+.occupant-adventurer[data-type="Hunter"]         { --type-h: 25;  --type-s: 30%; }
+.occupant-adventurer[data-type="Commoner"]       { --type-h: 35;  --type-s: 8%;  }
+.occupant-adventurer[data-type="Nobility"]       { --type-h: 275; --type-s: 45%; }
+.occupant-adventurer[data-type="Undead"]         { --type-h: 170; --type-s: 25%; }
+.occupant-adventurer[data-type="Fey"]            { --type-h: 295; --type-s: 65%; }
+.occupant-adventurer[data-type="Construct"]      { --type-h: 195; --type-s: 10%; }
+.occupant-adventurer[data-type="Beast"]          { --type-h: 15;  --type-s: 35%; }
+.occupant-adventurer[data-type="AnimalCompanion"] { --type-h: 100; --type-s: 25%; }
+.occupant-adventurer[data-type="Familiar"]       { --type-h: 265; --type-s: 30%; }
+.occupant-adventurer[data-attracted] {
+  border-color: hsl(48 90% 55% / 0.6);
+  color: hsl(48 90% 60%);
+}
+.occupant-rival {
+  border: 1px solid hsl(25 90% 55% / 0.6);
+  background: hsl(25 90% 55% / 0.12);
+}
+.occupant-creature {
+  min-width: 0;
+  padding: 0;
+  font-size: 13px;
+}
+@keyframes occupant-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .occupant { animation: none; }
+}
