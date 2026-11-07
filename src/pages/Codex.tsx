@@ -11,7 +11,8 @@ import {
   ACTION_LIMIT} from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
-import { Card, CardContent } from "@/components/ui/card";
+import { ChompCard } from "@/components/game/CardChomp";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
@@ -187,7 +188,7 @@ export default function Codex() {
                 {TIER_ORDER.map((tier) => {
                 const cfg = TIER_CONFIG[tier];
                 return (
-                  <Card key={tier} className="bg-card border-border">
+                  <ChompCard key={tier} className="bg-card border-border">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div>
@@ -201,7 +202,7 @@ export default function Codex() {
                         </div>
                         <p className="flavor-text text-sm text-muted-foreground italic">{cfg.lore}</p>
                       </CardContent>
-                    </Card>);
+                    </ChompCard>);
 
               })}
               </div>
@@ -254,11 +255,11 @@ export default function Codex() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {MASTER_FORMS[selectedTier].map((form) =>
-              <Card key={form.id} className="bg-card border-border">
+              <ChompCard key={form.id} speed="slow" className="bg-card border-border">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-1">
                         <h3 className="font-cinzel text-foreground">{form.name}</h3>
-                        <Badge variant="outline" className="text-[10px] border-primary/20 text-primary shrink-0 ml-2">
+                        <Badge variant="outline" className="text-[11px] border-primary/20 text-primary shrink-0 ml-2">
                           +{form.baseAllureModifier} Allure
                         </Badge>
                       </div>
@@ -270,20 +271,20 @@ export default function Codex() {
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
                       <div className="flex flex-wrap gap-1 mb-2">
                         {form.utilityTags.map((t) =>
-                    <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{t}</span>
+                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{t}</span>
                     )}
                         {form.builtInTraits.map((t) =>
-                    <span key={t} title="Built-in trait" className="text-[9px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{t}</span>
+                    <span key={t} title="Built-in trait" className="text-[10px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{t}</span>
                     )}
                       </div>
                       <div className="border-t border-border pt-2 mt-2">
-                        <p className="text-[10px] text-muted-foreground font-cinzel uppercase tracking-wide mb-1">Potential Flaws</p>
+                        <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-wide mb-1">Potential Flaws</p>
                         {form.flawProfiles.slice(0, 2).map((f, i) =>
                     <p key={i} className="text-[11px] text-muted-foreground/70 italic">• {f.description}</p>
                     )}
                       </div>
                     </CardContent>
-                  </Card>
+                  </ChompCard>
               )}
               </div>
             </div>
@@ -383,7 +384,7 @@ export default function Codex() {
               <p className="text-sm text-muted-foreground pt-2">Structural and aura traits can't be learned or applied — they're built into forms, so you have them only while wearing a form that includes them.</p>
               {Object.entries(UNLEARNED_TRAITS).map(([category, traits]) =>
             <div key={category}>
-                  <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category} <span className="normal-case tracking-normal text-[10px]">(built into forms)</span></h3>
+                  <h3 className="font-cinzel text-sm text-muted-foreground uppercase tracking-widest mb-2">{category} <span className="normal-case tracking-normal text-[11px]">(built into forms)</span></h3>
                   <div className="flex flex-wrap gap-2">
                     {traits.map((t) =>
                 <Badge key={t} variant="outline" className="border-dashed border-border text-muted-foreground hover:text-foreground transition-colors">{t}</Badge>
@@ -430,7 +431,7 @@ export default function Codex() {
             <Collapsible key={adv.name} title={<>
                 {level === "unknown" ? "???" : `${adv.name} (${adv.type})${adv.companion ? " ✦" : ""}`}
                 {adv.minTier && (
-                  <span className="ml-2 align-middle text-[10px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
+                  <span className="ml-2 align-middle text-[11px] font-sans px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
                     {adv.minTier}+{level !== "unknown" && adv.minMass ? ` · Mass ${adv.minMass}+` : ""}{level !== "unknown" && adv.wholeMealMass ? ` · Consumed whole at ${adv.wholeMealMass}` : ""}
                   </span>
                 )}
@@ -457,7 +458,7 @@ export default function Codex() {
                       <p className="text-xs text-muted-foreground mt-3 mb-1">Attracted To</p>
                       <div className="flex flex-wrap gap-1">
                         {[...adv.alluringQualities.materials, ...adv.alluringQualities.traits, ...adv.alluringQualities.tags].map((q) =>
-                    <span key={q} className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400 bg-yellow-400/5">{q}</span>
+                    <span key={q} className="text-[11px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400 bg-yellow-400/5">{q}</span>
                     )}
                       </div>
                       {adv.repelledBy && (
@@ -465,7 +466,7 @@ export default function Codex() {
                           <p className="text-xs text-muted-foreground mt-3 mb-1">Put Off By</p>
                           <div className="flex flex-wrap gap-1">
                             {[...(adv.repelledBy.materials || []), ...(adv.repelledBy.traits || []), ...(adv.repelledBy.tags || [])].map((q) =>
-                              <span key={q} className="text-[10px] px-1.5 py-0.5 rounded border border-red-400/30 text-red-400 bg-red-400/5">{q}</span>
+                              <span key={q} className="text-[11px] px-1.5 py-0.5 rounded border border-red-400/30 text-red-400 bg-red-400/5">{q}</span>
                             )}
                           </div>
                         </>
@@ -510,7 +511,7 @@ export default function Codex() {
                             {adv.companion.options.map((o, _i, opts) => {
                               const rare = (o.weight ?? 1) < Math.max(...opts.map(x => x.weight ?? 1));
                               return (
-                                <span key={o.nameSuffix} title={o.description} className="text-[10px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">
+                                <span key={o.nameSuffix} title={o.description} className="text-[11px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">
                                   {o.nameSuffix.replace("'s ", "")}{rare ? " (rare)" : ""}
                                 </span>
                               );

@@ -19,6 +19,8 @@ export default tseslint.config(
         ecmaVersion: 2022,
         sourceType: "module",
         ecmaFeatures: { jsx: true },
+        // Pin the project root, so editors that have seen other copies of the repo don't guess
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     settings: {

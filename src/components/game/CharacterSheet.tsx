@@ -43,7 +43,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
 
         {/* Stats */}
         <div>
-          <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Stats</p>
+          <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Stats</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <StatBar label="Plausibility" value={character.plausibility} max={6} color="bg-green-500" />
             <StatBar label="Adhesion" value={character.adhesion} max={6} color="bg-primary" />
@@ -58,7 +58,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
             ].map(([label, val]) => (
               <div key={label} className="bg-muted/30 rounded border border-border py-2">
                 <div className="text-base font-bold text-foreground">{val}</div>
-                <div className="text-[9px] text-muted-foreground font-cinzel uppercase">{label}</div>
+                <div className="text-[10px] text-muted-foreground font-cinzel uppercase">{label}</div>
               </div>
             ))}
           </div>
@@ -66,7 +66,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
 
         {/* Tier progress */}
         <div>
-          <div className="flex justify-between text-[10px] mb-1">
+          <div className="flex justify-between text-[11px] mb-1">
             <span className="font-cinzel text-muted-foreground uppercase tracking-widest">Evolution</span>
             <span className="text-foreground">{character.assimilationPoints} / {cfg.apToEvolve} AP</span>
           </div>
@@ -78,16 +78,16 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
         {/* Forms */}
         {activeForms.length > 0 && (
           <div>
-            <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Known Forms</p>
+            <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Known Forms</p>
             <div className="space-y-2">
               {activeForms.map((form, i) => (
                 <div key={form.id} className={`p-2.5 rounded border text-xs ${i === (character.activeFormIndex ?? 0) ? "border-primary/40 bg-primary/5" : "border-border bg-muted/20"}`}>
                   <div className="flex items-center justify-between">
                     <span className="font-cinzel text-foreground">{form.name}</span>
                     <div className="flex gap-1">
-                      <Badge variant="outline" className="text-[9px] border-border text-muted-foreground">{form.tier}</Badge>
+                      <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{form.tier}</Badge>
                       {i === (character.activeFormIndex ?? 0) && (
-                        <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20 border">Active</Badge>
+                        <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 border">Active</Badge>
                       )}
                     </div>
                   </div>
@@ -101,14 +101,14 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
         {/* Learned Materials */}
         {(character.learnedMaterials || []).length > 0 && (
           <div>
-            <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
               Known Materials ({character.learnedMaterials.length})
             </p>
             <div className="flex flex-wrap gap-1.5">
               {character.learnedMaterials.map(mat => {
                 const rarity = MATERIAL_RARITY[mat];
                 return (
-                  <span key={mat} className={`text-[10px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity]}`}>
+                  <span key={mat} className={`text-[11px] px-2 py-0.5 rounded border ${MATERIAL_COLORS[rarity]}`}>
                     {mat}
                   </span>
                 );
@@ -120,10 +120,10 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
         {/* Learned Traits */}
         {(character.learnedTraits || []).length > 0 && (
           <div>
-            <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Known Traits</p>
+            <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Known Traits</p>
             <div className="flex flex-wrap gap-1.5">
               {character.learnedTraits.map(t => (
-                <Badge key={t} variant="outline" className="text-[10px] border-accent/30 text-accent-foreground">{t}</Badge>
+                <Badge key={t} variant="outline" className="text-[11px] border-accent/30 text-accent-foreground">{t}</Badge>
               ))}
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
         {/* Current Appearance */}
         {character.currentAppearance && (
           <div>
-            <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Current Appearance</p>
+            <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Current Appearance</p>
             <div className="text-xs text-muted-foreground space-y-0.5">
               {(character.currentAppearance.primaryMaterials || []).length > 0 && (
                 <p>Primary: <span className="text-foreground">{character.currentAppearance.primaryMaterials.join(", ")}</span></p>
@@ -167,7 +167,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
           ];
           return (
             <div>
-              <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Lifetime Stats</p>
+              <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Lifetime Stats</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 {rows.map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-2">
@@ -182,7 +182,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
 
         {/* Achievements */}
         <div>
-          <p className="text-[10px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
             Achievements ({ACHIEVEMENTS.filter(a => a.isEarned(character)).length}/{ACHIEVEMENTS.length})
           </p>
           <AchievementList character={character} />

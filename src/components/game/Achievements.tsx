@@ -52,7 +52,7 @@ export function AchievementList({ character }: { character: MimicCharacter }) {
           <span className="text-lg leading-none">{a.icon}</span>
           <div>
             <p className={`font-cinzel text-xs font-bold ${ACHIEVEMENT_STYLES[a.id].text}`}>{a.name}</p>
-            <p className="text-[10px] text-muted-foreground flavor-text italic">"{a.flavor(character.name)}"</p>
+            <p className="text-[11px] text-muted-foreground flavor-text italic">"{a.flavor(character.name)}"</p>
           </div>
         </div>
       ))}

@@ -21,7 +21,7 @@
   --secondary-foreground: 45 30% 90%;
 
   --muted: 260 15% 18%;
-  --muted-foreground: 260 10% 55%;
+  --muted-foreground: 260 10% 62%;
 
   --accent: 280 40% 30%;
   --accent-foreground: 45 30% 90%;
@@ -49,6 +49,8 @@
   --sidebar-accent-foreground: 45 30% 90%;
   --sidebar-border: 260 20% 20%;
   --sidebar-ring: 45 70% 55%;
+
+  --bite-speed: 0.55s;
 }
 
 .dark {
@@ -68,7 +70,7 @@
   --secondary-foreground: 45 30% 90%;
 
   --muted: 260 15% 15%;
-  --muted-foreground: 260 10% 50%;
+  --muted-foreground: 260 10% 58%;
 
   --accent: 280 40% 28%;
   --accent-foreground: 45 30% 90%;
@@ -137,4 +139,383 @@
 .flavor-text {
   font-family: 'Crimson Text', serif;
   font-style: italic;
+}
+/* ============================================================
+   HUNT EFFECTS
+   The game only sets a few attributes and one variable:
+     --suspicion       on .hunt-stage (0–10)
+     data-suspicion    on .hunt-stage (same number, for exact matches)
+     data-fx / data-fx-turn  on .hunt-stage, from the latest turn's events
+   Everything below is CSS reacting to them.
+   ============================================================ */
+
+/* Red vignette that creeps in from the edges from suspicion 7 upward */
+.suspicion-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, hsla(0, 80%, 35%, 0.55) 100%);
+  opacity: clamp(0, calc((var(--suspicion, 0) - 6) / 4), 1);
+  transition: opacity 0.8s ease;
+}
+/* One step from discovery: the vignette breathes */
+[data-suspicion="9"] .suspicion-vignette {
+  animation: vignette-breathe 1.6s ease-in-out infinite;
+}
+@keyframes vignette-breathe {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
+}
+
+/* A botched strike: the panels jolt. Two identical keyframes alternate by turn parity, because
+   changing animation-name is what restarts a CSS animation without remounting anything. */
+[data-fx="shake"][data-fx-turn="0"] .fx-shake { animation: shake-a 0.4s ease-in-out; }
+[data-fx="shake"][data-fx-turn="1"] .fx-shake { animation: shake-b 0.4s ease-in-out; }
+@keyframes shake-a {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-0.4deg); }
+  40% { transform: translateX(5px) rotate(0.3deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes shake-b {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-0.4deg); }
+  40% { transform: translateX(5px) rotate(0.3deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Full-screen effect layer, remounted (by key) for each turn that has an effect */
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Jaws snap shut, teeth interlocking in the middle. Teeth are conic-gradient wedges tiled along
+   the edge. Two places bite: the whole screen on a meal (.fx-layer) and any card (.card-jaws,
+   below). Each sets the sizes; the drawing is shared. */
+.fx-layer[data-fx="chomp"] {
+  --tooth-size: 28px;
+  /* How far each jaw reaches when shut. 50vh meets in the middle; the extra half tooth lets
+     the teeth interlock. Each jaw is exactly this tall, so it stays attached to its edge. */
+  --jaw-reach: calc(50vh + var(--tooth-size) / 2);
+}
+.fx-layer[data-fx="chomp"]::before,
+.fx-layer[data-fx="chomp"]::after,
+.card-jaws::before,
+.card-jaws::after {
+  --tooth: hsl(45, 35%, 86%);
+  --gum: hsl(340, 45%, 14%);
+  --gum-edge: hsl(335, 64%, 17%);
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--jaw-reach);
+}
+.fx-layer[data-fx="chomp"]::before,
+.card-jaws::before {
+  top: 0;
+  background:
+    conic-gradient(from -45deg at 50% 100%, var(--tooth) 90deg, transparent 0) bottom / var(--tooth-size) var(--tooth-size) repeat-x,
+    linear-gradient(var(--gum), var(--gum)) top / 100% calc(100% - var(--tooth-size)*2 + 1px) no-repeat,
+    linear-gradient(to bottom, var(--gum) 90%, var(--gum-edge)) top / 100% calc(100% - var(--tooth-size)) no-repeat;
+  animation: jaw-top var(--bite-speed) cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+.fx-layer[data-fx="chomp"]::after,
+.card-jaws::after {
+  bottom: 0;
+  background:
+    conic-gradient(from 135deg at 50% 0%, var(--tooth) 90deg, transparent 0) calc(var(--tooth-size) / 2) top / var(--tooth-size) var(--tooth-size) repeat-x,
+    linear-gradient(var(--gum), var(--gum)) bottom / 100% calc(100% - var(--tooth-size)*2) no-repeat,
+    linear-gradient(to top, var(--gum) 90%, var(--gum-edge)) bottom / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
+  animation: jaw-bottom var(--bite-speed) cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+@keyframes jaw-top {
+  0% { transform: translateY(-100%); }
+  45%, 55% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes jaw-bottom {
+  0% { transform: translateY(100%); }
+  45%, 55% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* A card taking a quick bite (useCardChomp). The layer fills the card, takes its rounded
+   corners, and clips the jaws to them; the card itself only needs position: relative. */
+.card-jaws {
+  --tooth-size: 12px;
+  --jaw-reach: calc(50% + var(--tooth-size) / 2);
+  --bite-speed: 0.45s;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A slow card bite: the jaws creep halfway shut, hold a moment baring their teeth, and pull back */
+.card-jaws.slow-jaws {
+  --jaw-reach: 25%;
+  --bite-speed: 1.6s;
+}
+.card-jaws.slow-jaws::before { animation: jaw-top-bare var(--bite-speed) ease-in-out forwards; }
+.card-jaws.slow-jaws::after { animation: jaw-bottom-bare var(--bite-speed) ease-in-out forwards; }
+@keyframes jaw-top-bare {
+  0% { transform: translateY(-100%); }
+  35%, 70% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes jaw-bottom-bare {
+  0% { transform: translateY(100%); }
+  35%, 70% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* Found out: a flare of torchlight that fades to dark red */
+.fx-layer[data-fx="discovered"] {
+  background: radial-gradient(ellipse at center, hsla(25, 95%, 55%, 0.35), hsla(0, 85%, 25%, 0.6));
+  animation: torchlight 1.4s ease-out forwards;
+}
+@keyframes torchlight {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Event log: each new line fades in as it arrives */
+.log-line {
+  animation: log-in 0.3s ease-out both;
+}
+@keyframes log-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   MOBILE ACTION BAR
+   Below lg, the hunt actions sit in a bar fixed to the bottom of the screen, with a
+   thin suspicion strip on top. From lg up it's the normal 2×2 grid.
+   ============================================================ */
+.action-bar-suspicion {
+  width: calc(var(--suspicion, 0) * 10%);
+  transition: width 0.7s ease, background-color 0.7s ease;
+  background: hsl(140, 60%, 45%);
+}
+[data-suspicion="4"] .action-bar-suspicion,
+[data-suspicion="5"] .action-bar-suspicion { background: hsl(48, 90%, 55%); }
+[data-suspicion="6"] .action-bar-suspicion,
+[data-suspicion="7"] .action-bar-suspicion { background: hsl(25, 90%, 55%); }
+[data-suspicion="8"] .action-bar-suspicion,
+[data-suspicion="9"] .action-bar-suspicion,
+[data-suspicion="10"] .action-bar-suspicion { background: hsl(0, 75%, 52%); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fx="shake"] .fx-shake,
+  [data-suspicion="9"] .suspicion-vignette,
+  .log-line {
+    animation: none;
+  }
+  /* Without their animation the jaws would rest shut, so leave them out entirely */
+  .fx-layer[data-fx="chomp"]::before,
+  .fx-layer[data-fx="chomp"]::after,
+  .card-jaws {
+    display: none;
+  }
+}
+
+/* ============================================================
+   ROOM MAP
+   The hunt's floor plan (RoomMap.tsx). Rooms sit on a grid; the component sets
+     data-here         on your room
+     data-in-range     on other rooms within lure range
+     data-door-right / data-door-down  where a door leads to the next room
+   ============================================================ */
+.room-map {
+  --room-gap: 10px;
+  --door-width: 14px;
+  display: grid;
+  gap: var(--room-gap);
+}
+.room-cell {
+  position: relative;
+  min-height: 3.75rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--muted) / 0.25);
+  transition: border-color 0.4s ease, background-color 0.4s ease, box-shadow 0.4s ease;
+}
+.room-cell[data-in-range] {
+  border-color: hsl(48 90% 55% / 0.35);
+  background: hsl(48 90% 55% / 0.06);
+}
+.room-cell[data-here] {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.25);
+}
+
+/* Doors: a short passage across the gap to the next room */
+.room-cell[data-door-right]::before,
+.room-cell[data-door-down]::after {
+  content: "";
+  position: absolute;
+  background: hsl(var(--border));
+}
+.room-cell[data-door-right]::before {
+  top: 50%;
+  left: 100%;
+  width: calc(var(--room-gap) + 2px);
+  height: var(--door-width);
+  transform: translateY(-50%);
+}
+.room-cell[data-door-down]::after {
+  left: 50%;
+  top: 100%;
+  width: var(--door-width);
+  height: calc(var(--room-gap) + 2px);
+  transform: translateX(-50%);
+}
+
+.room-name {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  line-height: 1.2;
+  color: hsl(var(--muted-foreground));
+}
+.room-cell[data-here] .room-name {
+  color: hsl(var(--primary));
+}
+.room-occupants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 0.3rem;
+}
+.room-stairs {
+  margin-top: 0.25rem;
+  font-size: 10px;
+  line-height: 1.2;
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+/* Markers. They pop in whenever someone arrives, since moving rooms remounts them. */
+.occupant {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1;
+  animation: occupant-in 0.3s ease-out both;
+}
+.occupant-you {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 700;
+}
+/* Each adventurer type tints its marker: set --type-h (hue) and --type-s (saturation) below.
+   A test checks every type has a rule here. */
+.occupant-adventurer {
+  --type-h: 260;
+  --type-s: 10%;
+  border: 1px solid hsl(var(--type-h) var(--type-s) 42%);
+  background: hsl(var(--type-h) var(--type-s) 22%);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+.occupant-adventurer[data-type="Rogue"]          { --type-h: 220; --type-s: 12%; }
+.occupant-adventurer[data-type="Assassin"]       { --type-h: 350; --type-s: 45%; }
+.occupant-adventurer[data-type="Warrior"]        { --type-h: 12;  --type-s: 60%; }
+.occupant-adventurer[data-type="Paladin"]        { --type-h: 205; --type-s: 50%; }
+.occupant-adventurer[data-type="Cleric"]         { --type-h: 40;  --type-s: 12%; }
+.occupant-adventurer[data-type="Wizard"]         { --type-h: 240; --type-s: 50%; }
+.occupant-adventurer[data-type="Artificer"]      { --type-h: 28;  --type-s: 55%; }
+.occupant-adventurer[data-type="Bard"]           { --type-h: 320; --type-s: 50%; }
+.occupant-adventurer[data-type="Ranger"]         { --type-h: 80;  --type-s: 40%; }
+.occupant-adventurer[data-type="Druid"]          { --type-h: 145; --type-s: 50%; }
+.occupant-adventurer[data-type="Hunter"]         { --type-h: 25;  --type-s: 30%; }
+.occupant-adventurer[data-type="Commoner"]       { --type-h: 35;  --type-s: 8%;  }
+.occupant-adventurer[data-type="Nobility"]       { --type-h: 275; --type-s: 45%; }
+.occupant-adventurer[data-type="Undead"]         { --type-h: 170; --type-s: 25%; }
+.occupant-adventurer[data-type="Fey"]            { --type-h: 295; --type-s: 65%; }
+.occupant-adventurer[data-type="Construct"]      { --type-h: 195; --type-s: 10%; }
+.occupant-adventurer[data-type="Beast"]          { --type-h: 15;  --type-s: 35%; }
+.occupant-adventurer[data-type="AnimalCompanion"] { --type-h: 100; --type-s: 25%; }
+.occupant-adventurer[data-type="Familiar"]       { --type-h: 265; --type-s: 30%; }
+.occupant-adventurer[data-attracted] {
+  border-color: hsl(48 90% 55% / 0.6);
+  color: hsl(48 90% 60%);
+}
+.occupant-rival {
+  border: 1px solid hsl(25 90% 55% / 0.6);
+  background: hsl(25 90% 55% / 0.12);
+}
+.occupant-creature {
+  min-width: 0;
+  padding: 0;
+  font-size: 13px;
+}
+@keyframes occupant-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .occupant { animation: none; }
+}
+
+/* ============================================================
+   SIDEBAR VIEW CARD
+   The card holding the room map / party list is clickable to switch between them. The
+   icon in its corner shows what you'd switch to, and glows while the card is hovered.
+   ============================================================ */
+.sidebar-view-card {
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+.sidebar-view-card:hover,
+.sidebar-view-card:focus-visible {
+  border-color: hsl(var(--primary) / 0.4);
+  outline: none;
+}
+.view-toggle-icon {
+  flex-shrink: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: hsl(var(--muted-foreground) / 0.7);
+  transition: color 0.3s ease, text-shadow 0.3s ease, filter 0.3s ease;
+}
+.sidebar-view-card:hover .view-toggle-icon,
+.sidebar-view-card:focus-visible .view-toggle-icon {
+  color: hsl(var(--primary));
+  text-shadow: 0 0 6px hsl(var(--primary) / 0.8), 0 0 12px hsl(var(--primary) / 0.4);
+}
+
+/* The "show the map" icon: a tiny 2×3 floor plan, the same height as the "Aa" */
+.view-toggle-map {
+  display: grid;
+  grid-template-columns: repeat(2, 4px);
+  grid-auto-rows: 3px;
+  gap: 1px;
+}
+.view-toggle-map i {
+  background: currentColor;
+  border-radius: 0.5px;
+}
+.sidebar-view-card:hover .view-toggle-map,
+.sidebar-view-card:focus-visible .view-toggle-map {
+  filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.9));
 }
