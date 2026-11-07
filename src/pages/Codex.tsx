@@ -11,7 +11,8 @@ import {
   ACTION_LIMIT} from
 "../components/game/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
-import { Card, CardContent } from "@/components/ui/card";
+import { ChompCard } from "@/components/game/CardChomp";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Home } from "lucide-react";
 
@@ -183,7 +184,7 @@ export default function Codex() {
                 {TIER_ORDER.map((tier) => {
                 const cfg = TIER_CONFIG[tier];
                 return (
-                  <Card key={tier} className="bg-card border-border">
+                  <ChompCard key={tier} className="bg-card border-border">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div>
@@ -197,7 +198,7 @@ export default function Codex() {
                         </div>
                         <p className="flavor-text text-sm text-muted-foreground italic">{cfg.lore}</p>
                       </CardContent>
-                    </Card>);
+                    </ChompCard>);
 
               })}
               </div>
@@ -250,7 +251,7 @@ export default function Codex() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {MASTER_FORMS[selectedTier].map((form) =>
-              <Card key={form.id} className="bg-card border-border">
+              <ChompCard key={form.id} speed="slow" className="bg-card border-border">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-1">
                         <h3 className="font-cinzel text-foreground">{form.name}</h3>
@@ -279,7 +280,7 @@ export default function Codex() {
                     )}
                       </div>
                     </CardContent>
-                  </Card>
+                  </ChompCard>
               )}
               </div>
             </div>

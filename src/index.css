@@ -196,23 +196,30 @@
   overflow: hidden;
 }
 
-/* A meal: jaws snap shut across the screen, teeth interlocking in the middle. Teeth are conic-gradient wedges tiled along the edge. */
-.fx-layer[data-fx="chomp"]::before,
-.fx-layer[data-fx="chomp"]::after {
-  --tooth: hsl(45, 35%, 86%);
-  --gum: hsl(340, 45%, 14%);
-  --gum-edge: hsl(335, 64%, 17%);
+/* Jaws snap shut, teeth interlocking in the middle. Teeth are conic-gradient wedges tiled along
+   the edge. Two places bite: the whole screen on a meal (.fx-layer) and any card (.card-jaws,
+   below). Each sets the sizes; the drawing is shared. */
+.fx-layer[data-fx="chomp"] {
   --tooth-size: 28px;
   /* How far each jaw reaches when shut. 50vh meets in the middle; the extra half tooth lets
      the teeth interlock. Each jaw is exactly this tall, so it stays attached to its edge. */
   --jaw-reach: calc(50vh + var(--tooth-size) / 2);
+}
+.fx-layer[data-fx="chomp"]::before,
+.fx-layer[data-fx="chomp"]::after,
+.card-jaws::before,
+.card-jaws::after {
+  --tooth: hsl(45, 35%, 86%);
+  --gum: hsl(340, 45%, 14%);
+  --gum-edge: hsl(335, 64%, 17%);
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   height: var(--jaw-reach);
 }
-.fx-layer[data-fx="chomp"]::before {
+.fx-layer[data-fx="chomp"]::before,
+.card-jaws::before {
   top: 0;
   background:
     conic-gradient(from -45deg at 50% 100%, var(--tooth) 90deg, transparent 0) bottom / var(--tooth-size) var(--tooth-size) repeat-x,
@@ -220,7 +227,8 @@
     linear-gradient(to bottom, var(--gum) 90%, var(--gum-edge)) top / 100% calc(100% - var(--tooth-size)) no-repeat;
   animation: jaw-top var(--bite-speed) cubic-bezier(0.5, 0, 0.3, 1) forwards;
 }
-.fx-layer[data-fx="chomp"]::after {
+.fx-layer[data-fx="chomp"]::after,
+.card-jaws::after {
   bottom: 0;
   background:
     conic-gradient(from 135deg at 50% 0%, var(--tooth) 90deg, transparent 0) calc(var(--tooth-size) / 2) top / var(--tooth-size) var(--tooth-size) repeat-x,
@@ -236,6 +244,38 @@
 @keyframes jaw-bottom {
   0% { transform: translateY(100%); }
   45%, 55% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* A card taking a quick bite (useCardChomp). The layer fills the card, takes its rounded
+   corners, and clips the jaws to them; the card itself only needs position: relative. */
+.card-jaws {
+  --tooth-size: 12px;
+  --jaw-reach: calc(50% + var(--tooth-size) / 2);
+  --bite-speed: 0.45s;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A slow card bite: the jaws creep halfway shut, hold a moment baring their teeth, and pull back */
+.card-jaws.slow-jaws {
+  --jaw-reach: 25%;
+  --bite-speed: 1.6s;
+}
+.card-jaws.slow-jaws::before { animation: jaw-top-bare var(--bite-speed) ease-in-out forwards; }
+.card-jaws.slow-jaws::after { animation: jaw-bottom-bare var(--bite-speed) ease-in-out forwards; }
+@keyframes jaw-top-bare {
+  0% { transform: translateY(-100%); }
+  35%, 70% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes jaw-bottom-bare {
+  0% { transform: translateY(100%); }
+  35%, 70% { transform: translateY(0); }
   100% { transform: translateY(100%); }
 }
 
@@ -279,11 +319,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-fx="shake"] .fx-shake,
-  .fx-layer[data-fx="chomp"]::before,
-  .fx-layer[data-fx="chomp"]::after,
   [data-suspicion="9"] .suspicion-vignette,
   .log-line {
     animation: none;
+  }
+  /* Without their animation the jaws would rest shut, so leave them out entirely */
+  .fx-layer[data-fx="chomp"]::before,
+  .fx-layer[data-fx="chomp"]::after,
+  .card-jaws {
+    display: none;
   }
 }
 
