@@ -1097,6 +1097,14 @@ export default function Game() {
     setShowFormPanel(false);
   };
 
+  // The left sidebar shows the room map or the party list; clicking it switches (saved per mimic)
+  const toggleSidebarView = () => {
+    if (!character) return;
+    const sidebarView = character.sidebarView === "map" ? "party" : "map";
+    setCharacter(prev => prev ? { ...prev, sidebarView } : prev);
+    persist({ sidebarView });
+  };
+
   const doUpdateAppearance = (newAppearance: Appearance) => {
     if (!character) return;
     beginTurn();
@@ -1611,76 +1619,86 @@ export default function Game() {
             </div>
           )}
 
-          {/* Party status */}
-          {phase !== "setup" && party.length > 0 && (
-            <Card className="fx-shake bg-card border-border">
-              <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
-                  Party ({activeAdventurers.length} active / {consumedCount} consumed)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-3 space-y-2">
-                {party.map(adv => {
-                  const dist = mimicRoom && location && adv.isAlive && !adv.isConsumed
-                    ? getRoomDistance(location, mimicRoom, adv.location) : null;
-                  const inRange = dist !== null && dist <= getAllureRange();
-                  const fled = adv.fled && !adv.isConsumed;
-                  const disappeared = adv.isDisappeared && !adv.isConsumed;
-                  const maxHits = adv.constitution || 3;
-                  return (
-                    <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared ? "opacity-40" : ""}`}>
-                      <span className={
-                        adv.isConsumed ? "line-through text-muted-foreground" :
-                        fled ? "text-muted-foreground italic" :
-                        disappeared ? "text-purple-400/60 italic" :
-                        adv.isAttracted ? "text-yellow-400" : "text-foreground"
-                      }>
-                        {adv.name}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
-                        {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
-                        {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
-                        {adv.isAttracted && !adv.isConsumed && (
-                          <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
-                        )}
-                        {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
-                          <span className="text-[10px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
-                        )}
-                        {dist !== null && (
-                          <span title={adv.location} className={`text-[10px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
-                            <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
+          {/* Party list or room map: one card, click it to switch (remembered per mimic) */}
+          {phase !== "setup" && location && mimicRoom && party.length > 0 && (() => {
+            const showMap = character.sidebarView === "map";
+            const counts = `(${activeAdventurers.length} active / ${consumedCount} consumed)`;
+            return (
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-label={showMap ? "Show the party list" : "Show the room map"}
+                onClick={toggleSidebarView}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSidebarView(); }
+                }}
+                className={"sidebar-view-card bg-card border-border fx-shake"}
+              >
+                <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
+                      {showMap ? <>{location.name} <span className="normal-case tracking-normal">{counts}</span></> : <>Party {counts}</>}
+                    </CardTitle>
+                    {showMap
+                      ? <span className="view-toggle-icon" aria-hidden>Aa</span>
+                      : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
+                  </div>
+                </CardHeader>
+                {showMap ? (
+                  <CardContent className="px-4 pb-4">
+                    <RoomMap
+                      location={location}
+                      mimicRoom={mimicRoom}
+                      lureRange={getAllureRange()}
+                      adventurers={activeAdventurers}
+                      creatures={smallCreatures.filter(c => !c.isConsumed)}
+                      rivals={rivals}
+                      formName={activeForm?.name}
+                    />
+                  </CardContent>
+                ) : (
+                  <CardContent className="px-4 pb-3 space-y-2">
+                    {party.map(adv => {
+                      const dist = mimicRoom && location && adv.isAlive && !adv.isConsumed
+                        ? getRoomDistance(location, mimicRoom, adv.location) : null;
+                      const inRange = dist !== null && dist <= getAllureRange();
+                      const fled = adv.fled && !adv.isConsumed;
+                      const disappeared = adv.isDisappeared && !adv.isConsumed;
+                      const maxHits = adv.constitution || 3;
+                      return (
+                        <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared ? "opacity-40" : ""}`}>
+                          <span className={
+                            adv.isConsumed ? "line-through text-muted-foreground" :
+                            fled ? "text-muted-foreground italic" :
+                            disappeared ? "text-purple-400/60 italic" :
+                            adv.isAttracted ? "text-yellow-400" : "text-foreground"
+                          }>
+                            {adv.name}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Room map */}
-          {phase !== "setup" && location && mimicRoom && party.length > 0 && (
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
-                  {location.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="fx-shake px-4 pb-4">
-                <RoomMap
-                  location={location}
-                  mimicRoom={mimicRoom}
-                  lureRange={getAllureRange()}
-                  adventurers={activeAdventurers}
-                  creatures={smallCreatures.filter(c => !c.isConsumed)}
-                  rivals={rivals}
-                  formName={activeForm?.name}
-                />
-              </CardContent>
-            </Card>
-          )}
+                          <div className="flex items-center gap-1">
+                            {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
+                            {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
+                            {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
+                            {adv.isAttracted && !adv.isConsumed && (
+                              <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
+                            )}
+                            {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
+                              <span className="text-[10px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
+                            )}
+                            {dist !== null && (
+                              <span title={adv.location} className={`text-[10px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
+                                <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })()}
 
         </div>
 
