@@ -140,7 +140,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
 
         {/* Primary Material */}
         <div>
-          <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+          <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
             Primary Material{limits.primaryMaterials > 1 ? `s (max ${limits.primaryMaterials})` : ""} — learned only
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -152,7 +152,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Secondary Material — only if tier allows */}
         {limits.secondaryMaterials > 0 && (
           <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
               Secondary Material{limits.secondaryMaterials > 1 ? `s (max ${limits.secondaryMaterials})` : ""}
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -163,7 +163,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
 
         {/* Magic materials: cap and effects */}
         {hasLearnedMagic && (
-          <div className="text-[10px] text-muted-foreground space-y-1">
+          <div className="text-[11px] text-muted-foreground space-y-1">
             {limits.magicalMaterials > 0 ? (
               <p>
                 <span className="text-purple-400">Magical materials</span> can fill primary or secondary slots:{" "}
@@ -184,7 +184,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Surface Traits */}
         {limits.surfaceTraits > 0 && (
           <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
               Surface Traits (max {limits.surfaceTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -208,7 +208,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Symbolic Traits — only if learned */}
         {limits.symbolicTraits > 0 && (
           <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
               Symbolic Traits — learned only (max {limits.symbolicTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -235,7 +235,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Condition Traits */}
         {limits.conditionTraits > 0 && (
           <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
               Condition Traits (max {limits.conditionTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -259,7 +259,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Scent — all learned */}
         {limits.scentTraits > 0 && (
           <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[10px] mb-1.5">
+            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
               Scent (max {limits.scentTraits})
             </p>
             <div className="flex flex-wrap gap-1.5">

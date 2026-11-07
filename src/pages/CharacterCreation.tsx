@@ -255,7 +255,7 @@ export default function CharacterCreation() {
             <p className="text-center text-xs text-muted-foreground/60 mb-2 flavor-text italic">
               Forms from your tier, plus one tier above or below. Only {MAX_FORMS_ABOVE_TIER} may come from the tier above.
             </p>
-            <div className="flex gap-2 justify-center mb-4 text-[10px] text-muted-foreground">
+            <div className="flex gap-2 justify-center mb-4 text-[11px] text-muted-foreground">
               <span className="px-2 py-0.5 rounded border border-border">Same tier: no penalty</span>
               <span className="px-2 py-0.5 rounded border border-orange-400/30 text-orange-400">Above: –2 Plausibility</span>
               <span className="px-2 py-0.5 rounded border border-yellow-400/30 text-yellow-400">Below: –1 Patience</span>
@@ -282,22 +282,22 @@ export default function CharacterCreation() {
                       <div className="flex items-start justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-cinzel text-foreground">{form.name}</h3>
-                          {tierDiff === 1 && <span className="text-[9px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400">–2 Plaus.</span>}
-                          {tierDiff === -1 && <span className="text-[9px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400">–1 Pat.</span>}
+                          {tierDiff === 1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400">–2 Plaus.</span>}
+                          {tierDiff === -1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400">–1 Pat.</span>}
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
                       {blockedByAboveRule && selectedForms.length < 2 && (
-                        <p className="text-[10px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
+                        <p className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-[10px] border-primary/20 text-primary bg-primary/5">
+                        <Badge variant="outline" className="text-[11px] border-primary/20 text-primary bg-primary/5">
                           +{form.baseAllureModifier} Allure
                         </Badge>
-                        <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{form.tier}</Badge>
+                        <Badge variant="outline" className="text-[11px] border-border text-muted-foreground">{form.tier}</Badge>
                         {form.utilityTags.map(t => (
-                          <Badge key={t} variant="outline" className="text-[10px] border-border text-muted-foreground">{t}</Badge>
+                          <Badge key={t} variant="outline" className="text-[11px] border-border text-muted-foreground">{t}</Badge>
                         ))}
                       </div>
                     </CardContent>
@@ -411,7 +411,7 @@ export default function CharacterCreation() {
                   ].map(({ label, value }) => (
                     <div key={label} className="text-center p-3 bg-muted/30 rounded border border-border">
                       <div className="text-2xl font-bold text-foreground">{value}</div>
-                      <div className="text-[10px] text-muted-foreground font-cinzel uppercase">{label}</div>
+                      <div className="text-[11px] text-muted-foreground font-cinzel uppercase">{label}</div>
                     </div>
                   ))}
                 </div>
