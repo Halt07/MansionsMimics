@@ -1479,7 +1479,7 @@ export default function Game() {
         {/* Left: Status */}
         <div className="space-y-4">
           <Card className="bg-card border-border">
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="fx-shake p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-cinzel text-xs text-muted-foreground uppercase tracking-wide">Active Form</span>
                 {activeForm ? (
@@ -1668,7 +1668,7 @@ export default function Game() {
                   {location.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
+              <CardContent className="fx-shake px-4 pb-4">
                 <RoomMap
                   location={location}
                   mimicRoom={mimicRoom}

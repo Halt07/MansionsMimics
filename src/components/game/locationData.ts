@@ -642,6 +642,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──
   hidden_grove: {
     "Ancient Altar":       { "greater_statue":          { plausibility: 1, note: "Old forest altars are often watched over by weathered statues." } },
+    "Forest Path":         { "apex_abandoned_cottage":  { plausibility: 1, note: "An abandoned cottage lost to the woods." } },
     "Collapsed Shrine":    { "apex_chapel":             { plausibility: -1, note: "An intact chapel among the ruins raises questions." },
                              "apex_cathedral":          { plausibility: -2, note: "A whole cathedral where only rubble should be?" } },
     "Grove Clearing":      { "grand_chandelier":        { plausibility: -2, note: "A chandelier hanging from… nothing." },

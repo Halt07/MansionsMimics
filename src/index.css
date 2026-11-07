@@ -49,6 +49,8 @@
   --sidebar-accent-foreground: 45 30% 90%;
   --sidebar-border: 260 20% 20%;
   --sidebar-ring: 45 70% 55%;
+
+  --bite-speed: 0.55s;
 }
 
 .dark {
@@ -199,6 +201,7 @@
 .fx-layer[data-fx="chomp"]::after {
   --tooth: hsl(45, 35%, 86%);
   --gum: hsl(340, 45%, 14%);
+  --gum-edge: hsl(335, 64%, 17%);
   --tooth-size: 28px;
   /* How far each jaw reaches when shut. 50vh meets in the middle; the extra half tooth lets
      the teeth interlock. Each jaw is exactly this tall, so it stays attached to its edge. */
@@ -213,15 +216,17 @@
   top: 0;
   background:
     conic-gradient(from -45deg at 50% 100%, var(--tooth) 90deg, transparent 0) bottom / var(--tooth-size) var(--tooth-size) repeat-x,
-    linear-gradient(var(--gum), var(--gum)) top / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
-  animation: jaw-top 0.55s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+    linear-gradient(var(--gum), var(--gum)) top / 100% calc(100% - var(--tooth-size)*2 + 1px) no-repeat,
+    linear-gradient(to bottom, var(--gum) 90%, var(--gum-edge)) top / 100% calc(100% - var(--tooth-size)) no-repeat;
+  animation: jaw-top var(--bite-speed) cubic-bezier(0.5, 0, 0.3, 1) forwards;
 }
 .fx-layer[data-fx="chomp"]::after {
   bottom: 0;
   background:
     conic-gradient(from 135deg at 50% 0%, var(--tooth) 90deg, transparent 0) calc(var(--tooth-size) / 2) top / var(--tooth-size) var(--tooth-size) repeat-x,
-    linear-gradient(var(--gum), var(--gum)) bottom / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
-  animation: jaw-bottom 0.55s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+    linear-gradient(var(--gum), var(--gum)) bottom / 100% calc(100% - var(--tooth-size)*2) no-repeat,
+    linear-gradient(to top, var(--gum) 90%, var(--gum-edge)) bottom / 100% calc(100% - var(--tooth-size) + 1px) no-repeat;
+  animation: jaw-bottom var(--bite-speed) cubic-bezier(0.5, 0, 0.3, 1) forwards;
 }
 @keyframes jaw-top {
   0% { transform: translateY(-100%); }
