@@ -18,7 +18,7 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 - **Eat the cat that knew.** If you eat a cat after it has stared at you (`CAT_KNOWS_LINE`), add a
   payoff line ("It took the secret with it").
 - **Real-world dates.** A full moon or Friday the 13th could change the mood or add a modifier. A Halloween hunt could have all adventurers that enter your room while you are in the form of a door knock and say "Trick or Treat!".
-- **More name remarks.** Naming your mimic after an adventurer template, or after a location ("Manor"), could get a reply. Flavor text for the names "Pandora" "Wardrobe"(Narnia), "Spare oom"(Narnia)
+- **More name remarks.** Naming your mimic after an adventurer template, or after a location ("Manor"), could get a reply.
 - **A hidden page.** Something like "Field notes of the Doubting Scholar", reached by a secret input
   (a Konami code, or clicking something unlikely).
 
