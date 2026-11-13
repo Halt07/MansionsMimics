@@ -72,6 +72,36 @@ export function getAdjacentRooms(location: HuntLocation, room: RoomName): readon
 }
 
 // ============================================================
+// SMALL CREATURES WANDERING
+// Each turn a creature may wander to an adjacent room. Honeyamber (a magic material) makes
+// them wander more often, and half of those moves step toward the mimic's room.
+// ============================================================
+export const CREATURE_WANDER_CHANCE = 0.4;
+export const HONEYAMBER_WANDER_CHANCE = 0.5;
+/** Of the moves a creature makes under Honeyamber, how many head toward the mimic. */
+export const HONEYAMBER_LURE_CHANCE = 0.5;
+
+/**
+ * Where a small creature ends up this turn. Under Honeyamber, a move that heads for the mimic
+ * steps one room closer, or stays put if it's already in the mimic's room; any other move is
+ * to a random adjacent room (so a creature can still wander away from the mimic).
+ */
+export function wanderCreature(
+  location: HuntLocation, from: RoomName, mimicRoom: RoomName | null, honeyamber: boolean, rand: () => number = Math.random,
+): RoomName {
+  if (rand() >= (honeyamber ? HONEYAMBER_WANDER_CHANCE : CREATURE_WANDER_CHANCE)) return from;
+  const adjacent = getAdjacentRooms(location, from);
+  const candidates = adjacent.length > 0 ? adjacent : location.rooms;
+  if (honeyamber && mimicRoom && rand() < HONEYAMBER_LURE_CHANCE) {
+    if (from === mimicRoom) return from;
+    const here = getRoomDistance(location, from, mimicRoom);
+    const closer = candidates.filter(r => getRoomDistance(location, r, mimicRoom) < here);
+    if (closer.length) return closer[Math.floor(rand() * closer.length)];
+  }
+  return candidates[Math.floor(rand() * candidates.length)];
+}
+
+// ============================================================
 // DICE ENGINE
 // ============================================================
 export function rollDice(numDice: number): number {

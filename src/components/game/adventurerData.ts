@@ -301,7 +301,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     appliedQuirk: "{name} lingers near the doorway, plainly uncomfortable indoors.",
     alluringQualities: { materials: ["Oak", "Feywood"], traits: ["Rustic", "Carved", "Earthy"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 2 },
-    lootMaterials: ["Thimblewood", "Oak", "Wool"],
+    lootMaterials: ["Thimblewood", "Oak", "Wool", "Honeyamber"],
     lootTraits: ["Earthy"],
     partialLoot: ["strip of bark-cloth robe", "a vine cord", "torn leaf-pattern cloak"],
   },
@@ -675,7 +675,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     appliedQuirk: "{name} sets a trap beside the {form}, chatting to their terrier the whole time.",
     alluringQualities: { materials: ["Burlap", "Pine"], traits: ["Worn", "Dusty", "Weathered"], tags: ["Storage", "Coastal"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
-    lootMaterials: ["Burlap", "Goatskin", "Pine"],
+    // A rat-catcher knows the best bait
+    lootMaterials: ["Burlap", "Goatskin", "Pine", "Honeyamber"],
     lootTraits: ["Mossy", "Foul"],
     partialLoot: ["a sprung rat trap", "a leather glove, bitten through", "a sack smelling of bait"],
     companion: {

@@ -6,7 +6,7 @@ import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@
 import {
   ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
   rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
-  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
+  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, wanderCreature, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
   isTemplateEligible, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
@@ -1259,15 +1259,22 @@ export default function Game() {
       }
     }
 
-    // Small creatures also wander
-    setSmallCreatures(prev => prev.map(c => {
+    // Small creatures also wander (toward you, sometimes, if you wear Honeyamber)
+    const honeyamber = hasMagic(character.currentAppearance, "Honeyamber");
+    const wandered = smallCreatures.map(c => {
       if (c.isConsumed) return c;
-      if (Math.random() < 0.6) return c;
-      const adjacent = getAdjacentRooms(location, c.location);
-      const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = candidates[Math.floor(Math.random() * candidates.length)];
-      return { ...c, location: newRoom };
-    }));
+      const room = wanderCreature(location, c.location, mimicRoom, honeyamber);
+      return room === c.location ? c : { ...c, location: room };
+    });
+    setSmallCreatures(wandered);
+    // While wearing Honeyamber, any critter that wanders into your room gets a line
+    if (honeyamber && mimicRoom) {
+      wandered.forEach((c, i) => {
+        if (c.location === mimicRoom && smallCreatures[i].location !== mimicRoom) {
+          addEvent("info", `🍯 A ${c.name} creeps into the ${mimicRoom}, following a sweet smell only it can catch.`);
+        }
+      });
+    }
 
     checkActionLimit(newCount);
     advanceShip();
