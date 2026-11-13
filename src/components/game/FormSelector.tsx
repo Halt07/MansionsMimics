@@ -1,7 +1,11 @@
 import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_FORMS, TIER_ORDER, formTier, getValidForms, getLockedVariants, canAddForm, formBurn, MAX_FORMS_ABOVE_TIER, type Form, type Tier } from "./gameData";
+import {
+  ALL_FORMS, TIER_ORDER, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
+  MAX_FORMS_ABOVE_TIER, type Form, type Tier,
+} from "./gameData";
 import BurnBadge from "./BurnBadge";
+import HolidayBadge, { holidayCardProps } from "./HolidayBadge";
 import { Button } from "@/components/ui/button";
 
 const MAX_FORMS = 3;
@@ -16,9 +20,12 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
   // Thimblewood shrinks the mimic: forms are chosen as if it were one tier smaller
   const tier = formTier(character);
   const currentTierIdx = TIER_ORDER.indexOf(tier);
-  // Include all forms from tier-1, current tier, and tier+1 (plus any variant forms the mimic
-  // has unlocked); variants it hasn't unlocked yet are shown locked, with how to unlock them
-  const validForms = getValidForms(tier, character.mass, character);
+  // Ordinary forms from tier-1, current tier, and tier+1 (plus any variant forms the mimic has
+  // unlocked), and seasonal forms in season; variants it hasn't unlocked yet are shown locked,
+  // with how to unlock them
+  const tierForms = getValidForms(tier, character.mass, character);
+  const seasonalForms = getSeasonalForms(tier, today());
+  const validForms = [...tierForms, ...seasonalForms];
   const lockedVariants = getLockedVariants(tier, character.mass, character);
   const baseName = (id?: string) => ALL_FORMS.find(f => f.id === id)?.name ?? id;
 
@@ -55,11 +62,59 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
   };
 
   const groupedForms = TIER_ORDER.reduce<Partial<Record<Tier, Form[]>>>((acc, tier) => {
-    const formsInTier = validForms.filter(f => f.tier === tier);
+    const formsInTier = tierForms.filter(f => f.tier === tier);
     if (formsInTier.length > 0) acc[tier] = formsInTier;
     return acc;
   }, {});
   const lockedByTier = (tier: Tier) => lockedVariants.filter(f => f.tier === tier);
+
+  const renderForm = (form: Form) => {
+    const isSelected = !!selected.find(f => f.id === form.id);
+    const blockedByAboveRule = !isSelected && !canAddForm(selected, form, tier);
+    const holidayProps = holidayCardProps(form);
+    const isDisabled = !isSelected && (selected.length >= MAX_FORMS || blockedByAboveRule);
+    return (
+      <button
+        key={form.id}
+        onClick={() => !isDisabled && toggle(form)}
+        data-holiday={holidayProps["data-holiday"]}
+        className={`${holidayProps.className} text-left px-3 py-2.5 rounded-lg border transition-all text-xs ${
+          isSelected
+            ? "border-primary bg-primary/10 text-foreground"
+            : isDisabled
+              ? "border-border bg-card text-muted-foreground/40 cursor-not-allowed"
+              : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="font-cinzel">{form.name}</span>
+          <div className="flex gap-1 items-center">
+            {form.baseAllureModifier > 0 && (
+              <span className="text-[10px] text-yellow-400">✦ Allure +{form.baseAllureModifier}</span>
+            )}
+            {isSelected && <span className="text-[10px] text-primary">✓</span>}
+          </div>
+        </div>
+        {form.holiday && <p className="mb-0.5"><HolidayBadge form={form} /></p>}
+        {form.variantOf && (
+          <p className="text-[10px] text-teal-300 mb-0.5">🗝️ {form.holiday ? "Seasonal variant" : "Variant"} of {baseName(form.variantOf)}</p>
+        )}
+        <p className="text-[11px] text-muted-foreground">{form.description}</p>
+        <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
+        {blockedByAboveRule && selected.length < MAX_FORMS && (
+          <p className="text-[10px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
+        )}
+        <div className="flex flex-wrap gap-1 mt-1">
+          {form.utilityTags.map(tag => (
+            <span key={tag} className="text-[10px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>
+          ))}
+          {form.builtInTraits.map(t => (
+            <span key={t} title="Built-in trait — this form always has it" className="text-[10px] border border-dashed border-primary/30 rounded px-1 text-primary/80">{t}</span>
+          ))}
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -78,54 +133,22 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
         )}
       </div>
 
+      {seasonalForms.length > 0 && (
+        <div>
+          <p className="text-[11px] font-cinzel uppercase tracking-widest mb-2 text-amber-300">
+            ✨ Seasonal (count as your own tier, no penalty)
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {seasonalForms.map(renderForm)}
+          </div>
+        </div>
+      )}
+
       {TIER_ORDER.flatMap(tier => { const forms = groupedForms[tier]; return forms ? [[tier, forms] as const] : []; }).map(([tier, forms]) => (
         <div key={tier}>
           <p className={`text-[11px] font-cinzel uppercase tracking-widest mb-2 ${tierMeta[tier]?.color}`}>{tierLabel(tier)}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {forms.map(form => {
-              const isSelected = !!selected.find(f => f.id === form.id);
-              const blockedByAboveRule = !isSelected && !canAddForm(selected, form, tier);
-              const isDisabled = !isSelected && (selected.length >= MAX_FORMS || blockedByAboveRule);
-              return (
-                <button
-                  key={form.id}
-                  onClick={() => !isDisabled && toggle(form)}
-                  className={`text-left px-3 py-2.5 rounded-lg border transition-all text-xs ${
-                    isSelected
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : isDisabled
-                        ? "border-border bg-card text-muted-foreground/40 cursor-not-allowed"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-cinzel">{form.name}</span>
-                    <div className="flex gap-1 items-center">
-                      {form.baseAllureModifier > 0 && (
-                        <span className="text-[10px] text-yellow-400">✦ Allure +{form.baseAllureModifier}</span>
-                      )}
-                      {isSelected && <span className="text-[10px] text-primary">✓</span>}
-                    </div>
-                  </div>
-                  {form.variantOf && (
-                    <p className="text-[10px] text-teal-300 mb-0.5">🗝️ Variant of {baseName(form.variantOf)}</p>
-                  )}
-                  <p className="text-[11px] text-muted-foreground">{form.description}</p>
-                  <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
-                  {blockedByAboveRule && selected.length < MAX_FORMS && (
-                    <p className="text-[10px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>
-                  )}
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {form.utilityTags.map(tag => (
-                      <span key={tag} className="text-[10px] border border-border rounded px-1 text-muted-foreground/70">{tag}</span>
-                    ))}
-                    {form.builtInTraits.map(t => (
-                      <span key={t} title="Built-in trait — this form always has it" className="text-[10px] border border-dashed border-primary/30 rounded px-1 text-primary/80">{t}</span>
-                    ))}
-                  </div>
-                </button>
-              );
-            })}
+            {forms.map(renderForm)}
             {lockedByTier(tier).map(form => (
               <div key={form.id} className="text-left px-3 py-2.5 rounded-lg border border-dashed border-border bg-card/50 text-xs text-muted-foreground/50 cursor-not-allowed">
                 <span className="font-cinzel">🔒 {form.name}</span>

@@ -1,5 +1,6 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS } from "./gameData";
+import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "./gameData";
+import HolidayBadge from "./HolidayBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,16 +82,17 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
             <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">Known Forms</p>
             <div className="space-y-2">
               {activeForms.map((form, i) => (
-                <div key={form.id} className={`p-2.5 rounded border text-xs ${i === (character.activeFormIndex ?? 0) ? "border-primary/40 bg-primary/5" : "border-border bg-muted/20"}`}>
+                <div key={form.id} data-holiday={form.holiday} className={`${form.holiday ? "holiday-card" : ""} p-2.5 rounded border text-xs ${i === (character.activeFormIndex ?? 0) ? "border-primary/40 bg-primary/5" : "border-border bg-muted/20"}`}>
                   <div className="flex items-center justify-between">
                     <span className="font-cinzel text-foreground">{form.name}</span>
                     <div className="flex gap-1">
-                      <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{form.tier}</Badge>
+                      <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{effectiveFormTier(form, formTier(character))}</Badge>
                       {i === (character.activeFormIndex ?? 0) && (
                         <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 border">Active</Badge>
                       )}
                     </div>
                   </div>
+                  <HolidayBadge form={form} />
                   <p className="text-muted-foreground mt-0.5">{form.description}</p>
                 </div>
               ))}

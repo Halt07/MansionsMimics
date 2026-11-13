@@ -18,7 +18,7 @@ import {
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -43,6 +43,9 @@ import FormSelector from "../components/game/FormSelector";
 import DiceRollDisplay from "../components/game/DiceRollDisplay";
 import BurnBadge from "../components/game/BurnBadge";
 import RoomMap from "../components/game/RoomMap";
+import HuntReport from "../components/game/HuntReport";
+import HolidayBadge from "../components/game/HolidayBadge";
+import { buildHuntReport } from "../components/game/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
 
 // ── Game-screen state types ──
@@ -197,6 +200,7 @@ export default function Game() {
   // The Sinking Ship: turns taken so far this hunt (see advanceShip)
   const [shipTurn, setShipTurn] = useState(0);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
+  const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
   // Where form selection returns to: the hunting-ground screen normally, or straight back
   // into the hunt when a mid-hunt tier-up forced the selection
@@ -220,8 +224,19 @@ export default function Game() {
             decayMessage = `You have been away for ${Math.floor(daysSinceFed)} days without feeding. Your mass has diminished by ${massLost} (now ${newMass}). Hunger gnaws at your form.`;
           }
         }
+        // Seasonal forms whose season has ended slip away
+        const dropped = dropExpiredSeasonalForms(char.forms, char.activeFormIndex, today());
+        if (dropped) {
+          char.forms = dropped.forms;
+          char.activeFormIndex = dropped.activeFormIndex;
+          db.entities.MimicCharacter.update(char.id, { forms: dropped.forms, activeFormIndex: dropped.activeFormIndex })
+            .catch(err => console.error("Failed to save expired seasonal forms:", err));
+          setSeasonNotice(dropped.message);
+        }
         setCharacter(char);
-        setPhase("setup");
+        // With no forms left, choose new ones first
+        setFormSelectReturnPhase("setup");
+        setPhase(char.forms.length ? "setup" : "formSelect");
         if (decayMessage) setMassDecayNotice(decayMessage);
       }
     }).catch(err => {
@@ -250,6 +265,17 @@ export default function Game() {
   };
 
   const chooseLocation = (loc: HuntLocation) => {
+    // A season can end while the game is open: check again before every hunt
+    const dropped = character && dropExpiredSeasonalForms(character.forms, character.activeFormIndex, today());
+    if (dropped) {
+      setCharacter(prev => prev ? { ...prev, forms: dropped.forms, activeFormIndex: dropped.activeFormIndex } : prev);
+      persist({ forms: dropped.forms, activeFormIndex: dropped.activeFormIndex });
+      setSeasonNotice(dropped.message);
+      if (dropped.forms.length === 0) {
+        startFormSelection("setup");
+        return;
+      }
+    }
     setLocation(loc);
     setSuspicion(0);
     setEvents([]);
@@ -347,8 +373,18 @@ export default function Game() {
       stillTurnsRef.current = 0;
       catsThatKnowRef.current = new Set();
       peakSuspicionRef.current = 0;
+      huntMealRef.current = null;
+      huntSeedRef.current = Math.floor(Math.random() * 2 ** 31);
     }
     setPhase("hunt");
+  };
+
+  // For the end-of-hunt report: this hunt's biggest meal, and a seed so the report
+  // reads the same every time it renders.
+  const huntMealRef = useRef<{ name: string; ap: number } | null>(null);
+  const huntSeedRef = useRef(0);
+  const noteMeal = (name: string, ap: number) => {
+    huntMealRef.current = withBiggestMeal(huntMealRef.current, name, ap);
   };
 
   // Lifetime stats: each hunt is counted once, as survived or failed, however it ends.
@@ -442,7 +478,7 @@ export default function Game() {
       // Now and then, the newcomer acts out one of its quirks on your form
       const quirk = quirkLine(adv, form.name);
       if (quirk) addEvent("info", quirk);
-      const result = stealthCheck(effectivePlausibility, effectivePatience, form.tier, formTier(character), form, adv, roomMod, character.currentAppearance);
+      const result = stealthCheck(effectivePlausibility, effectivePatience, effectiveFormTier(form, formTier(character)), formTier(character), form, adv, roomMod, character.currentAppearance);
       if (result.detectedFlaws.length > 0) {
         result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
       }
@@ -692,6 +728,7 @@ export default function Game() {
           addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
         }
         setRivals(updatedRivals);
+        noteMeal(RIVAL_MEAL_NAMES[rivalTarget.kind], apGained);
         const updatedChar = {
           ...character,
           assimilationPoints: (character.assimilationPoints || 0) + apGained,
@@ -968,6 +1005,7 @@ export default function Game() {
         partyMembersEaten: character.partyMembersEaten + 1,
         biggestMeal: withBiggestMeal(character.biggestMeal, target.name, apGained),
       };
+      noteMeal(target.name, apGained);
       setCharacter(updatedChar);
       persist({
         assimilationPoints: updatedChar.assimilationPoints,
@@ -1011,6 +1049,7 @@ export default function Game() {
     beginTurn();
     addEvent("consume", `You snap up the ${creature.name} — a modest feast. +${creature.ap} AP.`);
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
+    noteMeal(creature.name, creature.ap);
     setActionCount(0); // Eating resets the stagnation counter
     const updatedChar = {
       ...character,
@@ -1144,7 +1183,7 @@ export default function Game() {
     const resized = hasMagic(newAppearance, "Thimblewood") !== hasMagic(character.currentAppearance, "Thimblewood");
     let formUpdates: Partial<MimicCharacter> = {};
     if (resized) {
-      const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: newAppearance }), character.mass, character);
+      const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: newAppearance }), character.mass, character, today());
       const activeId = character.forms[character.activeFormIndex]?.formId;
       formUpdates = { forms: kept, activeFormIndex: Math.max(0, kept.findIndex(f => f.formId === activeId)) };
       addEvent("evolve", hasMagic(newAppearance, "Thimblewood")
@@ -1302,7 +1341,7 @@ export default function Game() {
         // Invalidate forms that are now out of range at the new size (Thimblewood still shrinks it)
         const currentForms = character.forms;
         const validForms = formsStillAllowed(
-          currentForms, formTier({ ...character, tier: nextTier }), updates.mass ?? character.mass, character);
+          currentForms, formTier({ ...character, tier: nextTier }), updates.mass ?? character.mass, character, today());
         if (validForms.length < currentForms.length) {
           updates.forms = validForms;
           updates.activeFormIndex = 0;
@@ -1408,7 +1447,8 @@ export default function Game() {
     const earned = new Set(ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => a.id));
     if (earnedRef.current) {
       for (const a of ACHIEVEMENTS) {
-        if ((a.id === "connoisseur" || a.id === "masterOfDisguise") && earned.has(a.id) && !earnedRef.current.has(a.id)) {
+        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons"];
+        if (announced.includes(a.id) && earned.has(a.id) && !earnedRef.current.has(a.id)) {
           addEvent("evolve", `${a.icon} ${a.name}! ${a.flavor(character.name)}`);
         }
       }
@@ -1433,11 +1473,39 @@ export default function Game() {
   const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
   const activeForm = character ? getActiveForm(character) : null;
   // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
-  const formTierPenalties = activeForm && character ? getFormTierPenalties(activeForm.tier, formTier(character)) : { plausibility: 0, patience: 0 };
+  const formTierPenalties = activeForm && character ? getFormTierPenalties(effectiveFormTier(activeForm, formTier(character)), formTier(character)) : { plausibility: 0, patience: 0 };
   const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
   const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
   const cfg = character ? TIER_CONFIG[character.tier] : null;
   const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
+
+  // Seasonal forms in season for this mimic that it isn't carrying yet (nudged on the setup screen)
+  const seasonalHint = (() => {
+    if (!character) return null;
+    const carried = new Set<string>(character.forms.map(f => f.formId));
+    const fresh = getSeasonalForms(formTier(character), today()).filter(f => !carried.has(f.id));
+    const holiday = fresh[0]?.holiday;
+    if (!holiday) return null;
+    const names = fresh.map(f => `a ${f.name}`);
+    return { holiday: HOLIDAYS[holiday], names: names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : names[0] };
+  })();
+
+  // What the world says about the hunt once it's over (all inputs are final by then)
+  const endReport = character && location && (huntOver || phase === "gameover") ? buildHuntReport({
+    ending: huntOver ? "cleared" : gameoverReason,
+    seed: huntSeedRef.current,
+    locationName: location.name,
+    lastRoom: mimicRoom,
+    formName: activeForm?.name ?? null,
+    tier: character.tier,
+    mimicName: character.name,
+    bounty: isBountyHunt,
+    peakSuspicion: phase === "gameover" && gameoverReason === "discovered" ? 10 : peakSuspicionRef.current,
+    biggestMeal: huntMealRef.current,
+    party,
+    mimicsDevoured: rivals.filter(r => r.consumed).length,
+    sank: !!location.sinkingTurns && shipTurn >= location.sinkingTurns,
+  }) : null;
 
   // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):
   // jaws for a meal, a jolt when prey gets away, torchlight when you're found out.
@@ -1490,6 +1558,18 @@ export default function Game() {
     </div>
   ) : null;
 
+  const SeasonBanner = seasonNotice ? (
+    <div className="max-w-5xl mx-auto px-4 pt-3">
+      <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-lg flex items-start justify-between gap-3">
+        <div>
+          <p className="font-cinzel text-amber-400 text-xs font-bold mb-0.5">The Season Has Passed</p>
+          <p className="text-xs text-amber-200/80">{seasonNotice}</p>
+        </div>
+        <button onClick={() => setSeasonNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div
       className={`hunt-stage min-h-screen bg-background ${phase === "hunt" ? "pb-28 lg:pb-0" : ""}`}
@@ -1502,6 +1582,7 @@ export default function Game() {
       {/* Remounted for each turn with an effect, which replays its animation */}
       {fx && fx !== "shake" && <div key={`${latestTurn}-${fx}`} className="fx-layer" data-fx={fx} aria-hidden />}
       {MassDecayBanner}
+      {SeasonBanner}
       {/* Top bar */}
       <div className="border-b border-border bg-card/50 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1802,6 +1883,16 @@ export default function Game() {
               {character && TIER_ORDER.indexOf(character.tier) < TIER_ORDER.indexOf("Grand") && (
                 <p className="text-[11px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
               )}
+              {seasonalHint && (
+                <button
+                  onClick={() => startFormSelection("setup")}
+                  data-holiday={seasonalHint.holiday.id}
+                  className="holiday-card w-full text-left mb-4 px-3 py-2 rounded-lg border bg-card text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span className="holiday-badge text-xs font-cinzel">{seasonalHint.holiday.icon} {seasonalHint.holiday.name}</span>
+                  {" "}· Something in the air: you could take the shape of {seasonalHint.names}. <span className="text-primary">Choose forms →</span>
+                </button>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...availableLocations].sort((a, b) => Number(!!b.rare) - Number(!!a.rare)).map(loc => (
                   <Card
@@ -1942,7 +2033,8 @@ export default function Game() {
                       <button
                         key={ref.formId}
                         onClick={() => !isActive && doChangeForm(i)}
-                        className={`w-full text-left px-3 py-2 rounded border text-xs transition-all ${
+                        data-holiday={form.holiday}
+                        className={`${form.holiday ? "holiday-card" : ""} w-full text-left px-3 py-2 rounded border text-xs transition-all ${
                           isActive ? "border-primary bg-primary/10 text-primary cursor-default" :
                           "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                         }`}
@@ -1950,10 +2042,11 @@ export default function Game() {
                         <div className="flex items-center justify-between">
                           <span className="font-cinzel">{form.name}</span>
                           <div className="flex gap-1">
-                            <span className="text-[10px] border border-border rounded px-1">{form.tier}</span>
+                            <span className="text-[10px] border border-border rounded px-1">{effectiveFormTier(form, formTier(character))}</span>
                             {isActive && <span className="text-[10px] text-primary">Active</span>}
                           </div>
                         </div>
+                        <HolidayBadge form={form} />
                         <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
                         <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
                       </button>
@@ -2081,12 +2174,8 @@ export default function Game() {
 
               {huntOver && (
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
-                  <p className="text-primary font-cinzel mb-2">The hunt is over.</p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {party.filter(a => a.isConsumed).length} consumed · {party.filter(a => a.fled).length} fled
-                    {party.some(a => a.isConverted) && ` · ${party.filter(a => a.isConverted).length} converted`}
-                    {isNest && ` · ${rivals.filter(r => r.consumed).length} mimics devoured`}
-                  </p>
+                  <p className="text-primary font-cinzel mb-3">The hunt is over.</p>
+                  {endReport && <div className="mb-4"><HuntReport report={endReport} /></div>}
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
                       Choose New Forms
@@ -2163,6 +2252,7 @@ export default function Game() {
                   ? "The adventurers found nothing of interest and moved on. Hunger remains."
                   : "Torches are lit. Steel is drawn. You scatter into the dark — this lair is burned."}
               </p>
+              {endReport && <div className="my-6"><HuntReport report={endReport} /></div>}
               <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
                 {gameoverReason === "abandoned"
                   ? "Find a new hunting ground. Better forms and higher stats will help you lure more resistant prey."

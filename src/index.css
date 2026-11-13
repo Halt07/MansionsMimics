@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -518,4 +518,379 @@
 .sidebar-view-card:hover .view-toggle-map,
 .sidebar-view-card:focus-visible .view-toggle-map {
   filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.9));
+}
+
+/* ============================================================
+   END-OF-HUNT REPORT
+   A notice, verse or scrap of gossip pinned to a plank wall. The paper keeps its own colors
+   in every theme (paper is paper); only the wall around it is dark.
+   ============================================================ */
+.report-wall {
+  --paper: #e8d9b5;
+  --paper-dark: #c9ad78;
+  --ink: #2b1d10;
+  --ink-faded: #5a4128;
+  --blood: #8c1c13;
+  margin: 0 auto;
+  max-width: 30rem;
+  padding: 1.75rem 1rem 0.75rem;
+  width: 100%;
+  container-type: inline-size;
+  border-radius: 0.5rem;
+  /* Weathered planks: grain, seams, and lamplight from above */
+  background:
+    radial-gradient(ellipse at 50% 0%, hsl(35 60% 45% / 0.22), transparent 70%),
+    repeating-linear-gradient(0deg, transparent 0 46px, rgb(0 0 0 / 0.55) 46px 48px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.015) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #3a2716, #241709);
+  box-shadow: inset 0 0 40px rgb(0 0 0 / 0.7);
+}
+.report-caption {
+  margin-top: 0.9rem;
+  text-align: center;
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: hsl(35 30% 70% / 0.75);
+}
+
+/* The shadow sits on a wrapper: clip-path on the paper would clip its own shadow */
+.report-shadow {
+  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.6)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.5));
+}
+.report-paper {
+  position: relative;
+  padding: 1.75rem 1.5rem 1.4rem;
+  color: var(--ink);
+  font-family: 'IM Fell English', 'Crimson Text', serif;
+  text-align: left;
+  transform: rotate(-1.2deg);
+  background:
+    radial-gradient(circle at 82% 78%, rgb(120 70 20 / 0.18), transparent 22%),
+    radial-gradient(circle at 12% 30%, rgb(120 70 20 / 0.12), transparent 18%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.24 0 0 0 0 0.1 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(170deg, var(--paper), var(--paper-dark));
+  box-shadow: inset 0 0 28px rgb(90 55 20 / 0.45), inset 0 0 4px rgb(90 55 20 / 0.5);
+  /* Torn, uneven edges */
+  clip-path: polygon(
+    0% 1.5%, 6% 0%, 14% 1%, 23% 0.2%, 31% 1.2%, 42% 0%, 53% 0.8%, 61% 0.1%, 72% 1.3%, 84% 0.2%, 93% 1%, 100% 0%,
+    99.3% 9%, 100% 21%, 99.1% 34%, 99.8% 48%, 99% 61%, 99.9% 74%, 99.2% 88%, 100% 100%,
+    91% 98.8%, 80% 99.9%, 69% 98.6%, 57% 99.7%, 46% 98.9%, 34% 100%, 22% 98.7%, 11% 99.8%, 0% 98.6%,
+    0.8% 86%, 0% 72%, 0.9% 58%, 0.1% 45%, 1% 31%, 0.2% 17%
+  );
+}
+.report-paper--verse { transform: rotate(0.8deg); }
+.report-paper--gossip {
+  --paper: #ece4d0;
+  --paper-dark: #d6c8a6;
+  max-width: 22rem;
+  margin: 0 auto;
+  transform: rotate(-2.5deg);
+  /* A bar tab: faint ruled lines under the grime */
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 1.45rem, rgb(70 90 140 / 0.18) 1.45rem calc(1.45rem + 1px)),
+    radial-gradient(circle at 75% 25%, rgb(120 70 20 / 0.25), transparent 14%),
+    linear-gradient(170deg, var(--paper), var(--paper-dark));
+}
+
+/* Iron nails (notices get two, everything else one, centered) */
+.report-nail {
+  position: absolute;
+  top: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b9b0a3, #4b443b 55%, #1d1a16);
+  box-shadow: 1px 2px 2px rgb(0 0 0 / 0.55);
+}
+.report-nail--left { left: 0.9rem; }
+.report-nail--right { right: 0.9rem; }
+.report-paper--verse .report-nail--left,
+.report-paper--gossip .report-nail--left { left: calc(50% - 0.35rem); }
+.report-paper--gossip .report-nail { background: radial-gradient(circle at 35% 30%, #e07a6a, #9b2a1c 60%, #4a120b); }
+
+.report-heading {
+  text-align: center;
+  font-family: 'IM Fell English SC', 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-faded);
+}
+.report-title {
+  margin-top: 0.15rem;
+  text-align: center;
+  font-family: 'IM Fell English SC', 'Cinzel', serif;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.report-paper--incident .report-title {
+  font-size: 2.4rem;
+  color: var(--blood);
+  text-shadow: 0 0 1px rgb(140 28 19 / 0.5);
+}
+.report-paper--gossip .report-title,
+.report-paper--verse .report-title {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 1.45rem;
+}
+.report-subtitle {
+  margin-top: 0.2rem;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--ink-faded);
+}
+.report-rule {
+  height: 6px;
+  margin: 0.7rem 0 0.8rem;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 0.5px solid var(--ink);
+  opacity: 0.7;
+}
+
+.report-fields { display: grid; gap: 0.2rem; font-size: 0.92rem; line-height: 1.25; }
+.report-fields > div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.5rem; }
+.report-fields dd { overflow-wrap: anywhere; }
+.report-fields dt {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-faded);
+  padding-top: 0.08rem;
+}
+@container (max-width: 26rem) {
+  .report-fields > div { grid-template-columns: 1fr; gap: 0; margin-bottom: 0.25rem; }
+  .report-paper--incident .report-title { font-size: 1.9rem; }
+}
+
+.report-quote {
+  margin: 0.9rem 0.25rem 0.2rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgb(43 29 16 / 0.4);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+.report-quote footer {
+  margin-top: 0.15rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--ink-faded);
+}
+
+.report-body { margin-top: 0.8rem; font-size: 0.95rem; line-height: 1.35; }
+.report-body p + p { margin-top: 0.5rem; }
+.report-paper--gossip .report-body { font-style: italic; font-size: 1rem; line-height: 1.45rem; }
+
+.report-verse {
+  margin-top: 0.8rem;
+  text-align: center;
+  font-style: italic;
+  font-size: 1.02rem;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+.report-verse p + p { margin-top: 0.75rem; }
+.report-verse p:first-child { font-style: normal; }
+
+.report-signoff {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  min-height: 2.6rem;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--ink-faded);
+  text-align: right;
+}
+/* Red wax seal */
+.report-seal {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 46% 54% 50% 50% / 52% 48% 54% 46%;
+  background: radial-gradient(circle at 38% 34%, #c2392c, #8c1c13 55%, #5a0f09);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.5), inset 0 0 0 3px rgb(0 0 0 / 0.12), inset 0 0 0 5px rgb(255 255 255 / 0.06);
+  font-family: 'IM Fell English SC', serif;
+  font-style: normal;
+  font-size: 1.1rem;
+  color: rgb(60 8 4 / 0.85);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.15);
+}
+
+/* Rubber stamp, slapped on at an angle */
+.report-stamp {
+  position: absolute;
+  bottom: 1.1rem;
+  left: 1rem;
+  padding: 0.15rem 0.6rem;
+  border: 3px double rgb(140 28 19 / 0.7);
+  border-radius: 0.3rem;
+  transform: rotate(-14deg);
+  font-family: 'IM Fell English SC', serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(140 28 19 / 0.7);
+  white-space: nowrap;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .report-wall .report-paper { animation: report-post 0.5s ease-out both; }
+}
+@keyframes report-post {
+  from { opacity: 0; translate: 0 -10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+/* Leave the stamp its corner beside the signoff; in a narrow column it drops below instead */
+.report-paper:has(.report-stamp) .report-signoff { padding-left: 9.5rem; }
+@container (max-width: 26rem) {
+  .report-paper:has(.report-stamp) .report-signoff { padding-left: 0; }
+  .report-stamp { position: static; display: inline-block; margin: 0.6rem 0 0 0.25rem; transform: rotate(-8deg); }
+}
+
+/* ============================================================
+   SEASONAL FORMS
+   Cards for holiday forms get a themed border and glow. The border is drawn by ::before as a
+   masked ring, so the card keeps its own background (and selected tint) underneath.
+   ============================================================ */
+.holiday-card {
+  position: relative;
+  border-color: transparent !important;
+  isolation: isolate;
+}
+.holiday-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--holiday-border);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+.holiday-card { box-shadow: 0 0 10px var(--holiday-glow), 0 0 2px var(--holiday-glow); }
+
+/* All Hallows' Eve: jack-o'-lantern orange, flickering like a candle */
+[data-holiday="halloween"] {
+  --holiday-border: linear-gradient(135deg, #ff8a1f, #b8410e 45%, #ffb347 70%, #7a2a08);
+  --holiday-glow: rgb(255 128 20 / 0.55);
+  --holiday-text: #ffa040;
+}
+/* Harvest Feast: wheat, russet and gold */
+[data-holiday="thanksgiving"] {
+  --holiday-border: repeating-linear-gradient(90deg, #f2d27a 0 10px, #c9962e 10px 18px, #6e4a1c 18px 22px);
+  --holiday-glow: rgb(236 200 100 / 0.4);
+  --holiday-text: #f0cf72;
+}
+/* Midwinter: a candy-cane stripe that slowly travels around the card, red and green glow */
+[data-holiday="christmas"] {
+  --holiday-border: repeating-linear-gradient(45deg, #d42a2a 0 7px, #f6f1e7 7px 14px, #1f8a4c 14px 21px, #f6f1e7 21px 28px);
+  --holiday-glow: rgb(212 42 42 / 0.45);
+  --holiday-text: #f08080;
+}
+[data-holiday="christmas"].holiday-card::before { background-size: 40px 40px; }
+
+/* Year's Turning: gold and silver, with a shimmer sweeping across */
+[data-holiday="new_year"] {
+  --holiday-border: linear-gradient(110deg, #b8902e 0%, #f7e7a1 20%, #c9ccd6 35%, #fff8dc 50%, #b8902e 65%, #e9ecf2 80%, #b8902e 100%);
+  --holiday-glow: rgb(247 220 140 / 0.45);
+  --holiday-text: #f2d98a;
+}
+[data-holiday="new_year"].holiday-card::before { background-size: 250% 100%; }
+/* Lantern Festival: lacquer red and gold */
+[data-holiday="lunar_new_year"] {
+  --holiday-border: linear-gradient(135deg, #c8102e, #f5c542 30%, #a50d24 55%, #f5c542 80%, #c8102e);
+  --holiday-glow: rgb(220 30 50 / 0.5);
+  --holiday-text: #f5a0a0;
+}
+/* Springtide: pastel dyed-egg stripes */
+[data-holiday="easter"] {
+  --holiday-border: repeating-linear-gradient(90deg, #f7b7d2 0 9px, #b8ecd2 9px 18px, #cdb9f5 18px 27px, #fbe7a0 27px 36px);
+  --holiday-glow: rgb(220 190 240 / 0.4);
+  --holiday-text: #e8b8f0;
+}
+/* Midsummer Revel: noon yellow to sunset orange */
+[data-holiday="midsummer"] {
+  --holiday-border: linear-gradient(135deg, #fff27a, #ffc12e 35%, #ff7a1a 70%, #ffd65c);
+  --holiday-glow: rgb(255 200 50 / 0.5);
+  --holiday-text: #ffd65c;
+}
+/* Founders' Day: red, white and blue bunting stripes */
+[data-holiday="independence_day"] {
+  --holiday-border: repeating-linear-gradient(-45deg, #c8202f 0 7px, #f6f4ee 7px 14px, #234a9c 14px 21px, #f6f4ee 21px 28px);
+  --holiday-glow: rgb(60 100 220 / 0.45);
+  --holiday-text: #9db8ff;
+}
+[data-holiday="independence_day"].holiday-card::before { background-size: 40px 40px; }
+[data-holiday="falling_stars"].holiday-card::before { background-size: 132px 132px; }
+/* Night of Falling Stars: deep blue night, crossed by short white streaks that drift past */
+[data-holiday="falling_stars"] {
+  --holiday-border: repeating-linear-gradient(115deg, #1b2a6b 0 22px, #3e56c4 22px 44px, #f2f5ff 44px 48px, #14204f 48px 60px);
+  --holiday-glow: rgb(80 110 230 / 0.5);
+  --holiday-text: #a9bcff;
+}
+/* Brewfest: amber ale, a band of foam, dark oak */
+[data-holiday="brewfest"] {
+  --holiday-border: linear-gradient(180deg, #f6ecd0 0 18%, #e3a92b 18% 70%, #8a5a1f 70%);
+  --holiday-glow: rgb(227 169 43 / 0.45);
+  --holiday-text: #edc062;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .holiday-card[data-holiday="halloween"] { animation: holiday-flicker 3.2s ease-in-out infinite; }
+  .holiday-card[data-holiday="christmas"] { animation: holiday-twinkle 4s ease-in-out infinite; }
+  .holiday-card[data-holiday="christmas"]::before { animation: holiday-stripes 4s linear infinite; }
+  .holiday-card[data-holiday="independence_day"]::before { animation: holiday-stripes 5s linear infinite; }
+  .holiday-card[data-holiday="independence_day"] { animation: holiday-bunting 4s ease-in-out infinite; }
+  .holiday-card[data-holiday="new_year"]::before { animation: holiday-shimmer 5s linear infinite; }
+  .holiday-card[data-holiday="midsummer"],
+  .holiday-card[data-holiday="lunar_new_year"] { animation: holiday-pulse 3s ease-in-out infinite; }
+  .holiday-card[data-holiday="falling_stars"]::before { animation: holiday-drift 6s linear infinite; }
+}
+@keyframes holiday-bunting {
+  0%, 100% { box-shadow: 0 0 10px rgb(200 32 47 / 0.45), 0 0 2px rgb(200 32 47 / 0.45); }
+  50% { box-shadow: 0 0 10px rgb(60 100 220 / 0.5), 0 0 2px rgb(60 100 220 / 0.5); }
+}
+@keyframes holiday-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+@keyframes holiday-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--holiday-glow), 0 0 2px var(--holiday-glow); }
+  50% { box-shadow: 0 0 16px var(--holiday-glow), 0 0 3px var(--holiday-glow); }
+}
+@keyframes holiday-drift {
+  to { background-position: 132px 0; }
+}
+@keyframes holiday-flicker {
+  0%, 100% { box-shadow: 0 0 10px rgb(255 128 20 / 0.55), 0 0 2px rgb(255 128 20 / 0.55); }
+  20% { box-shadow: 0 0 14px rgb(255 140 30 / 0.7), 0 0 3px rgb(255 140 30 / 0.7); }
+  23% { box-shadow: 0 0 7px rgb(255 110 10 / 0.4), 0 0 2px rgb(255 110 10 / 0.4); }
+  60% { box-shadow: 0 0 12px rgb(255 128 20 / 0.6), 0 0 2px rgb(255 128 20 / 0.6); }
+}
+@keyframes holiday-twinkle {
+  0%, 100% { box-shadow: 0 0 10px rgb(212 42 42 / 0.5), 0 0 2px rgb(212 42 42 / 0.5); }
+  50% { box-shadow: 0 0 10px rgb(31 160 80 / 0.5), 0 0 2px rgb(31 160 80 / 0.5); }
+}
+@keyframes holiday-stripes {
+  to { background-position: 40px 0; }
+}
+
+.holiday-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--holiday-text);
 }
