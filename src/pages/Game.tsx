@@ -18,7 +18,7 @@ import {
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, dropExpiredSeasonalForms,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, dropExpiredSeasonalForms, SEASONAL_FORMS,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -1395,7 +1395,11 @@ export default function Game() {
         adventurersEaten: ADVENTURER_TEMPLATES.map(t => t.name),                            // Connoisseur
         learnedMaterials: [...ALL_MATERIALS],                                                // Master of Disguise
         learnedTraits: [...LEARNABLE_TRAITS],
-        formsUsed: [...new Set([...character.formsUsed, ...VARIANT_FORMS.map(f => f.id)])], // Curiosity Cabinet
+        formsUsed: [...new Set([
+          ...character.formsUsed,
+          ...VARIANT_FORMS.map(f => f.id),   // Curiosity Cabinet
+          ...SEASONAL_FORMS.map(f => f.id),  // Festive, A Mimic for All Seasons
+        ])],
       }
     : character;
   // If a new achievement is added and the preview above doesn't earn it, say so
