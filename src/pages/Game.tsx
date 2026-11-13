@@ -41,6 +41,8 @@ import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
 import BurnBadge from "../components/game/BurnBadge";
 import RoomMap from "../components/game/RoomMap";
+import HuntReport from "../components/game/HuntReport";
+import { buildHuntReport } from "../components/game/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
 
 // ── Game-screen state types ──
@@ -332,8 +334,18 @@ export default function Game() {
       stillTurnsRef.current = 0;
       catsThatKnowRef.current = new Set();
       peakSuspicionRef.current = 0;
+      huntMealRef.current = null;
+      huntSeedRef.current = Math.floor(Math.random() * 2 ** 31);
     }
     setPhase("hunt");
+  };
+
+  // For the end-of-hunt report: this hunt's biggest meal, and a seed so the report
+  // reads the same every time it renders.
+  const huntMealRef = useRef<{ name: string; ap: number } | null>(null);
+  const huntSeedRef = useRef(0);
+  const noteMeal = (name: string, ap: number) => {
+    huntMealRef.current = withBiggestMeal(huntMealRef.current, name, ap);
   };
 
   // Lifetime stats: each hunt is counted once, as survived or failed, however it ends.
@@ -661,6 +673,7 @@ export default function Game() {
           addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
         }
         setRivals(updatedRivals);
+        noteMeal(RIVAL_MEAL_NAMES[rivalTarget.kind], apGained);
         const updatedChar = {
           ...character,
           assimilationPoints: (character.assimilationPoints || 0) + apGained,
@@ -937,6 +950,7 @@ export default function Game() {
         partyMembersEaten: character.partyMembersEaten + 1,
         biggestMeal: withBiggestMeal(character.biggestMeal, target.name, apGained),
       };
+      noteMeal(target.name, apGained);
       setCharacter(updatedChar);
       persist({
         assimilationPoints: updatedChar.assimilationPoints,
@@ -980,6 +994,7 @@ export default function Game() {
     beginTurn();
     addEvent("consume", `You snap up the ${creature.name} — a modest feast. +${creature.ap} AP.`);
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
+    noteMeal(creature.name, creature.ap);
     setActionCount(0); // Eating resets the stagnation counter
     const updatedChar = {
       ...character,
@@ -1390,6 +1405,23 @@ export default function Game() {
   const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
   const cfg = character ? TIER_CONFIG[character.tier] : null;
   const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
+
+  // What the world says about the hunt once it's over (all inputs are final by then)
+  const endReport = character && location && (huntOver || phase === "gameover") ? buildHuntReport({
+    ending: huntOver ? "cleared" : gameoverReason,
+    seed: huntSeedRef.current,
+    locationName: location.name,
+    lastRoom: mimicRoom,
+    formName: activeForm?.name ?? null,
+    tier: character.tier,
+    mimicName: character.name,
+    bounty: isBountyHunt,
+    peakSuspicion: phase === "gameover" && gameoverReason === "discovered" ? 10 : peakSuspicionRef.current,
+    biggestMeal: huntMealRef.current,
+    party,
+    mimicsDevoured: rivals.filter(r => r.consumed).length,
+    sank: !!location.sinkingTurns && shipTurn >= location.sinkingTurns,
+  }) : null;
 
   // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):
   // jaws for a meal, a jolt when prey gets away, torchlight when you're found out.
@@ -1991,12 +2023,8 @@ export default function Game() {
 
               {huntOver && (
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
-                  <p className="text-primary font-cinzel mb-2">The hunt is over.</p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {party.filter(a => a.isConsumed).length} consumed · {party.filter(a => a.fled).length} fled
-                    {party.some(a => a.isConverted) && ` · ${party.filter(a => a.isConverted).length} converted`}
-                    {isNest && ` · ${rivals.filter(r => r.consumed).length} mimics devoured`}
-                  </p>
+                  <p className="text-primary font-cinzel mb-3">The hunt is over.</p>
+                  {endReport && <div className="mb-4"><HuntReport report={endReport} /></div>}
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
                       Choose New Forms
@@ -2073,6 +2101,7 @@ export default function Game() {
                   ? "The adventurers found nothing of interest and moved on. Hunger remains."
                   : "Torches are lit. Steel is drawn. You scatter into the dark — this lair is burned."}
               </p>
+              {endReport && <div className="my-6"><HuntReport report={endReport} /></div>}
               <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
                 {gameoverReason === "abandoned"
                   ? "Find a new hunting ground. Better forms and higher stats will help you lure more resistant prey."
