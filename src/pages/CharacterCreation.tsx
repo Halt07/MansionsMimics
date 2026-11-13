@@ -6,8 +6,10 @@ import { toast } from "@/components/ui/use-toast";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
-  canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, type Form, type Material, type StartingType,
+  canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, effectiveFormTier, getSeasonalForms, today,
+  type Form, type Material, type StartingType,
 } from "../components/game/gameData";
+import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,11 +60,15 @@ export default function CharacterCreation() {
   // Minor origin starts at Minor tier; Lesser origin starts at Lesser tier
   const startingTier: StartingType = origin || "Minor";
   const tierIndex = TIER_ORDER.indexOf(startingTier);
-  const availableForms = TIER_ORDER.reduce<Form[]>((acc, tier, i) => {
-    // Base forms only: variant forms must be unlocked by learning something in play
-    if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier].filter(f => !isVariantForm(f))];
-    return acc;
-  }, []);
+  const availableForms = [
+    // Seasonal forms first, while in season (they count as the starting tier)
+    ...getSeasonalForms(startingTier, today()).filter(f => !isVariantForm(f)),
+    ...TIER_ORDER.reduce<Form[]>((acc, tier, i) => {
+      // Base forms only: variant forms must be unlocked by learning something in play
+      if (Math.abs(i - tierIndex) <= 1) return [...acc, ...MASTER_FORMS[tier].filter(f => !isVariantForm(f))];
+      return acc;
+    }, []),
+  ];
 
   const canProceed = () => {
     if (step === 0) return !!origin;
@@ -265,14 +271,16 @@ export default function CharacterCreation() {
                 const isSelected = selectedForms.find(f => f.id === form.id);
                 const blockedByAboveRule = !isSelected && !canAddForm(selectedForms, form, startingTier);
                 const disabled = !isSelected && (selectedForms.length >= 2 || blockedByAboveRule);
-                const formTierIdx = TIER_ORDER.indexOf(form.tier);
+                const formTierIdx = TIER_ORDER.indexOf(effectiveFormTier(form, startingTier));
+                const holidayProps = holidayCardProps(form);
                 const myTierIdx = TIER_ORDER.indexOf(startingTier);
                 const tierDiff = formTierIdx - myTierIdx;
                 return (
                   <Card
                     key={form.id}
                     onClick={() => !disabled && toggleForm(form)}
-                    className={`cursor-pointer transition-all border-2 ${
+                    data-holiday={holidayProps["data-holiday"]}
+                    className={`${holidayProps.className} cursor-pointer transition-all border-2 ${
                       isSelected ? "border-primary bg-primary/5" :
                       disabled ? "border-border opacity-40 cursor-not-allowed" :
                       "border-border bg-card hover:border-primary/30"
@@ -287,6 +295,7 @@ export default function CharacterCreation() {
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
+                      {form.holiday && <p className="mb-1"><HolidayBadge form={form} /></p>}
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
                       {blockedByAboveRule && selectedForms.length < 2 && (
                         <p className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
@@ -295,7 +304,7 @@ export default function CharacterCreation() {
                         <Badge variant="outline" className="text-[11px] border-primary/20 text-primary bg-primary/5">
                           +{form.baseAllureModifier} Allure
                         </Badge>
-                        <Badge variant="outline" className="text-[11px] border-border text-muted-foreground">{form.tier}</Badge>
+                        <Badge variant="outline" className="text-[11px] border-border text-muted-foreground">{effectiveFormTier(form, startingTier)}</Badge>
                         {form.utilityTags.map(t => (
                           <Badge key={t} variant="outline" className="text-[11px] border-border text-muted-foreground">{t}</Badge>
                         ))}

@@ -1,9 +1,9 @@
 // Magic material effects and their arcane-residue cost.
 // Many checks are statistical: they roll thousands of times and compare rates.
 export default async function ({ gameData: m, ok }) {
-  const { ADVENTURER_TEMPLATES: T, MATERIALS, MAGIC_EFFECTS, MASTER_FORMS, LOCATIONS: L } = m;
+  const { ADVENTURER_TEMPLATES: T, MATERIALS, MAGIC_EFFECTS, ALL_FORMS, LOCATIONS: L } = m;
   const N = 20000;
-  const forms = Object.values(MASTER_FORMS).flat();
+  const forms = ALL_FORMS;
   const tpl = (n) => ({ ...T.find((t) => t.name === n), suspicion: 1, id: n, isAlive: true, isConsumed: false });
   const app = (...magic) => ({ primaryMaterials: ['Oak'], secondaryMaterials: magic, surfaceTraits: [], symbolicTraits: [], conditionTraits: [] });
   const form = forms.find((f) => f.id === 'lesser_chest');

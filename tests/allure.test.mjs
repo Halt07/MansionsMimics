@@ -1,8 +1,8 @@
 // Luring: likes and dislikes (all traits count, dislikes cost dice),
 // and partial bites (Minor mimics, and giants you can't yet swallow whole).
 export default async function ({ gameData: m, ok, log }) {
-  const { ADVENTURER_TEMPLATES: T, MATERIALS, TRAITS, MASTER_FORMS } = m;
-  const forms = Object.values(MASTER_FORMS).flat();
+  const { ADVENTURER_TEMPLATES: T, MATERIALS, TRAITS, ALL_FORMS } = m;
+  const forms = ALL_FORMS;
   const allMats = new Set(Object.values(MATERIALS).flat());
   // Anything wearable in the appearance editor (every learnable category), plus traits built into forms
   const reachableTraits = new Set([...Object.values(TRAITS).flat(), ...forms.flatMap((f) => f.builtInTraits)]);

@@ -9,6 +9,7 @@ import {
   type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
   type MaterialRarity, type StartingType, type Tier, type UtilityTag,
 } from "./vocabulary";
+import type { HolidayId } from "./holidays";
 
 // ============================================================
 // FORMS
@@ -38,6 +39,18 @@ interface FormDef {
    */
   readonly variantOf?: string;
   readonly unlockedBy?: readonly (Material | Trait)[];
+}
+
+/**
+ * Seasonal forms: only offered while their holiday is in season (see ./holidays), and only to
+ * mimics of `holidayTiers`, where they always count as the mimic's own tier (no adjacent-tier
+ * penalty, never "above"). They have no `tier` of their own: it's derived as the lowest of
+ * `holidayTiers`. A seasonal variant (variantOf, no unlockedBy) is unlocked by the date instead
+ * of by learning.
+ */
+interface SeasonalFormDef extends Omit<FormDef, "tier" | "unlockedBy"> {
+  readonly holiday: HolidayId;
+  readonly holidayTiers: readonly [Tier, ...Tier[]];
 }
 
 const FORM_DATA = {
@@ -707,15 +720,408 @@ const FORM_DATA = {
   ],
 } as const satisfies Record<Tier, readonly FormDef[]>;
 
-/** Every form id in the game, derived from the form data above. */
-export type FormId = (typeof FORM_DATA)[Tier][number]["id"];
+// ============================================================
+// SEASONAL FORMS
+// Kept apart from the tier lists above, so MASTER_FORMS (and everything built from it) never
+// includes them by accident. Grouped by holiday, in calendar order.
+// ============================================================
+const SEASONAL_FORM_DATA = [
+  // ── Year's Turning ──
+  {
+    id: "minor_hourglass", name: "Hourglass", baseMassRange: [1, 8],
+    holiday: "new_year", holidayTiers: ["Minor", "Lesser"],
+    builtInTraits: ["Carved", "Ornate"],
+    baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Valuable", "Decor"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "Turned over at midnight to count in the new year. Everyone watches the last grains fall.",
+    flawProfiles: [
+      { type: "structure", description: "The sand runs at the same speed whichever way up it is" },
+      { type: "visual", description: "The last grain never quite falls" },
+      { type: "weight", description: "It's heavier at the top than at the bottom" },
+    ],
+  },
+  {
+    id: "lesser_wassail_bowl", name: "Wassail Bowl", baseMassRange: [5, 12],
+    holiday: "new_year", holidayTiers: ["Lesser", "Standard"],
+    builtInTraits: ["Carved", "Warm to Touch"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Dining", "Social"],
+    materialSlots: 3, digestCapacityRequired: 2, description: "A great carved bowl of hot spiced ale, passed hand to hand for luck. Everyone has to drink.",
+    flawProfiles: [
+      { type: "temperature", description: "It never cools" },
+      { type: "material", description: "The level never drops, however many drink" },
+      { type: "environmental", description: "The spices smell stronger the closer you lean" },
+    ],
+  },
+  {
+    id: "greater_midnight_orb", name: "Midnight Orb", baseMassRange: [13, 40],
+    holiday: "new_year", holidayTiers: ["Greater", "Grand", "Apex"],
+    builtInTraits: ["Radiant", "Ornate"],
+    baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Lighting", "Valuable", "Social"],
+    materialSlots: 4, digestCapacityRequired: 5, description: "A great glowing ball lowered from the tower at the stroke of midnight. The whole crowd presses in to watch it come down.",
+    flawProfiles: [
+      { type: "light", description: "It's already glowing before the lamplighters reach it" },
+      { type: "structure", description: "No rope or chain is holding it up" },
+      { type: "spatial", description: "It looks bigger the closer it gets" },
+    ],
+  },
+  // ── Lantern Festival ──
+  {
+    id: "minor_red_envelope", name: "Red Envelope", baseMassRange: [1, 4],
+    holiday: "lunar_new_year", holidayTiers: ["Minor"],
+    builtInTraits: ["Ornate"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable"],
+    materialSlots: 1, digestCapacityRequired: 1, description: "A red paper envelope stamped in gold and plump with something. Finders keepers, surely.",
+    flawProfiles: [
+      { type: "weight", description: "Too thick for paper money, too light for coin" },
+      { type: "text", description: "The gold characters say something different to each reader" },
+      { type: "material", description: "The paper is warm, and faintly pulses" },
+    ],
+  },
+  {
+    id: "minor_paper_lantern", name: "Paper Lantern", baseMassRange: [1, 8],
+    holiday: "lunar_new_year", holidayTiers: ["Minor", "Lesser"],
+    builtInTraits: ["Radiant", "Minimalist"],
+    baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Lighting", "Decor"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "A round red lantern of paper and bamboo. They're hung by the hundred this time of year; one more won't be counted.",
+    flawProfiles: [
+      { type: "light", description: "It glows brighter when someone walks underneath" },
+      { type: "structure", description: "There's no candle inside, yet it's lit" },
+      { type: "environmental", description: "It doesn't sway in the wind with the others" },
+    ],
+  },
+  {
+    id: "standard_dragon_costume", name: "Dragon Dance Costume", baseMassRange: [9, 16],
+    holiday: "lunar_new_year", holidayTiers: ["Standard", "Greater", "Grand"],
+    builtInTraits: ["Ornate", "Carved"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Entertainment", "Social"],
+    materialSlots: 3, digestCapacityRequired: 4, description: "A great painted dragon head and a long silk body, waiting for dancers to climb in underneath. They always climb in.",
+    flawProfiles: [
+      { type: "structure", description: "The body ripples when no one is inside" },
+      { type: "visual", description: "The eyes blink between drumbeats" },
+      { type: "weight", description: "It's heavier than silk and paper should be" },
+    ],
+  },
+  {
+    id: "grand_lantern_arch", name: "Lantern Arch", baseMassRange: [17, 40],
+    holiday: "lunar_new_year", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Arched", "Radiant", "Ornate"],
+    baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Structural", "Lighting", "Social"],
+    materialSlots: 5, digestCapacityRequired: 6, description: "A great wooden arch strung with hundreds of red lanterns. The whole festival passes beneath it, and nobody counts who comes out the other side.",
+    flawProfiles: [
+      { type: "light", description: "One lantern stays lit after all the others are put out" },
+      { type: "structure", description: "It has no foundations, yet the wind can't stir it" },
+      { type: "acoustic", description: "Footsteps beneath it echo a moment too long" },
+    ],
+  },
+  // ── Springtide ──
+  {
+    id: "minor_painted_egg", name: "Painted Egg", baseMassRange: [1, 4],
+    holiday: "easter", holidayTiers: ["Minor"],
+    builtInTraits: ["Ornate"],
+    baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Decor", "Rural"],
+    materialSlots: 1, digestCapacityRequired: 1, description: "A hen's egg painted in bright spirals and hidden for children to find. The grown-ups look too, when they think no one is watching.",
+    flawProfiles: [
+      { type: "temperature", description: "It's warm, as if something is still sitting on it" },
+      { type: "weight", description: "Too heavy for an egg, even a boiled one" },
+      { type: "acoustic", description: "Something inside taps back" },
+    ],
+  },
+  {
+    id: "minor_egg_basket", name: "Egg Basket", baseMassRange: [1, 8],
+    holiday: "easter", holidayTiers: ["Minor", "Lesser"],
+    builtInTraits: ["Rustic"],
+    baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage", "Rural"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "A wicker basket lined with straw and heaped with dyed eggs. Whoever finds it gets to keep it.",
+    flawProfiles: [
+      { type: "structure", description: "The wicker doesn't creak when it's lifted" },
+      { type: "material", description: "Every egg is exactly the same size" },
+      { type: "environmental", description: "The straw never sheds a single stalk" },
+    ],
+  },
+  {
+    id: "standard_hedge_rabbit", name: "Hedge Rabbit", baseMassRange: [9, 25],
+    holiday: "easter", holidayTiers: ["Standard", "Greater", "Grand"],
+    builtInTraits: ["Rustic"],
+    baseAllureModifier: 2, plausibilityModifier: 2, utilityTags: ["Decor", "Rural"],
+    materialSlots: 3, digestCapacityRequired: 5, description: "A rabbit clipped from boxwood, taller than a man, in the middle of the garden. Children hide eggs at its feet.",
+    flawProfiles: [
+      { type: "environmental", description: "No gardener trims it, yet it never grows ragged" },
+      { type: "visual", description: "Its ears are up in the morning and down at night" },
+      { type: "grounding", description: "Its roots don't go into the ground" },
+    ],
+  },
+  {
+    id: "apex_hedge_maze", name: "Hedge Maze", baseMassRange: [26, 40],
+    holiday: "easter", holidayTiers: ["Apex"],
+    builtInTraits: ["Rustic"],
+    baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Decor", "Rural"],
+    materialSlots: 7, digestCapacityRequired: 8, description: "A garden maze of clipped yew, with painted eggs hidden at every dead end. Children run in laughing. The paths are never quite where they were.",
+    flawProfiles: [
+      { type: "spatial", description: "The maze is bigger inside than the garden it stands in" },
+      { type: "environmental", description: "The hedges never need clipping" },
+      { type: "visual", description: "The way out moves while you're looking for it" },
+    ],
+  },
+  // ── Midsummer Revel ──
+  {
+    id: "lesser_maypole", name: "Maypole", baseMassRange: [5, 16],
+    holiday: "midsummer", holidayTiers: ["Lesser", "Standard", "Greater"],
+    builtInTraits: ["Carved", "Rustic"],
+    baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Entertainment", "Social", "Rural"],
+    materialSlots: 3, digestCapacityRequired: 4, description: "A tall pole hung with long ribbons. Dancers each take one and circle it, closer and closer, until the ribbons are wound tight.",
+    flawProfiles: [
+      { type: "environmental", description: "The ribbons stream out when there is no wind" },
+      { type: "structure", description: "It stands upright, but no hole was ever dug for it" },
+      { type: "presence", description: "The dancers feel themselves pulled inward" },
+    ],
+  },
+  {
+    id: "greater_bonfire", name: "Bonfire", baseMassRange: [13, 40],
+    holiday: "midsummer", holidayTiers: ["Greater", "Grand", "Apex"],
+    builtInTraits: ["Radiant", "Warm to Touch", "Rustic"],
+    baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Lighting", "Social", "Rural"],
+    materialSlots: 3, digestCapacityRequired: 5, description: "A towering stack of logs, roaring through the shortest night. Everyone crowds in for the warmth, a little closer every hour.",
+    flawProfiles: [
+      { type: "environmental", description: "It never burns down, however long it roars" },
+      { type: "light", description: "The flames lean toward whoever is nearest" },
+      { type: "grounding", description: "There's no ash beneath it" },
+    ],
+  },
+  // ── Founders' Day ──
+  {
+    id: "minor_picnic_basket", name: "Picnic Basket", baseMassRange: [1, 8],
+    holiday: "independence_day", holidayTiers: ["Minor", "Lesser"],
+    builtInTraits: ["Rustic", "Heavy-Lidded"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Dining", "Rural"],
+    materialSlots: 2, digestCapacityRequired: 2, description: "A checked cloth, a wicker lid and the smell of pies, left unattended on the green as if it were waiting for someone.",
+    flawProfiles: [
+      { type: "environmental", description: "No ants come anywhere near it" },
+      { type: "weight", description: "It's heavier after someone reaches in" },
+      { type: "structure", description: "The lid closes by itself, gently" },
+    ],
+  },
+  {
+    id: "lesser_firework_crate", name: "Firework Crate", baseMassRange: [5, 16],
+    holiday: "independence_day", holidayTiers: ["Lesser", "Standard", "Greater"],
+    builtInTraits: ["Reinforced", "Rustic"],
+    baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage", "Entertainment"],
+    materialSlots: 2, digestCapacityRequired: 2, description: "A crate of rockets and fizzers stamped DO NOT DROP. Everyone wants a look inside; nobody wants to be the one who opens it carelessly.",
+    flawProfiles: [
+      { type: "weight", description: "Nothing rattles when it's moved" },
+      { type: "environmental", description: "There's no smell of black powder at all" },
+      { type: "structure", description: "Every fuse is exactly the same length" },
+    ],
+  },
+  {
+    id: "grand_parade_float", name: "Parade Float", baseMassRange: [17, 40],
+    holiday: "independence_day", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Ornate", "Reinforced"],
+    baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Transport", "Entertainment", "Social"],
+    materialSlots: 5, digestCapacityRequired: 6, description: "A wagon dressed in bunting and painted founders, big enough to carry a whole band. Revelers clamber aboard for the ride.",
+    flawProfiles: [
+      { type: "structure", description: "It rolls along with no horses in the traces" },
+      { type: "acoustic", description: "The band's music comes from somewhere underneath" },
+      { type: "spatial", description: "More people climb on than ever get off" },
+    ],
+  },
+  // ── Night of Falling Stars ──
+  {
+    id: "minor_fallen_star", name: "Fallen Star", baseMassRange: [1, 12],
+    holiday: "falling_stars", holidayTiers: ["Minor", "Lesser", "Standard"],
+    builtInTraits: ["Radiant", "Warm to Touch"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Knowledge"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "A glowing stone, still warm from the sky. Scholars cross three counties for one this size.",
+    flawProfiles: [
+      { type: "light", description: "It glows brighter in daylight, not dimmer" },
+      { type: "environmental", description: "There's no crater where it landed" },
+      { type: "presence", description: "It hums a note that only the learned can hear" },
+    ],
+  },
+  {
+    id: "greater_wishing_well", name: "Wishing Well", baseMassRange: [13, 40],
+    holiday: "falling_stars", holidayTiers: ["Greater", "Grand", "Apex"],
+    builtInTraits: ["Carved", "Arched", "Rustic"],
+    baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Rural"],
+    materialSlots: 4, digestCapacityRequired: 6, description: "An old stone well where every coin thrown on the Night of Falling Stars buys a wish. Everyone leans over to see where theirs landed.",
+    flawProfiles: [
+      { type: "acoustic", description: "Coins dropped in never hit the bottom" },
+      { type: "environmental", description: "It's dry, yet the bucket always comes up wet" },
+      { type: "spatial", description: "It's deeper than the hill it's dug into" },
+    ],
+  },
+  // ── Brewfest ──
+  {
+    id: "minor_beer_stein", name: "Beer Stein", baseMassRange: [1, 8],
+    holiday: "brewfest", holidayTiers: ["Minor", "Lesser"],
+    builtInTraits: ["Carved", "Heavy-Lidded"],
+    baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Dining", "Social"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "A lidded stoneware stein, full to the brim and nobody's in particular. Brewfest custom says it's yours now.",
+    flawProfiles: [
+      { type: "material", description: "The foam never goes flat" },
+      { type: "weight", description: "It gets no lighter as it's drunk" },
+      { type: "acoustic", description: "The lid clicks shut by itself" },
+    ],
+  },
+  {
+    id: "lesser_festival_keg", name: "Festival Keg", baseMassRange: [5, 16],
+    variantOf: "lesser_barrel", holiday: "brewfest", holidayTiers: ["Lesser", "Standard", "Greater"],
+    builtInTraits: ["Iron-Banded", "Rustic"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Storage", "Dining", "Social"],
+    materialSlots: 2, digestCapacityRequired: 2, description: "A fresh-tapped keg garlanded with hops. The line for it never gets shorter, and neither does the keg.",
+    flawProfiles: [
+      { type: "acoustic", description: "It sounds full however much is poured" },
+      { type: "structure", description: "The tap never drips" },
+      { type: "environmental", description: "Wasps won't go near the spills" },
+    ],
+  },
+  {
+    id: "grand_beer_tent", name: "Beer Tent", baseMassRange: [17, 40],
+    holiday: "brewfest", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Rustic", "Warm to Touch"],
+    baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Structural", "Social", "Hospitality"],
+    materialSlots: 5, digestCapacityRequired: 6, description: "A striped festival tent full of long benches and longer songs. It's always warm inside, and there's always room for one more.",
+    flawProfiles: [
+      { type: "spatial", description: "There's always room for one more, however many go in" },
+      { type: "environmental", description: "The canvas doesn't flap in the wind" },
+      { type: "social", description: "The songs never end, and nobody remembers starting them" },
+    ],
+  },
+  // ── All Hallows' Eve ──
+  {
+    id: "minor_jack_o_lantern", name: "Jack-o'-Lantern", baseMassRange: [1, 12],
+    holiday: "halloween", holidayTiers: ["Minor", "Lesser", "Standard"],
+    builtInTraits: ["Carved", "Radiant", "Warm to Touch"],
+    baseAllureModifier: 2, plausibilityModifier: 0, utilityTags: ["Decor", "Lighting", "Rural"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "A grinning gourd with a candle inside. Every doorstep has one this time of year, so nobody looks twice.",
+    flawProfiles: [
+      { type: "light", description: "The candle never gutters, even in a draft" },
+      { type: "material", description: "The flesh inside never softens or starts to rot" },
+      { type: "visual", description: "The grin is wider than whoever carved it meant it to be" },
+    ],
+  },
+  {
+    id: "lesser_haunted_tree", name: "Haunted Tree", baseMassRange: [5, 16],
+    holiday: "halloween", holidayTiers: ["Lesser", "Standard", "Greater"],
+    builtInTraits: ["Rustic", "Whispering", "Cold to Touch"],
+    baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Decor", "Rural"],
+    materialSlots: 3, digestCapacityRequired: 3, description: "A bare, twisted tree that creaks with no wind. This close to All Hallows', a tree like that is just part of the scenery.",
+    flawProfiles: [
+      { type: "acoustic", description: "The branches creak when there is no wind" },
+      { type: "environmental", description: "The branches are bare, yet no leaves lie beneath it" },
+      { type: "presence", description: "Crows land on it, then think better of it" },
+    ],
+  },
+  {
+    id: "grand_haunted_mansion", name: "Haunted Mansion", baseMassRange: [17, 40],
+    holiday: "halloween", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Ornate", "Carved", "Cold to Touch", "Whispering"],
+    baseAllureModifier: 3, plausibilityModifier: 1, utilityTags: ["Structural", "Social", "Valuable"],
+    materialSlots: 6, digestCapacityRequired: 6, description: "A rambling mansion with one lit window and a story for every room. Every mansion has a mimic hiding somewhere inside. This one is the mimic.",
+    flawProfiles: [
+      { type: "spatial", description: "There are more rooms inside than there are windows outside" },
+      { type: "acoustic", description: "Floorboards creak in rooms nobody has entered" },
+      { type: "presence", description: "Every portrait in the hall faces the front door" },
+    ],
+  },
+  // ── Harvest Feast ──
+  {
+    id: "lesser_scarecrow", name: "Scarecrow", baseMassRange: [5, 12],
+    holiday: "thanksgiving", holidayTiers: ["Lesser", "Standard", "Greater"],
+    builtInTraits: ["Rustic", "Minimalist"],
+    baseAllureModifier: 1, plausibilityModifier: 1, utilityTags: ["Agricultural", "Rural"],
+    materialSlots: 2, digestCapacityRequired: 2, description: "Straw, burlap and an old hat on a pole. Come harvest every field has one, and every farmer swears theirs has moved.",
+    flawProfiles: [
+      { type: "structure", description: "Not one bit of straw ever pokes loose from the seams" },
+      { type: "environmental", description: "The crows aren't scared of it. They're terrified" },
+      { type: "visual", description: "It faces a different way each time you look up" },
+    ],
+  },
+  {
+    id: "standard_feast_table", name: "Harvest Feast Table", baseMassRange: [9, 16],
+    variantOf: "standard_dining_table", holiday: "thanksgiving", holidayTiers: ["Standard", "Greater", "Grand"],
+    builtInTraits: ["Carved", "Reinforced", "Warm to Touch"],
+    baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Dining", "Social", "Hospitality"],
+    materialSlots: 3, digestCapacityRequired: 4, description: "A long table groaning under roast fowl, pies and gourds. Nobody walks past a laid table at harvest, and nobody asks who laid it.",
+    flawProfiles: [
+      { type: "environmental", description: "The food is still steaming hours later" },
+      { type: "material", description: "Every pie has exactly the same crimp in its crust" },
+      { type: "structure", description: "The table doesn't bow under all that weight" },
+    ],
+  },
+  {
+    id: "grand_threshing_barn", name: "Threshing Barn", baseMassRange: [17, 40],
+    holiday: "thanksgiving", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Rustic", "Reinforced"],
+    baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Agricultural", "Rural"],
+    materialSlots: 5, digestCapacityRequired: 6, description: "A great barn heaped with the harvest, where the whole village dances once the threshing's done. The hay is soft to fall into.",
+    flawProfiles: [
+      { type: "environmental", description: "Not a single mouse in all that grain" },
+      { type: "structure", description: "The beams don't creak under the dancing" },
+      { type: "presence", description: "Deep down, the hay is warm, like breath" },
+    ],
+  },
+  // ── Midwinter ──
+  {
+    id: "minor_wrapped_present", name: "Wrapped Present", baseMassRange: [1, 12],
+    holiday: "christmas", holidayTiers: ["Minor", "Lesser", "Standard"],
+    builtInTraits: ["Ornate"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Valuable", "Decor"],
+    materialSlots: 2, digestCapacityRequired: 1, description: "Paper, ribbon and a tag with no name on it. Who could resist finding out who it's for?",
+    flawProfiles: [
+      { type: "weight", description: "It's heavier on one side, and the heavy side moves" },
+      { type: "acoustic", description: "Shaking it makes no sound, and then a sound it shouldn't" },
+      { type: "structure", description: "The ribbon has no knot. It just ends" },
+    ],
+  },
+  {
+    id: "standard_festive_tree", name: "Festive Tree", baseMassRange: [9, 25],
+    holiday: "christmas", holidayTiers: ["Standard", "Greater", "Grand"],
+    builtInTraits: ["Ornate", "Radiant"],
+    baseAllureModifier: 3, plausibilityModifier: 0, utilityTags: ["Decor", "Lighting", "Social"],
+    materialSlots: 4, digestCapacityRequired: 4, description: "A great evergreen hung with candles, glass baubles and gilt stars. Everyone gathers around it. Close around it.",
+    flawProfiles: [
+      { type: "environmental", description: "It hasn't dropped a single needle" },
+      { type: "light", description: "The candles never drip, and never go out" },
+      { type: "presence", description: "It's warmer beside the tree than beside the hearth" },
+    ],
+  },
+  {
+    id: "grand_gingerbread_house", name: "Gingerbread House", baseMassRange: [17, 40],
+    holiday: "christmas", holidayTiers: ["Grand", "Apex"],
+    builtInTraits: ["Ornate", "Warm to Touch"],
+    baseAllureModifier: 4, plausibilityModifier: 0, utilityTags: ["Structural", "Dining", "Hospitality"],
+    materialSlots: 5, digestCapacityRequired: 6, description: "A cottage of gingerbread walls, sugar-glass windows and icing snow. Visitors break off a piece to taste. Then another. It returns the favor.",
+    flawProfiles: [
+      { type: "material", description: "The icing never goes stale or cracks" },
+      { type: "structure", description: "Bites taken out of the walls are gone by morning" },
+      { type: "environmental", description: "It smells of ginger from a mile downwind, but no birds come to peck at it" },
+    ],
+  },
+] as const satisfies readonly SeasonalFormDef[];
 
+/** Every form id in the game, derived from the form data above. */
+export type FormId = (typeof FORM_DATA)[Tier][number]["id"] | (typeof SEASONAL_FORM_DATA)[number]["id"];
+
+/** Any form. Seasonal forms also carry `holiday` and `holidayTiers` (see SeasonalForm). */
 export interface Form extends FormDef {
   readonly id: FormId;
+  readonly holiday?: HolidayId;
+  readonly holidayTiers?: readonly Tier[];
 }
 
+export interface SeasonalForm extends Form {
+  readonly holiday: HolidayId;
+  readonly holidayTiers: readonly [Tier, ...Tier[]];
+}
+
+/** The ordinary forms, by tier. Seasonal forms aren't in here: see SEASONAL_FORMS. */
 export const MASTER_FORMS: Readonly<Record<Tier, readonly Form[]>> = FORM_DATA;
-export const ALL_FORMS: readonly Form[] = TIER_ORDER.flatMap((tier) => MASTER_FORMS[tier]);
+/** Every seasonal form, with `tier` set to the lowest of its holidayTiers. */
+export const SEASONAL_FORMS: readonly SeasonalForm[] = SEASONAL_FORM_DATA.map((f): SeasonalForm => ({
+  ...f,
+  tier: f.holidayTiers.reduce<Tier>((low, t) => (TIER_ORDER.indexOf(t) < TIER_ORDER.indexOf(low) ? t : low), f.holidayTiers[0]),
+}));
+/** Every form, ordinary and seasonal. */
+export const ALL_FORMS: readonly Form[] = [...TIER_ORDER.flatMap((tier) => MASTER_FORMS[tier]), ...SEASONAL_FORMS];
 export const FORM_IDS = ALL_FORMS.map((form) => form.id) as [FormId, ...FormId[]];
 
 // ============================================================

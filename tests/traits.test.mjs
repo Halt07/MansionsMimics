@@ -1,6 +1,6 @@
 // Forms' built-in traits (structural/aura) and flaw data.
 export default async function ({ gameData: m, ok }) {
-  const forms = Object.values(m.MASTER_FORMS).flat();
+  const forms = m.ALL_FORMS;
   const builtInAllowed = new Set([...m.UNLEARNED_TRAITS.structural, ...m.UNLEARNED_TRAITS.aura]);
 
   ok(forms.every((f) => Array.isArray(f.builtInTraits) && f.builtInTraits.length > 0), `all ${forms.length} forms have built-in traits`);

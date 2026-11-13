@@ -5,7 +5,6 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 ## Features
 
 - **Room map during a hunt.** Show the location as a small graph of rooms: where you are, where each adventurer and small creature is, how far your lure reaches, and which rooms are burned. Rooms where an adventurer "vanished" could pulse, to help with tracking rivals. Today the layout only shows up as text ("Adjacent: …" and the distances in the party list).
-- **End-of-hunt write-up.** Replace the counts line on the game-over and "hunt is over" screens with an in-world report written from the survivors' side: a Guild incident notice, tavern gossip, or a bard's verse ("Three entered the Manor. One came out, insisting the coat rack _breathed_"). It can draw on data the game already has: who fled, peak suspicion, the form you wore, the biggest meal.
 - **Trophy room / hoard.** Keep the special things you swallow (the Captain's strongbox, the porter's token, the Doubting Scholar's notes, biggest meals) as objects you can look at on the character
   sheet or Home, so easter eggs leave a souvenir behind.
 - **Codex Locations section.** One entry per hunting ground, using `locationHuntCounts` for how often you've hunted there. Rare locations could show as "???" until you've visited them.

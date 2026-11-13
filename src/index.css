@@ -757,3 +757,140 @@
   .report-paper:has(.report-stamp) .report-signoff { padding-left: 0; }
   .report-stamp { position: static; display: inline-block; margin: 0.6rem 0 0 0.25rem; transform: rotate(-8deg); }
 }
+
+/* ============================================================
+   SEASONAL FORMS
+   Cards for holiday forms get a themed border and glow. The border is drawn by ::before as a
+   masked ring, so the card keeps its own background (and selected tint) underneath.
+   ============================================================ */
+.holiday-card {
+  position: relative;
+  border-color: transparent !important;
+  isolation: isolate;
+}
+.holiday-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--holiday-border);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+.holiday-card { box-shadow: 0 0 10px var(--holiday-glow), 0 0 2px var(--holiday-glow); }
+
+/* All Hallows' Eve: jack-o'-lantern orange, flickering like a candle */
+[data-holiday="halloween"] {
+  --holiday-border: linear-gradient(135deg, #ff8a1f, #b8410e 45%, #ffb347 70%, #7a2a08);
+  --holiday-glow: rgb(255 128 20 / 0.55);
+  --holiday-text: #ffa040;
+}
+/* Harvest Feast: wheat, russet and gold */
+[data-holiday="thanksgiving"] {
+  --holiday-border: repeating-linear-gradient(90deg, #f2d27a 0 10px, #c9962e 10px 18px, #6e4a1c 18px 22px);
+  --holiday-glow: rgb(236 200 100 / 0.4);
+  --holiday-text: #f0cf72;
+}
+/* Midwinter: a candy-cane stripe that slowly travels around the card, red and green glow */
+[data-holiday="christmas"] {
+  --holiday-border: repeating-linear-gradient(45deg, #d42a2a 0 7px, #f6f1e7 7px 14px, #1f8a4c 14px 21px, #f6f1e7 21px 28px);
+  --holiday-glow: rgb(212 42 42 / 0.45);
+  --holiday-text: #f08080;
+}
+[data-holiday="christmas"].holiday-card::before { background-size: 40px 40px; }
+
+/* Year's Turning: gold and silver, with a shimmer sweeping across */
+[data-holiday="new_year"] {
+  --holiday-border: linear-gradient(110deg, #b8902e 0%, #f7e7a1 20%, #c9ccd6 35%, #fff8dc 50%, #b8902e 65%, #e9ecf2 80%, #b8902e 100%);
+  --holiday-glow: rgb(247 220 140 / 0.45);
+  --holiday-text: #f2d98a;
+}
+[data-holiday="new_year"].holiday-card::before { background-size: 250% 100%; }
+/* Lantern Festival: lacquer red and gold */
+[data-holiday="lunar_new_year"] {
+  --holiday-border: linear-gradient(135deg, #c8102e, #f5c542 30%, #a50d24 55%, #f5c542 80%, #c8102e);
+  --holiday-glow: rgb(220 30 50 / 0.5);
+  --holiday-text: #f5a0a0;
+}
+/* Springtide: pastel dyed-egg stripes */
+[data-holiday="easter"] {
+  --holiday-border: repeating-linear-gradient(90deg, #f7b7d2 0 9px, #b8ecd2 9px 18px, #cdb9f5 18px 27px, #fbe7a0 27px 36px);
+  --holiday-glow: rgb(220 190 240 / 0.4);
+  --holiday-text: #e8b8f0;
+}
+/* Midsummer Revel: noon yellow to sunset orange */
+[data-holiday="midsummer"] {
+  --holiday-border: linear-gradient(135deg, #fff27a, #ffc12e 35%, #ff7a1a 70%, #ffd65c);
+  --holiday-glow: rgb(255 200 50 / 0.5);
+  --holiday-text: #ffd65c;
+}
+/* Founders' Day: red, white and blue bunting stripes */
+[data-holiday="independence_day"] {
+  --holiday-border: repeating-linear-gradient(-45deg, #c8202f 0 7px, #f6f4ee 7px 14px, #234a9c 14px 21px, #f6f4ee 21px 28px);
+  --holiday-glow: rgb(60 100 220 / 0.45);
+  --holiday-text: #9db8ff;
+}
+[data-holiday="independence_day"].holiday-card::before { background-size: 40px 40px; }
+[data-holiday="falling_stars"].holiday-card::before { background-size: 132px 132px; }
+/* Night of Falling Stars: deep blue night, crossed by short white streaks that drift past */
+[data-holiday="falling_stars"] {
+  --holiday-border: repeating-linear-gradient(115deg, #1b2a6b 0 22px, #3e56c4 22px 44px, #f2f5ff 44px 48px, #14204f 48px 60px);
+  --holiday-glow: rgb(80 110 230 / 0.5);
+  --holiday-text: #a9bcff;
+}
+/* Brewfest: amber ale, a band of foam, dark oak */
+[data-holiday="brewfest"] {
+  --holiday-border: linear-gradient(180deg, #f6ecd0 0 18%, #e3a92b 18% 70%, #8a5a1f 70%);
+  --holiday-glow: rgb(227 169 43 / 0.45);
+  --holiday-text: #edc062;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .holiday-card[data-holiday="halloween"] { animation: holiday-flicker 3.2s ease-in-out infinite; }
+  .holiday-card[data-holiday="christmas"] { animation: holiday-twinkle 4s ease-in-out infinite; }
+  .holiday-card[data-holiday="christmas"]::before { animation: holiday-stripes 4s linear infinite; }
+  .holiday-card[data-holiday="independence_day"]::before { animation: holiday-stripes 5s linear infinite; }
+  .holiday-card[data-holiday="independence_day"] { animation: holiday-bunting 4s ease-in-out infinite; }
+  .holiday-card[data-holiday="new_year"]::before { animation: holiday-shimmer 5s linear infinite; }
+  .holiday-card[data-holiday="midsummer"],
+  .holiday-card[data-holiday="lunar_new_year"] { animation: holiday-pulse 3s ease-in-out infinite; }
+  .holiday-card[data-holiday="falling_stars"]::before { animation: holiday-drift 6s linear infinite; }
+}
+@keyframes holiday-bunting {
+  0%, 100% { box-shadow: 0 0 10px rgb(200 32 47 / 0.45), 0 0 2px rgb(200 32 47 / 0.45); }
+  50% { box-shadow: 0 0 10px rgb(60 100 220 / 0.5), 0 0 2px rgb(60 100 220 / 0.5); }
+}
+@keyframes holiday-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+@keyframes holiday-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--holiday-glow), 0 0 2px var(--holiday-glow); }
+  50% { box-shadow: 0 0 16px var(--holiday-glow), 0 0 3px var(--holiday-glow); }
+}
+@keyframes holiday-drift {
+  to { background-position: 132px 0; }
+}
+@keyframes holiday-flicker {
+  0%, 100% { box-shadow: 0 0 10px rgb(255 128 20 / 0.55), 0 0 2px rgb(255 128 20 / 0.55); }
+  20% { box-shadow: 0 0 14px rgb(255 140 30 / 0.7), 0 0 3px rgb(255 140 30 / 0.7); }
+  23% { box-shadow: 0 0 7px rgb(255 110 10 / 0.4), 0 0 2px rgb(255 110 10 / 0.4); }
+  60% { box-shadow: 0 0 12px rgb(255 128 20 / 0.6), 0 0 2px rgb(255 128 20 / 0.6); }
+}
+@keyframes holiday-twinkle {
+  0%, 100% { box-shadow: 0 0 10px rgb(212 42 42 / 0.5), 0 0 2px rgb(212 42 42 / 0.5); }
+  50% { box-shadow: 0 0 10px rgb(31 160 80 / 0.5), 0 0 2px rgb(31 160 80 / 0.5); }
+}
+@keyframes holiday-stripes {
+  to { background-position: 40px 0; }
+}
+
+.holiday-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--holiday-text);
+}
