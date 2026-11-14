@@ -894,3 +894,24 @@
   font-size: 10px;
   color: var(--holiday-text);
 }
+
+/* ============================================================
+   KEYBOARD SHORTCUT HINTS (see KeyHint.tsx)
+   ============================================================ */
+.key-hint {
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border: 1px solid hsl(var(--border));
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  line-height: 1;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.4);
+  opacity: 0.8;
+}
+button:disabled .key-hint { opacity: 0.4; }

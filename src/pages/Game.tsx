@@ -43,6 +43,7 @@ import BurnBadge from "../components/game/BurnBadge";
 import RoomMap from "../components/game/RoomMap";
 import HuntReport from "../components/game/HuntReport";
 import HolidayBadge from "../components/game/HolidayBadge";
+import KeyHint from "../components/game/KeyHint";
 import { buildHuntReport } from "../components/game/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
 
@@ -1480,6 +1481,53 @@ export default function Game() {
     ? LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation))
     : [];
 
+  // What the four hunt actions can do right now (shared by the buttons and the keyboard)
+  const someoneInMyRoom = activeAdventurers.some(a => a.location === mimicRoom);
+  const canRelocate = !acting && !huntOver && !someoneInMyRoom;
+  const canLure = !acting && !huntOver && activeAdventurers.length > 0;
+  const canStrike = !acting && !huntOver &&
+    (party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) || !!rivalInRoom(rivals, mimicRoom)?.revealed);
+  const canWait = !acting && !huntOver;
+  // Empty rooms next door, in the order the Relocate panel lists (and numbers) them
+  const relocateRooms = location && mimicRoom
+    ? getAdjacentRooms(location, mimicRoom).filter(room => !activeAdventurers.some(a => a.location === room))
+    : [];
+  const toggleMovePanel = () => {
+    if (!canRelocate) return;
+    setShowMovePanel(prev => !prev);
+    setShowFormPanel(false);
+    setShowAppearancePanel(false);
+  };
+
+  // Keyboard shortcuts during a hunt: R / L / S / W, and 1–9 to pick a room while relocating
+  const onHuntKey = useEffectEvent((e: KeyboardEvent) => {
+    if (phase !== "hunt" || showSheet || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+    const key = e.key.toLowerCase();
+    if (showMovePanel && /^[1-9]$/.test(key)) {
+      const room = relocateRooms[Number(key) - 1];
+      if (room && canRelocate) { e.preventDefault(); doRelocate(room); }
+      return;
+    }
+    if (key === "escape" && showMovePanel) { setShowMovePanel(false); return; }
+    const actions: Record<string, [boolean, () => void]> = {
+      r: [canRelocate, toggleMovePanel],
+      l: [canLure, doAllureTurn],
+      s: [canStrike, doStrikeTurn],
+      w: [canWait, doWaitTurn],
+    };
+    const action = actions[key];
+    if (!action) return;
+    e.preventDefault();
+    if (action[0]) action[1]();
+  });
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => onHuntKey(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1985,22 +2033,20 @@ export default function Game() {
               {/* Relocate panel */}
               {showMovePanel && (() => {
                 if (!location || !mimicRoom) return null;
-                const adjacentRooms = getAdjacentRooms(location, mimicRoom);
-                const openRooms = adjacentRooms.filter(room =>
-                  !activeAdventurers.some(a => a.location === room)
-                );
+                const openRooms = relocateRooms;
                 return (
                   <div className="bg-muted/20 border border-blue-400/20 rounded-lg p-3 space-y-2">
                     <p className="text-[11px] text-blue-400/70 font-cinzel uppercase tracking-widest">Relocate — Choose Destination</p>
                     {openRooms.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic">There are too many people nearby — moving now would be too risky.</p>
                     ) : (
-                      openRooms.map(room => (
+                      openRooms.map((room, i) => (
                         <button
                           key={room}
                           onClick={() => doRelocate(room)}
                           className="w-full text-left px-3 py-2 rounded border border-border text-xs text-muted-foreground hover:border-blue-400/40 hover:text-foreground transition-all"
                         >
+                          {i < 9 && <KeyHint k={String(i + 1)} className="mr-2" />}
                           <span className="font-cinzel">{room}</span>
                           <span className="text-[10px] text-muted-foreground ml-2">(+1 suspicion)</span>
                         </button>
@@ -2015,47 +2061,45 @@ export default function Game() {
               <div className="h-1 bg-muted lg:hidden" aria-hidden><div className="action-bar-suspicion h-full" /></div>
               <div className="grid grid-cols-4 gap-2 p-2 lg:grid-cols-2 lg:gap-3 lg:p-0">
                 <Button
-                  onClick={() => {
-                    const inMyRoom = activeAdventurers.filter(a => a.location === mimicRoom);
-                    if (inMyRoom.length > 0) return; // disabled
-                    setShowMovePanel(prev => !prev);
-                    setShowFormPanel(false);
-                    setShowAppearancePanel(false);
-                  }}
-                  disabled={acting || huntOver || activeAdventurers.some(a => a.location === mimicRoom)}
+                  onClick={toggleMovePanel}
+                  disabled={!canRelocate}
                   variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
+                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
                 >
+                  <KeyHint k="R" className="absolute top-1 right-1" />
                   <MoveRight className="w-5 h-5 text-muted-foreground" />
                   <span className="text-xs font-cinzel">Relocate</span>
                   <span className="hidden lg:inline text-[11px] text-muted-foreground">Slip to empty room</span>
                 </Button>
                 <Button
                   onClick={doAllureTurn}
-                  disabled={acting || huntOver || activeAdventurers.length === 0}
+                  disabled={!canLure}
                   variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
+                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
                 >
+                  <KeyHint k="L" className="absolute top-1 right-1" />
                   <Zap className="w-5 h-5 text-yellow-400/70" />
                   <span className="text-xs font-cinzel">Lure</span>
                   <span className="hidden lg:inline text-[11px] text-muted-foreground">Attract adventurers</span>
                 </Button>
                 <Button
                   onClick={doStrikeTurn}
-                  disabled={acting || huntOver || (!party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) && !rivalInRoom(rivals, mimicRoom)?.revealed)}
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
+                  disabled={!canStrike}
+                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
                   variant="ghost"
                 >
+                  <KeyHint k="S" className="absolute top-1 right-1" />
                   <Shield className="w-5 h-5" />
                   <span className="text-xs font-cinzel">Strike!</span>
                   <span className="hidden lg:inline text-[11px]">Consume attracted prey</span>
                 </Button>
                 <Button
                   onClick={doWaitTurn}
-                  disabled={acting || huntOver}
+                  disabled={!canWait}
                   variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-purple-400/30"
+                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-purple-400/30"
                 >
+                  <KeyHint k="W" className="absolute top-1 right-1" />
                   <RefreshCw className="w-5 h-5 text-muted-foreground" />
                   <span className="text-xs font-cinzel">Wait</span>
                   <span className="hidden lg:inline text-[11px] text-muted-foreground">Rest & reduce suspicion</span>
