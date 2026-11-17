@@ -16,7 +16,7 @@ import {
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
   starfallDue, stepToward, claimStar, STAR_FRAGMENT,
-  fireworksDue, distractedRooms, fireworksRummage, tossRoom,
+  fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -223,18 +223,16 @@ export default function Game() {
     db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
       if (res[0]) {
         const char = res[0];
-        // Mass decay check: 1 mass per 3 days since last fed
+        // Mass decay: 1 mass per 3 days since last fed. lastFedAt moves forward by the days
+        // charged, so reloading doesn't take the same mass again.
         let decayMessage: string | null = null;
-        if (char.lastFedAt && char.mass > 1) {
-          const daysSinceFed = (Date.now() - new Date(char.lastFedAt).getTime()) / (1000 * 60 * 60 * 24);
-          const massLost = Math.min(Math.floor(daysSinceFed / 3), char.mass - 1);
-          if (massLost > 0) {
-            const newMass = char.mass - massLost;
-            char.mass = newMass;
-            db.entities.MimicCharacter.update(char.id, { mass: newMass })
-              .catch(err => console.error("Failed to save mass decay:", err));
-            decayMessage = `You have been away for ${Math.floor(daysSinceFed)} days without feeding. Your mass has diminished by ${massLost} (now ${newMass}). Hunger gnaws at your form.`;
-          }
+        const decay = massDecay(char.mass, char.lastFedAt);
+        if (decay) {
+          char.mass = decay.mass;
+          char.lastFedAt = decay.lastFedAt;
+          db.entities.MimicCharacter.update(char.id, { mass: decay.mass, lastFedAt: decay.lastFedAt })
+            .catch(err => console.error("Failed to save mass decay:", err));
+          decayMessage = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
         }
         // Seasonal forms whose season has ended slip away
         const dropped = dropExpiredSeasonalForms(char.forms, char.activeFormIndex, today());
@@ -822,7 +820,10 @@ export default function Game() {
       return true;
     }
 
-    const attracted = party.filter(a => a.isAlive && !a.isConsumed && a.isAttracted);
+    // Under the fireworks, anyone in your room is staring at the sky: no need to lure them first
+    const skyward = watchingSky(mimicRoom);
+    const attracted = party.filter(a => a.isAlive && !a.isConsumed &&
+      (a.isAttracted || (skyward && a.location === mimicRoom && !a.fled && !a.isDisappeared)));
     if (attracted.length === 0) {
       addEvent("info", "No adventurers are close enough to strike. Use Allure first.");
       return false;
@@ -840,6 +841,7 @@ export default function Game() {
     }));
     scored.sort((a, b) => a.dist - b.dist || b.interest - a.interest);
     const target = scored[0].adv;
+    if (!target.isAttracted) addEvent("info", `🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
     // Killing the last adventurer ends the hunt in success, so it never adds suspicion
     const othersRemain = party.some(a =>
       a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
@@ -1672,7 +1674,8 @@ export default function Game() {
   const canRelocate = !acting && !huntOver && !someoneInMyRoom;
   const canLure = !acting && !huntOver && activeAdventurers.length > 0;
   const canStrike = !acting && !huntOver &&
-    (party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) || !!rivalInRoom(rivals, mimicRoom)?.revealed);
+    (party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) || !!rivalInRoom(rivals, mimicRoom)?.revealed ||
+      (watchingSky(mimicRoom) && someoneInMyRoom));
   const canWait = !acting && !huntOver;
   // Empty rooms next door, in the order the Relocate panel lists (and numbers) them
   const relocateRooms = location && mimicRoom
@@ -1941,7 +1944,7 @@ export default function Game() {
                 <span className="font-cinzel">🎆 Fireworks every {every} turns, over a different part of the fair.</span>
                 <p className="text-[11px] mt-0.5 opacity-80">
                   {fireworksRoom
-                    ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses.`
+                    ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses${watchingSky(mimicRoom) ? ", and you can Strike anyone in your room without luring them first" : ""}.`
                     : `The next volley goes up in ${next} ${next === 1 ? "turn" : "turns"}.`}
                   {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
                 </p>
