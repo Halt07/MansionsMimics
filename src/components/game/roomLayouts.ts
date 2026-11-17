@@ -28,6 +28,7 @@ const ROOM_LAYOUTS: { readonly [L in LocationId]: Readonly<Record<RoomOf<L>, Cel
   hollow_reliquary: { "Pilgrims' Dormitory": [0, 0], "Bell Loft": [1, 0], "Nave": [0, 1], "Candle Gallery": [1, 1], "Reliquary Vault": [0, 2], "Ossuary": [1, 2] },
   mimic_nest: { "Rope Loft": [1, 0], "Loading Dock": [0, 1], "Crate Stacks": [1, 1], "Foreman's Office": [0, 2], "Cold Storage": [1, 2], "Bonded Vault": [0, 3] },
   sinking_ship: { "Quarterdeck": [0, 0], "Captain's Cabin": [1, 0], "Main Deck": [0, 1], "Galley": [1, 1], "Cargo Hold": [0, 2], "Bilge": [1, 2] },
+  stargazers_hill: { "Observatory Dome": [0, 0], "Star-Chart Room": [1, 0], "Stair Hall": [0, 1], "Lens Workshop": [1, 1], "Hilltop Lawn": [0, 2], "Stone Circle": [1, 2] },
   snowbound_lodge: { "Bunk Loft": [0, 0], "Kitchen & Larder": [1, 0], "Great Hearth": [0, 1], "Boot Room": [1, 1], "Woodshed": [0, 2], "Snowed-In Courtyard": [1, 2] },
 };
 

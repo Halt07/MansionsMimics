@@ -62,6 +62,8 @@ export interface CompanionOption {
 export interface Treasure {
   readonly ap: number;
   readonly description: string;
+  /** What it's called once swallowed, in "The strongbox cracks open inside you" (default "strongbox"). */
+  readonly noun?: string;
   readonly materials: readonly Material[];
   readonly traits: readonly TeachableTrait[];
 }
@@ -1068,6 +1070,56 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Beanstalk Leather", "Titan Oak", "Sky Gold"],
     lootTraits: [],
     partialLoot: ["a length of beanstalk vine", "scrap of beanstalk-leather pack", "a giant's golden coin fragment"],
+  },
+
+  // ── Stargazers' Hill (seasonal, Night of Falling Stars) ──
+  {
+    name: "Astronomer", type: "Wizard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "common",
+    locations: ["stargazers_hill"],
+    quirks: ["Logs every streak in a battered notebook", "Never takes their eyes off the sky for long", "Keeps muttering about the angle of descent"],
+    appliedQuirk: "{name} glances at the {form}, then back at the sky, then back at the {form}. \"That wasn't on my chart.\"",
+    alluringQualities: { materials: ["Brass", "Crystal", "Clear Glass"], traits: ["Etched", "Polished", "Runescript"], tags: ["Knowledge", "Lighting"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 1, social: 0, spatial: 2, environmental: 2, acoustic: 0, presence: 0 },
+    lootMaterials: ["Brass", "Clear Glass"],
+    lootTraits: ["Etched", "Runescript"],
+    partialLoot: ["a page of star sightings", "a brass sextant arm", "an ink-blotted cuff"],
+  },
+  {
+    name: "Meteorite Prospector", type: "Rogue", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "common",
+    locations: ["stargazers_hill"],
+    quirks: ["Taps every rock with a little hammer, just in case", "Carries a sack for whatever falls", "Elbows anyone between them and a landing"],
+    appliedQuirk: "{name} taps the {form} with a little hammer and listens. \"Hm. Not from the sky.\"",
+    alluringQualities: { materials: ["Iron", "Obsidian", "Basalt"], traits: ["Pitted", "Rough-Hewn", "Faint Glow"], tags: ["Valuable", "Storage"] },
+    perceptionAffinity: { material: 3, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
+    lootMaterials: ["Iron", "Basalt"],
+    lootTraits: ["Pitted"],
+    partialLoot: ["a rock hammer", "a sack of ordinary stones", "a scorched glove"],
+  },
+  {
+    name: "Lens-Grinder's Apprentice", type: "Artificer", discipline: 2, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["stargazers_hill"],
+    quirks: ["Polishes anything shiny on reflex", "Was told to mind the workshop and absolutely did not", "Squints through a lens at everything"],
+    appliedQuirk: "{name} squints at the {form} through a lens, then gives it a quick polish.",
+    alluringQualities: { materials: ["Clear Glass", "Crystal", "Brass"], traits: ["Smooth", "Lacquered"], tags: ["Lighting", "Knowledge"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 0, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: ["Clear Glass", "Crystal"],
+    lootTraits: ["Lacquered"],
+    partialLoot: ["a polishing cloth", "a cracked lens", "a leather apron strap"],
+  },
+  {
+    name: "Lovestruck Wisher", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["stargazers_hill"],
+    quirks: ["Makes a wish on every single streak", "Ties ribbons to anything near the stones", "Is absolutely sure this is the year"],
+    appliedQuirk: "{name} ties a ribbon to the {form} and makes a wish on it.",
+    alluringQualities: { materials: ["Silver", "Silk"], traits: ["Faint Glow", "Gilded", "Fragrant"], tags: ["Decor", "Social"] },
+    perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
+    lootMaterials: ["Silk", "Linen"],
+    lootTraits: ["Fragrant"],
+    partialLoot: ["a silk ribbon", "a folded wish", "a pressed flower"],
   },
 
   // ── Snowbound Lodge (seasonal, Midwinter) ──

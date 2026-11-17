@@ -66,6 +66,13 @@ interface LocationDef {
   readonly snowbound?: { readonly hearth: string; readonly cold: readonly string[] };
   /** At least this many party slots go to adventurers native here (those listing it in `locations`). */
   readonly nativeShare?: number;
+  /**
+   * Falling stars: every `every` turns a star fragment lands in a random room, and on each Wait
+   * the party heads one room closer to it until someone picks it up (see ./gameData).
+   * `landings` says how it gets into each room ("comes down … in the Stone Circle"); every room
+   * needs one (tests/stargazersHill.test.mjs checks).
+   */
+  readonly starfall?: { readonly every: number; readonly landings: Readonly<Record<string, string>> };
 }
 
 const LOCATION_DATA = [
@@ -539,6 +546,45 @@ const LOCATION_DATA = [
     nativeShare: 1,
     snowbound: { hearth: "Great Hearth", cold: ["Snowed-In Courtyard", "Woodshed"] },
   },
+  {
+    id: "stargazers_hill", name: "Stargazers' Hill", minTier: "Minor",
+    description: "An old observatory on a bald hilltop, crowded every August with people waiting for the sky to fall.",
+    flavorText: "Every face is turned up. Every so often the sky splits open, and everyone runs. Nobody is looking at the furniture.",
+    rooms: ["Observatory Dome", "Star-Chart Room", "Stair Hall", "Lens Workshop", "Hilltop Lawn", "Stone Circle"],
+    roomGraph: {
+      "Observatory Dome": ["Star-Chart Room", "Stair Hall"],
+      "Star-Chart Room":  ["Observatory Dome", "Lens Workshop"],
+      "Stair Hall":       ["Observatory Dome", "Lens Workshop", "Hilltop Lawn"],
+      "Lens Workshop":    ["Star-Chart Room", "Stair Hall"],
+      "Hilltop Lawn":     ["Stair Hall", "Stone Circle"],
+      "Stone Circle":     ["Hilltop Lawn"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Knowledge", "Lighting", "Decor", "Rural"],
+    imageHint: "hilltop observatory under a sky full of meteors, stone circle on the lawn",
+    locationCreatures: [
+      { id: "barn_owl", name: "Barn Owl", ap: 2, discipline: 2, description: "Nests in the dome's rafters and hates the crowds." },
+      { id: "night_moth", name: "Night Moth", ap: 1, discipline: 1, description: "Drawn to every lamp on the hill." },
+      { id: "hedgehog", name: "Hedgehog", ap: 1, discipline: 1, description: "Snuffling through the dew.", rooms: ["Hilltop Lawn", "Stone Circle"] },
+      { id: "field_mouse", name: "Field Mouse", ap: 1, discipline: 1, description: "After the picnic crumbs." },
+      { id: "fox", name: "Hill Fox", ap: 2, discipline: 2, description: "Watching the crowd from the long grass.", rooms: ["Hilltop Lawn", "Stone Circle"] },
+      { id: "observatory_cat", name: "Observatory Cat", ap: 2, discipline: 2, description: "Sleeps on the warm telescope housing.", rooms: ["Observatory Dome", "Star-Chart Room", "Lens Workshop", "Stair Hall"] },
+    ],
+    holiday: "falling_stars",
+    alwaysIncludes: ["Astronomer"],
+    nativeShare: 1,
+    starfall: {
+      every: 4,
+      landings: {
+        "Observatory Dome": "drops straight through the telescope's open slit and clatters across the Observatory Dome floor",
+        "Star-Chart Room":  "punches through the roof slates and lands in a smoking heap of charts in the Star-Chart Room",
+        "Stair Hall":       "smashes through the tall stairwell window and rolls to a stop in the Stair Hall",
+        "Lens Workshop":    "comes through the Lens Workshop skylight in a shower of glass",
+        "Hilltop Lawn":     "thumps into the grass of the Hilltop Lawn, hissing in the dew",
+        "Stone Circle":     "comes down dead in the middle of the Stone Circle, as if the stones were waiting for it",
+      },
+    },
+  },
 ] as const satisfies readonly LocationDef[];
 
 /** Every location id, derived from the location data above. */
@@ -859,6 +905,16 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "standard_wardrobe":       { plausibility: -2, note: "A wardrobe on the open deck?" } },
     "Bilge":               { "minor_pillow":            { plausibility: -2, note: "Nothing soft survives the bilge." },
                              "minor_book":              { plausibility: -2, note: "Soaked through — no book would be left down here." } },
+  },
+  // ── Stargazers' Hill · all mimics, Night of Falling Stars only · wearable forms: Minor–Apex ──
+  stargazers_hill: {
+    "Stone Circle":        { "minor_fallen_star":       { plausibility: 1, allure: 1, note: "A fallen star among the old stones. Who could resist?" },
+                             "greater_wishing_well":    { plausibility: 1, note: "Wishes are made at the stones all night." } },
+    "Hilltop Lawn":        { "minor_picnic_basket":     { plausibility: 1, note: "Half the hill brought a picnic." },
+                             "minor_fallen_star":       { plausibility: 1, note: "Fragments land on the lawn all the time tonight." } },
+    "Star-Chart Room":     { "minor_book":              { plausibility: 1, note: "Almanacs and star charts everywhere." },
+                             "standard_bookshelf":      { plausibility: 1, note: "Shelves of star charts." } },
+    "Lens Workshop":       { "lesser_crate":            { plausibility: 1, note: "Lenses are shipped in straw-packed crates." } },
   },
   // ── Snowbound Lodge · all mimics, Midwinter only · wearable forms: Minor–Apex ──
   snowbound_lodge: {

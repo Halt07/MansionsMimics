@@ -123,6 +123,9 @@ function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
               {visited && loc.snowbound && (
                 <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Snowbound:</span> <span className="text-foreground text-right">Nobody can leave, and the cold freezes them one by one</span></div>
               )}
+              {visited && loc.starfall && (
+                <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Starfall:</span> <span className="text-foreground text-right">Every {loc.starfall.every} turns a star lands, and the party runs for it</span></div>
+              )}
               {visited && loc.rivalNest && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Rival mimics:</span> <span className="text-foreground">{loc.rivalNest[0]}–{loc.rivalNest[1]}, one of them the Elder</span></div>
               )}

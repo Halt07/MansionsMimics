@@ -16,6 +16,8 @@ interface RoomMapProps {
   rivals?: readonly RivalMimic[];
   /** Adventurers frozen solid (snowbound locations), still waiting to be eaten. */
   frozen?: readonly { id: string; name: string; location: RoomName }[];
+  /** Where a fallen star fragment lies (Stargazers' Hill). */
+  star?: RoomName | null;
   /** The mimic's current form, for its marker's tooltip. */
   formName?: string;
 }
@@ -33,7 +35,7 @@ function initials(name: string): string {
  * styling is under ROOM MAP in index.css, driven by the data attributes set here.
  */
 export default function RoomMap({
-  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], formName,
+  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], star = null, formName,
 }: RoomMapProps) {
   const plan = floorPlan(location);
   return (
@@ -71,6 +73,7 @@ export default function RoomMap({
                   {initials(a.name)}
                 </span>
               ))}
+              {star === cell.room && <span className="occupant occupant-frozen" title="A fallen star fragment">🌠</span>}
               {frozen.filter(f => f.location === cell.room).map(f => (
                 <span key={f.id} className="occupant occupant-frozen" title={`${f.name}, frozen solid`}>🧊</span>
               ))}

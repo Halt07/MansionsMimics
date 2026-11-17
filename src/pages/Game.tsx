@@ -15,6 +15,7 @@ import {
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
+  starfallDue, stepToward, claimStar, STAR_FRAGMENT,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -203,6 +204,9 @@ export default function Game() {
   // Snowbound locations: bumped at the end of every turn; the cold is applied once the turn's
   // moves have landed (see applyFrost)
   const [frostTurn, setFrostTurn] = useState(0);
+  // Starfall locations: turns so far, and the room a fallen star fragment is lying in (if any)
+  const [starTurn, setStarTurn] = useState(0);
+  const [starFragment, setStarFragment] = useState<RoomName | null>(null);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
@@ -288,6 +292,8 @@ export default function Game() {
     setRivals([]);
     setShipTurn(0);
     setFrostTurn(0);
+    setStarTurn(0);
+    setStarFragment(null);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -435,6 +441,18 @@ export default function Game() {
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
   const advanceShip = () => {
     if (location?.snowbound) setFrostTurn(t => t + 1);
+    if (location?.starfall) {
+      const turn = starTurn + 1;
+      setStarTurn(turn);
+      if (starfallDue(location, turn) && !starFragment) {
+        const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
+        setStarFragment(room);
+        const landing = location.starfall.landings[room] ?? `comes down in the ${room}`;
+        addEvent("alert", room === mimicRoom
+          ? `🌠 The sky splits open, and a fragment of star ${landing}, right beside you. Every head on the hill turns your way.`
+          : `🌠 The sky splits open, and a fragment of star ${landing}! Every head turns.`);
+      }
+    }
     const total = location?.sinkingTurns;
     if (!total || shipTurn >= total) return;
     const turn = shipTurn + 1;
@@ -948,7 +966,9 @@ export default function Game() {
       if (target.treasure) {
         addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
         if (prize) {
-          addEvent("evolve", `The strongbox cracks open inside you: ${prize.name}! New ${prize.kind} learned.`);
+          addEvent("evolve", `The ${target.treasure.noun ?? "strongbox"} ${target.treasure.noun ? "flares" : "cracks open"} inside you: ${prize.name}! New ${prize.kind} learned.`);
+        } else if (target.treasure.noun) {
+          addEvent("info", `The ${target.treasure.noun} glows a moment inside you, then fades. Nothing you haven't tasted before.`);
         } else {
           const shrugs = [
             "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
@@ -1071,6 +1091,41 @@ export default function Game() {
     persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
     const cfg = TIER_CONFIG[character.tier];
     if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
+      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
+      setPhase("evolve");
+    }
+  };
+
+  // Stargazers' Hill: a star fragment in your room can be swallowed before anyone else gets to
+  // it. It's worth a little AP and may teach something; anyone watching sees it vanish.
+  const doEatStar = () => {
+    if (!character || !starFragment || starFragment !== mimicRoom) return;
+    beginTurn();
+    setStarFragment(null);
+    const prize = pickTreasurePrize(STAR_FRAGMENT, character.learnedMaterials, character.learnedTraits);
+    addEvent("consume", `You swallow the star fragment whole. It's warm all the way down. +${STAR_FRAGMENT.ap} AP.`);
+    if (prize) addEvent("evolve", `The star fragment flares inside you: ${prize.name}! New ${prize.kind} learned.`);
+    const witnesses = activeAdventurers.filter(a => a.location === mimicRoom).length;
+    if (witnesses > 0) {
+      const gain = consumeSuspicion(witnesses);
+      addEvent("alert", `Someone was reaching for the fragment when its glow simply went out. (+${gain} suspicion)`);
+      setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+    }
+    noteMeal("Star Fragment", STAR_FRAGMENT.ap);
+    const updatedChar = {
+      ...character,
+      assimilationPoints: (character.assimilationPoints || 0) + STAR_FRAGMENT.ap,
+      learnedMaterials: prize?.kind === "material" ? [...character.learnedMaterials, prize.name] : character.learnedMaterials,
+      learnedTraits: prize?.kind === "trait" ? [...character.learnedTraits, prize.name] : character.learnedTraits,
+    };
+    setCharacter(updatedChar);
+    persist({
+      assimilationPoints: updatedChar.assimilationPoints,
+      learnedMaterials: updatedChar.learnedMaterials,
+      learnedTraits: updatedChar.learnedTraits,
+      lastFedAt: new Date().toISOString(),
+    });
+    if (updatedChar.assimilationPoints >= TIER_CONFIG[character.tier].apToEvolve) {
       addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
       setPhase("evolve");
     }
@@ -1293,13 +1348,16 @@ export default function Game() {
     const currentRivals = rivals;
 
     const newlyArrived: PartyMember[] = [];
-    const updatedParty = currentParty.map(adv => {
+    // A fallen star: everyone heads for it instead of wandering (Stargazers' Hill)
+    const star = location.starfall ? starFragment : null;
+    const movedParty = currentParty.map(adv => {
       if (!adv.isAlive || adv.isConsumed) return adv;
       if (isStationary(adv)) return adv;
-      if (Math.random() < 0.5) return adv;
+      if (star && adv.location === star) return adv;
+      if (!star && Math.random() < 0.5) return adv;
       const adjacent = getAdjacentRooms(location, adv.location);
       const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = candidates[Math.floor(Math.random() * candidates.length)];
+      const newRoom = star ? stepToward(location, adv.location, star) : candidates[Math.floor(Math.random() * candidates.length)];
       if (newRoom !== adv.location) {
         // Rival mimic: silently consume this adventurer if they move into the rival's room
         const lurker = rivalInRoom(currentRivals, newRoom);
@@ -1324,6 +1382,12 @@ export default function Game() {
       return { ...adv, location: newRoom, isAttracted: false };
     });
 
+    // Whoever reaches the fragment first pockets it
+    const { party: updatedParty, claimedBy } = star ? claimStar(movedParty, star) : { party: movedParty, claimedBy: null };
+    if (claimedBy) {
+      setStarFragment(null);
+      addEvent("info", `🌠 ${claimedBy.name} scoops up the star fragment and pockets it, still glowing.`);
+    }
     setParty(updatedParty);
 
     countStillTurn(newlyArrived.length > 0);
@@ -1827,6 +1891,21 @@ export default function Game() {
             );
           })()}
 
+          {phase === "hunt" && !huntOver && location?.starfall && (() => {
+            const every = location.starfall.every;
+            const next = every - (starTurn % every);
+            return (
+              <div className="px-3 py-2 rounded border text-xs border-indigo-300/30 bg-indigo-400/5 text-indigo-200/90">
+                <span className="font-cinzel">🌠 Stars are falling. When one lands, the whole party runs for it.</span>
+                <p className="text-[11px] mt-0.5 opacity-80">
+                  {starFragment
+                    ? `A fragment glows in the ${starFragment}. Each time you wait, they all move a room closer to it.`
+                    : `The next one should fall in ${next} ${next === 1 ? "turn" : "turns"}.`}
+                </p>
+              </div>
+            );
+          })()}
+
           {phase === "hunt" && !huntOver && location?.snowbound && (() => {
             const frozenCount = party.filter(a => a.isFrozen).length;
             return (
@@ -1882,6 +1961,7 @@ export default function Game() {
                       creatures={smallCreatures.filter(c => !c.isConsumed)}
                       rivals={rivals}
                       frozen={uneatenFrozen(party)}
+                      star={location.starfall ? starFragment : null}
                       formName={activeForm?.name}
                     />
                   </CardContent>
@@ -2242,6 +2322,21 @@ export default function Game() {
                   </div>
                 );
               })()}
+
+              {/* Starfall: a fragment lying in your room */}
+              {location?.starfall && starFragment && starFragment === mimicRoom && !huntOver && (
+                <div className="bg-indigo-400/5 border border-indigo-300/30 rounded-lg p-3">
+                  <p className="text-[11px] text-indigo-200 font-cinzel uppercase tracking-widest mb-2">Fallen Star</p>
+                  <button
+                    onClick={doEatStar}
+                    disabled={acting}
+                    className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-indigo-300/30 bg-card hover:border-indigo-200/60 hover:text-indigo-100 transition-all text-muted-foreground"
+                    title="Swallow it before anyone else gets here, or leave it as bait: whoever comes for it walks right up to you."
+                  >
+                    🌠 Star fragment <span className="text-primary ml-1">+{STAR_FRAGMENT.ap} AP</span>
+                  </button>
+                </div>
+              )}
 
               {/* Snowbound: frozen adventurers in your room, there for the taking */}
               {(() => {

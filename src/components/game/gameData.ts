@@ -840,6 +840,31 @@ export function locationKnowledge(
 }
 
 // ============================================================
+// STARFALL (Stargazers' Hill)
+// Every `starfall.every` turns a star fragment lands in a random room (if none is still lying
+// about). On each Wait the party heads one room closer to it instead of wandering, and the first
+// to reach it pockets it: eat them whole and the fragment comes too. Get to it first and you can
+// swallow it yourself.
+// ============================================================
+export const STAR_FRAGMENT: Treasure = {
+  ap: 2, description: "a still-warm star fragment", noun: "star fragment",
+  materials: ["Starforged Iron"], traits: ["Faint Glow"],
+};
+
+/** Whether a fragment lands at the end of this turn (turns count from 1). */
+export function starfallDue(location: HuntLocation, turn: number): boolean {
+  return !!location.starfall && turn > 0 && turn % location.starfall.every === 0;
+}
+
+/** Whoever is in the fragment's room picks it up (the first one listed), carrying it as treasure. */
+export function claimStar(party: readonly PartyMember[], star: RoomName): { party: PartyMember[]; claimedBy: PartyMember | null } {
+  const claimer = party.find(a => isStillHunting(a) && a.location === star && !a.treasure);
+  if (!claimer) return { party: [...party], claimedBy: null };
+  const claimedBy = { ...claimer, treasure: STAR_FRAGMENT };
+  return { party: party.map(a => a.id === claimer.id ? claimedBy : a), claimedBy };
+}
+
+// ============================================================
 // SNOWBOUND (The Snowbound Lodge)
 // Nobody can leave, and the cold freezes the party one by one. Each adventurer starts with
 // warmth set by its constitution, so the frail go first. Every turn costs 1 warmth; entering
@@ -1348,6 +1373,8 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\b(Rabbit|Hare)\b/, "🐇"],
   [/\bReindeer\b/, "🦌"],
   [/\bOwl\b/, "🦉"],
+  [/\bHedgehog\b/, "🦔"],
+  [/\bMoth\b/, "🦋"],
   [/\bOtter\b/, "🦦"],
   [/\b(Weasel|Ermine)\b/, "🦡"], // no weasel emoji; the badger is family
   [/\bCrab\b/, "🦀"],
@@ -1451,7 +1478,7 @@ export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean
 const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
 
 /** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
-function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
+export function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
   if (fromRoom === targetRoom) return fromRoom;
   const options = getAdjacentRooms(location, fromRoom);
   if (options.length === 0) return fromRoom;
