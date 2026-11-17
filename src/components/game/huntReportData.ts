@@ -17,6 +17,8 @@ export interface ReportPartyMember {
   readonly fled?: boolean;
   readonly isConverted?: boolean;
   readonly isDisappeared?: boolean;
+  /** Froze to death (snowbound locations); isConsumed too if the mimic ate them after. */
+  readonly isFrozen?: boolean;
 }
 
 export interface HuntReportInput {
@@ -118,7 +120,7 @@ export function buildHuntReport(input: HuntReportInput): HuntReport {
   const converted = people.filter(a => a.isConverted);
   const lost = devoured.length + vanished.length;
   // Anyone not eaten, vanished or converted walked (or ran) out
-  const survivors = people.filter(a => !a.isConsumed && !a.isDisappeared && !a.isConverted);
+  const survivors = people.filter(a => !a.isConsumed && !a.isDisappeared && !a.isConverted && !a.isFrozen);
   const witness = survivors.length ? pick(survivors).name : null;
 
   const form = input.formName ? input.formName.toLowerCase() : "furniture";

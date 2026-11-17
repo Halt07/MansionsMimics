@@ -14,6 +14,8 @@ interface RoomMapProps {
   /** Small creatures still about. */
   creatures?: readonly { uid: string; name: string; location: RoomName }[];
   rivals?: readonly RivalMimic[];
+  /** Adventurers frozen solid (snowbound locations), still waiting to be eaten. */
+  frozen?: readonly { id: string; name: string; location: RoomName }[];
   /** The mimic's current form, for its marker's tooltip. */
   formName?: string;
 }
@@ -31,7 +33,7 @@ function initials(name: string): string {
  * styling is under ROOM MAP in index.css, driven by the data attributes set here.
  */
 export default function RoomMap({
-  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], formName,
+  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], formName,
 }: RoomMapProps) {
   const plan = floorPlan(location);
   return (
@@ -68,6 +70,9 @@ export default function RoomMap({
                 >
                   {initials(a.name)}
                 </span>
+              ))}
+              {frozen.filter(f => f.location === cell.room).map(f => (
+                <span key={f.id} className="occupant occupant-frozen" title={`${f.name}, frozen solid`}>🧊</span>
               ))}
               {crits.map(c => (
                 <span key={c.uid} className="occupant occupant-creature" title={c.name}>{creatureEmoji(c.name)}</span>

@@ -1069,6 +1069,57 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootTraits: [],
     partialLoot: ["a length of beanstalk vine", "scrap of beanstalk-leather pack", "a giant's golden coin fragment"],
   },
+
+  // ── Snowbound Lodge (seasonal, Midwinter) ──
+  {
+    name: "Lodgekeeper", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Rations the firewood and counts every log", "Knows exactly what furniture the lodge owns", "Keeps saying the pass will open tomorrow"],
+    appliedQuirk: "{name} stops in front of the {form}, frowning. \"I don't remember buying that.\"",
+    alluringQualities: { materials: ["Pine", "Wool", "Iron"], traits: ["Rustic", "Smoky", "Worn"], tags: ["Comfort", "Hospitality"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Pine", "Wool"],
+    lootTraits: ["Smoky"],
+    partialLoot: ["a ring of lodge keys", "a knitted scarf end", "a tally stick for the woodpile"],
+  },
+  {
+    name: "Gnome Courier", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Snowed in with a sack of Midwinter parcels and a schedule to keep", "Checks every package against a very long list", "Insists the sledge dogs will be back for them"],
+    appliedQuirk: "{name} checks the {form} against the list. Twice.",
+    alluringQualities: { materials: ["Burlap", "Linen", "Pine"], traits: ["Pristine", "Fragrant"], tags: ["Storage", "Transport", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 2, text: 2, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: ["Burlap", "Linen"],
+    lootTraits: ["Fragrant"],
+    partialLoot: ["a parcel tag", "a curl of red ribbon", "a pointed felt cap"],
+  },
+  {
+    name: "Gnome Lamplighter", type: "Artificer", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    repelledBy: { traits: ["Shadowed Presence"] },
+    quirks: ["Keeps every lamp in the lodge trimmed and burning", "Notices the moment a shadow falls the wrong way", "Hums to keep warm"],
+    appliedQuirk: "{name} lifts a lamp to the {form} and studies the shadow it casts.",
+    alluringQualities: { materials: ["Brass", "Clear Glass"], traits: ["Polished", "Faint Glow"], tags: ["Lighting", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 0, magical: 1, social: 0, spatial: 2, environmental: 2, acoustic: 0, presence: 1 },
+    lootMaterials: ["Brass", "Clear Glass"],
+    lootTraits: ["Faint Glow"],
+    partialLoot: ["a brass wick-trimmer", "a singed mitten", "a stub of lamp oil candle"],
+  },
+  {
+    name: "Gnome Woodcarver", type: "Artificer", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Whittles little gifts by the fire", "Runs a thumb along the grain of everything wooden", "Can't resist critiquing other people's joinery"],
+    appliedQuirk: "{name} runs a thumb along the {form}'s grain and tuts at the joinery.",
+    alluringQualities: { materials: ["Birch", "Walnut", "Pine"], traits: ["Carved", "Etched", "Smooth"], tags: ["Decor", "Entertainment"] },
+    perceptionAffinity: { material: 3, structure: 2, weight: 0, text: 0, magical: 0, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 0 },
+    lootMaterials: ["Birch", "Walnut"],
+    lootTraits: ["Etched", "Inlaid"],
+    partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
+  },
 ];
 
 // ============================================================
@@ -1143,6 +1194,13 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   isConverted?: boolean;
   /** Overrides the type/group AP reward (companions set this from their option's `ap`). */
   apReward?: number;
+  /** Snowbound locations: how much cold they can still take (0 = frozen), and the most they can have. */
+  warmth?: number;
+  maxWarmth?: number;
+  /** The room they were in when the cold last touched them (to tell when they enter a new one). */
+  warmthRoom?: RoomName;
+  /** Frozen solid: out of the hunt (isAlive is false), but still there to be eaten. */
+  isFrozen?: boolean;
 };
 
 // ============================================================

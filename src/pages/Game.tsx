@@ -14,10 +14,11 @@ import {
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
+  withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, dropExpiredSeasonalForms,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, seasonEnd, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -93,6 +94,15 @@ function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: numbe
   const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
 
   const baseParty: AdventurerTemplate[] = [...required];
+  // Some locations save a few slots for their own locals (e.g. the Snowbound Lodge's gnomes)
+  if (location.nativeShare) {
+    const natives = shuffledCommon.filter(t => t.locations?.includes(location.id)).slice(0, location.nativeShare);
+    for (const t of natives) {
+      if (baseParty.length >= size) break;
+      baseParty.push(t);
+      shuffledCommon.splice(shuffledCommon.indexOf(t), 1);
+    }
+  }
   for (let i = 0; i < eliteCount && baseParty.length < size; i++) {
     if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
   }
@@ -145,8 +155,13 @@ function spawnSmallCreatures(loc: HuntLocation): SmallCreature[] {
   const count = 3 + Math.floor(Math.random() * 3);
   const creatures: SmallCreature[] = [];
   for (let i = 0; i < count; i++) {
-    const template = pool[Math.floor(Math.random() * pool.length)];
-    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    // Skip any creature that has already reached its limit for the hunt (e.g. one reindeer)
+    const open = pool.filter(t => !t.max || creatures.filter(c => c.id === t.id).length < t.max);
+    if (open.length === 0) break;
+    const template = open[Math.floor(Math.random() * open.length)];
+    // Some creatures keep to certain rooms (the Lodge's reindeer stays out by the woodpile)
+    const rooms = template.rooms ? loc.rooms.filter(r => template.rooms?.includes(r)) : loc.rooms;
+    const room = rooms[Math.floor(Math.random() * rooms.length)];
     creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
   }
   return creatures;
@@ -185,6 +200,9 @@ export default function Game() {
   const [rivals, setRivals] = useState<RivalMimic[]>([]);
   // The Sinking Ship: turns taken so far this hunt (see advanceShip)
   const [shipTurn, setShipTurn] = useState(0);
+  // Snowbound locations: bumped at the end of every turn; the cold is applied once the turn's
+  // moves have landed (see applyFrost)
+  const [frostTurn, setFrostTurn] = useState(0);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
@@ -269,6 +287,7 @@ export default function Game() {
     setIsBountyHunt(false);
     setRivals([]);
     setShipTurn(0);
+    setFrostTurn(0);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -288,9 +307,9 @@ export default function Game() {
       ? placeRivals(loc, room, rollNestKinds(loc))
       : hasRival ? placeRivals(loc, room, ["lone"]) : [];
 
-    const newParty = bounty
+    const newParty = withWarmth(bounty
       ? generateBountyParty(loc, character?.mass ?? 26)
-      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0);
+      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0), loc);
     const creatures = spawnSmallCreatures(loc);
     setMimicRoom(room);
     setParty(newParty);
@@ -415,6 +434,7 @@ export default function Game() {
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
   const advanceShip = () => {
+    if (location?.snowbound) setFrostTurn(t => t + 1);
     const total = location?.sinkingTurns;
     if (!total || shipTurn >= total) return;
     const turn = shipTurn + 1;
@@ -429,6 +449,22 @@ export default function Game() {
       addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
     }
   };
+
+  // The Snowbound Lodge: after each turn, the cold takes its toll (see chillParty)
+  const applyFrost = useEffectEvent(() => {
+    if (!location?.snowbound || frostTurn === 0) return;
+    const { party: chilled, frozen, numb } = chillParty(party, location);
+    setParty(chilled);
+    numb.forEach(a => addEvent("info", `❄️ ${a.name}'s teeth are chattering. They won't last much longer in this cold.`));
+    frozen.forEach(a => addEvent("alert", `🧊 ${a.name} stops moving. Frozen solid, in the ${a.location}.`));
+    if (frozen.length > 0 && !chilled.some(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared)) {
+      addEvent("system", `The lodge falls silent. Nothing moves but you, and whatever the ice has left for you.`);
+    }
+  });
+  // Intentional: every kind of turn moves the party in its own way (wandering, lures, bolting),
+  // so the cold is applied once that turn's moves have landed rather than inside each action.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => applyFrost(), [frostTurn]);
 
   // Called whenever suspicion hits 10 — ends hunt immediately
   const triggerHuntEnd = () => {
@@ -819,6 +855,9 @@ export default function Game() {
             // Dead or fled
             if (flees && target.behavior === "elusive") {
               boltAway(target, 2, hitsSoFar);
+            } else if (flees && location?.snowbound) {
+              addEvent("escape", `${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
+              boltAway(target, 3, hitsSoFar);
             } else if (flees) {
               addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
@@ -856,6 +895,9 @@ export default function Game() {
           addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
           setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
           if (hitsSoFarMissed + 1 >= (target.constitution || 3) && target.behavior === "elusive") {
+            boltAway(target, 4, hitsSoFarMissed + 1);
+          } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && location?.snowbound) {
+            addEvent("escape", `Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
             boltAway(target, 4, hitsSoFarMissed + 1);
           } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && Math.random() < 0.6) {
             addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
@@ -1034,6 +1076,43 @@ export default function Game() {
     }
   };
 
+  // The Snowbound Lodge: a frozen adventurer in your room is a cheap meal. Easy to take (no
+  // roll, any size of mimic), but worth less, and it teaches nothing: the flavor is locked in the ice.
+  const doEatFrozen = (body: PartyMember) => {
+    if (!character || !body.isFrozen || body.isConsumed) return;
+    beginTurn();
+    const ap = frozenMealAp(body);
+    addEvent("consume", `You crack ${body.name} free of the ice and swallow them, stiff and cold. +${ap} AP.`);
+    const witnesses = activeAdventurers.filter(a => a.location === mimicRoom).length;
+    if (witnesses > 0) {
+      const gain = consumeSuspicion(witnesses);
+      addEvent("alert", `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
+      setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+    }
+    setParty(prev => prev.map(a => a.id === body.id ? { ...a, isConsumed: true } : a));
+    noteMeal(body.name, ap);
+    setActionCount(0);
+    const updatedChar = {
+      ...character,
+      assimilationPoints: (character.assimilationPoints || 0) + ap,
+      adventurersEaten: withDiscovered(character.adventurersEaten, [body]),
+      partyMembersEaten: character.partyMembersEaten + 1,
+      biggestMeal: withBiggestMeal(character.biggestMeal, body.name, ap),
+    };
+    setCharacter(updatedChar);
+    persist({
+      assimilationPoints: updatedChar.assimilationPoints,
+      adventurersEaten: updatedChar.adventurersEaten,
+      partyMembersEaten: updatedChar.partyMembersEaten,
+      biggestMeal: updatedChar.biggestMeal,
+      lastFedAt: new Date().toISOString(),
+    });
+    if (updatedChar.assimilationPoints >= TIER_CONFIG[character.tier].apToEvolve) {
+      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
+      setPhase("evolve");
+    }
+  };
+
   // Devotion (The Hollow Reliquary): once a devoted pilgrim is the last one left, it
   // recognises the mimic as the shrine's lost god, brings offerings and leaves — ending the hunt.
   // Runs whenever the party changes; if the last kill opened the upgrade screen it waits
@@ -1177,7 +1256,8 @@ export default function Game() {
   };
 
   const checkActionLimit = (newCount: number) => {
-    if (newCount >= ACTION_LIMIT) {
+    // Snowed in, the party can't wander off: the cold is the only clock
+    if (newCount >= ACTION_LIMIT && !location?.snowbound) {
       addEvent("info", `After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
       addEvent("system", `The party leaves the ${location?.name} of their own accord. Find new prey.`);
       setGameoverReason("abandoned");
@@ -1265,7 +1345,8 @@ export default function Game() {
     const wandered = smallCreatures.map(c => {
       if (c.isConsumed) return c;
       const room = wanderCreature(location, c.location, mimicRoom, honeyamber);
-      return room === c.location ? c : { ...c, location: room };
+      const allowed = !c.rooms || c.rooms.includes(room);
+      return room === c.location || !allowed ? c : { ...c, location: room };
     });
     setSmallCreatures(wandered);
     // While wearing Honeyamber, any critter that wanders into your room gets a line
@@ -1368,7 +1449,7 @@ export default function Game() {
   // any other hunt ends when no adventurers remain. Either way, wait for a ceremony to finish.
   const isNest = !!location?.rivalNest;
   const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
-    (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
+    (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0 && uneatenFrozen(party).length === 0);
   const recordSurvivedHunt = useEffectEvent(() => recordHunt("survived"));
   useEffect(() => {
     if (huntOver) recordSurvivedHunt();
@@ -1502,8 +1583,7 @@ export default function Game() {
   // Keyboard shortcuts during a hunt: R / L / S / W, and 1–9 to pick a room while relocating
   const onHuntKey = useEffectEvent((e: KeyboardEvent) => {
     if (phase !== "hunt" || showSheet || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    const target = e.target as HTMLElement | null;
-    if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+    if (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable='true']")) return;
     const key = e.key.toLowerCase();
     if (showMovePanel && /^[1-9]$/.test(key)) {
       const room = relocateRooms[Number(key) - 1];
@@ -1747,8 +1827,20 @@ export default function Game() {
             );
           })()}
 
+          {phase === "hunt" && !huntOver && location?.snowbound && (() => {
+            const frozenCount = party.filter(a => a.isFrozen).length;
+            return (
+              <div className="px-3 py-2 rounded border text-xs border-sky-400/30 bg-sky-400/5 text-sky-300/90">
+                <span className="font-cinzel">❄️ Snowed in. Nobody can leave, and the cold is getting to them.</span>
+                <p className="text-[11px] mt-0.5 opacity-80">
+                  {frozenCount > 0 ? `${frozenCount} frozen solid so far. ` : ""}The {location.snowbound.hearth} warms whoever walks in; the {location.snowbound.cold.join(" and ")} chill them.
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Action counter warning */}
-          {phase === "hunt" && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
+          {phase === "hunt" && !location?.snowbound && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
             <div className={`px-3 py-2 rounded border text-xs ${ACTION_LIMIT - actionCount <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
               <span className="font-cinzel">⏳ {ACTION_LIMIT - actionCount} actions remaining</span>
               <p className="text-[11px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
@@ -1789,6 +1881,7 @@ export default function Game() {
                       adventurers={activeAdventurers}
                       creatures={smallCreatures.filter(c => !c.isConsumed)}
                       rivals={rivals}
+                      frozen={uneatenFrozen(party)}
                       formName={activeForm?.name}
                     />
                   </CardContent>
@@ -1800,6 +1893,7 @@ export default function Game() {
                       const inRange = dist !== null && dist <= getAllureRange();
                       const fled = adv.fled && !adv.isConsumed;
                       const disappeared = adv.isDisappeared && !adv.isConsumed;
+                      const frozen = adv.isFrozen && !adv.isConsumed;
                       const maxHits = adv.constitution || 3;
                       return (
                         <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared ? "opacity-40" : ""}`}>
@@ -1807,6 +1901,7 @@ export default function Game() {
                             adv.isConsumed ? "line-through text-muted-foreground" :
                             fled ? "text-muted-foreground italic" :
                             disappeared ? "text-purple-400/60 italic" :
+                            frozen ? "text-sky-300/80 italic" :
                             adv.isAttracted ? "text-yellow-400" : "text-foreground"
                           }>
                             {adv.name}
@@ -1814,6 +1909,15 @@ export default function Game() {
                           <div className="flex items-center gap-1">
                             {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
                             {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
+                            {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
+                            {adv.warmth !== undefined && adv.isAlive && !adv.isConsumed && (
+                              <span
+                                title={`Warmth ${adv.warmth}/${adv.maxWarmth ?? adv.warmth}: freezes at 0`}
+                                className={`text-[10px] whitespace-nowrap ${adv.warmth <= FROST_WARNING ? "text-sky-300" : "text-muted-foreground"}`}
+                              >
+                                ❄️ {adv.warmth}
+                              </span>
+                            )}
                             {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
                             {adv.isAttracted && !adv.isConsumed && (
                               <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
@@ -1860,16 +1964,22 @@ export default function Game() {
                 </button>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[...availableLocations].sort((a, b) => Number(!!b.rare) - Number(!!a.rare)).map(loc => (
+                {[...availableLocations].sort((a, b) => Number(!!b.holiday) - Number(!!a.holiday) || Number(!!b.rare) - Number(!!a.rare)).map(loc => (
                   <Card
                     key={loc.id}
                     onClick={() => chooseLocation(loc)}
-                    className={`cursor-pointer bg-card transition-all group ${loc.rare
+                    data-holiday={loc.holiday}
+                    className={`cursor-pointer bg-card transition-all group ${loc.holiday ? "holiday-card border-border" : loc.rare
                       ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
                       : "border-border hover:border-primary/40"}`}
                   >
                     <CardContent className="p-4">
                       {character && <BurnBadge huntsLeft={locationBurn(character, loc.id)} />}
+                      {loc.holiday && (
+                        <p className="holiday-badge text-[11px] font-cinzel uppercase tracking-wide mb-1">
+                          {HOLIDAYS[loc.holiday].icon} {HOLIDAYS[loc.holiday].name} · open to all until {seasonEnd(loc.holiday)}
+                        </p>
+                      )}
                       {loc.rare && character?.rareLocation && (
                         <p className="text-[11px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
                           ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
@@ -2126,6 +2236,30 @@ export default function Game() {
                           title={creature.description}
                         >
                           {creatureEmoji(creature.name)} {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Snowbound: frozen adventurers in your room, there for the taking */}
+              {(() => {
+                const bodies = uneatenFrozen(party).filter(a => a.location === mimicRoom);
+                if (bodies.length === 0) return null;
+                return (
+                  <div className="bg-sky-400/5 border border-sky-400/30 rounded-lg p-3">
+                    <p className="text-[11px] text-sky-300 font-cinzel uppercase tracking-widest mb-2">Frozen Solid</p>
+                    <div className="flex flex-wrap gap-2">
+                      {bodies.map(body => (
+                        <button
+                          key={body.id}
+                          onClick={() => doEatFrozen(body)}
+                          disabled={acting}
+                          className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-sky-400/30 bg-card hover:border-sky-300/60 hover:text-sky-200 transition-all text-muted-foreground"
+                          title="Frozen meals are easy to take, but worth half as much and teach you nothing."
+                        >
+                          🧊 {body.name} <span className="text-primary ml-1">+{frozenMealAp(body)} AP</span>
                         </button>
                       ))}
                     </div>

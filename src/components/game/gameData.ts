@@ -23,7 +23,7 @@ import {
   LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
 } from "./locationData";
-import { HOLIDAYS, isInSeason, seasonStart, type HolidayId } from "./holidays";
+import { HOLIDAYS, isInSeason, seasonStart, today, type HolidayId } from "./holidays";
 
 export * from "./vocabulary";
 export * from "./mimicData";
@@ -752,10 +752,12 @@ export function meetsLocationRequirements(location: HuntLocation, tier: Tier, ma
   return true;
 }
 
-/** Whether a location appears on the hunting-ground screen right now. */
+/** Whether a location appears on the hunting-ground screen right now. Seasonal ones are open to every tier, in season. */
 export function isLocationAvailable(
   location: HuntLocation, tier: Tier, mass: number, rareLocation: RareLocationState | null | undefined,
+  date: Date = today(),
 ): boolean {
+  if (location.holiday) return isInSeason(location.holiday, date);
   if (location.rare && rareLocation?.id !== location.id) return false;
   return meetsLocationRequirements(location, tier, mass);
 }
@@ -785,7 +787,7 @@ export function advanceRareLocation(
 // CODEX: LOCATIONS
 // The Codex groups hunting grounds and only tells you about the ones you've found.
 // ============================================================
-export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare";
+export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare" | "seasonal";
 
 export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; description: string }[] = [
   { id: "common", label: "Common", description: "Hunting grounds every mimic knows from its first meal." },
@@ -793,6 +795,7 @@ export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; des
   { id: "giant", label: "Giant", description: "Where the giants live. Only the largest mimics are taken seriously there." },
   { id: "adept", label: "Adept", description: "Grounds for mimics that have outgrown even the giants' doorways." },
   { id: "rare", label: "Rare", description: "Places that open only now and then, for a hunt or two." },
+  { id: "seasonal", label: "Seasonal", description: "Places that open to mimics of every size, but only while their holiday lasts." },
 ];
 
 /** Where a location's requirements fall in unlock order: tier first, then mass. */
@@ -802,6 +805,7 @@ const firstGiantRank = Math.min(...LOCATIONS.filter(l => l.isGiantRealm).map(unl
 
 /** Which Codex group a location belongs to. */
 export function locationGroup(location: HuntLocation): LocationGroupId {
+  if (location.holiday) return "seasonal";
   if (location.rare) return "rare";
   if (location.isGiantRealm) return "giant";
   if (location.minTier === TIER_ORDER[0] && !location.minMass) return "common";
@@ -811,8 +815,9 @@ export function locationGroup(location: HuntLocation): LocationGroupId {
 /**
  * What the Codex knows about a location, pooled over `characters` (one mimic, or all of them):
  * "unknown" shows only "???"; "known" shows its name and details but not its rooms; "visited"
- * shows everything, map included. Common grounds are always known. Advanced and Giant grounds
- * become known once a mimic qualifies for them; Rare grounds only once one has hunted there.
+ * shows everything, map included. Common grounds are always known. Advanced, Giant and Adept
+ * grounds become known once a mimic qualifies for them; Rare grounds only once one has hunted
+ * there; Seasonal grounds while their holiday is on.
  */
 export type LocationKnowledge = "unknown" | "known" | "visited";
 
@@ -824,12 +829,86 @@ export function locationHunts(
 
 export function locationKnowledge(
   location: HuntLocation, characters: readonly Pick<MimicCharacter, "tier" | "mass" | "locationHuntCounts">[],
+  date: Date = today(),
 ): LocationKnowledge {
   if (locationHunts(location, characters) > 0) return "visited";
+  if (location.holiday) return isInSeason(location.holiday, date) ? "known" : "unknown";
   const group = locationGroup(location);
   if (group === "common") return "known";
   if (group === "rare") return "unknown";
   return characters.some(c => meetsLocationRequirements(location, c.tier, c.mass)) ? "known" : "unknown";
+}
+
+// ============================================================
+// SNOWBOUND (The Snowbound Lodge)
+// Nobody can leave, and the cold freezes the party one by one. Each adventurer starts with
+// warmth set by its constitution, so the frail go first. Every turn costs 1 warmth; entering
+// the hearth room gives 1 back (up to their starting warmth) and entering a cold room costs 1
+// more. Staying put changes nothing beyond the turn's 1. At 0 they freeze solid: out of the
+// hunt, but still there to be eaten, for less.
+// ============================================================
+export const WARMTH_PER_CONSTITUTION = 4;
+/** Extra starting warmth, 0 to this, so equally sturdy adventurers don't freeze on the same turn. */
+export const WARMTH_JITTER = 2;
+/** At this warmth or below an adventurer is close to freezing (the log says so, once). */
+export const FROST_WARNING = 3;
+
+export function startingWarmth(constitution: number, random: () => number = Math.random): number {
+  return constitution * WARMTH_PER_CONSTITUTION + Math.floor(random() * (WARMTH_JITTER + 1));
+}
+
+/** The party with starting warmth, for a snowbound location (unchanged anywhere else). */
+export function withWarmth(party: readonly PartyMember[], location: HuntLocation, random: () => number = Math.random): PartyMember[] {
+  if (!location.snowbound) return [...party];
+  return party.map(a => {
+    const warmth = startingWarmth(a.constitution || 3, random);
+    return { ...a, warmth, maxWarmth: warmth, warmthRoom: a.location };
+  });
+}
+
+export interface FrostResult {
+  party: PartyMember[];
+  /** Froze solid this turn. */
+  frozen: PartyMember[];
+  /** Dropped to FROST_WARNING this turn. */
+  numb: PartyMember[];
+}
+
+/** One turn of cold at a snowbound location. */
+export function chillParty(party: readonly PartyMember[], location: HuntLocation): FrostResult {
+  const frozen: PartyMember[] = [];
+  const numb: PartyMember[] = [];
+  const snow = location.snowbound;
+  if (!snow) return { party: [...party], frozen, numb };
+  const next = party.map(a => {
+    if (!isStillHunting(a) || a.warmth === undefined) return a;
+    const max = a.maxWarmth ?? a.warmth;
+    let warmth = a.warmth;
+    if (a.location !== a.warmthRoom) {
+      if (a.location === snow.hearth) warmth = Math.min(max, warmth + 1);
+      if (snow.cold.includes(a.location)) warmth -= 1;
+    }
+    warmth -= 1;
+    if (warmth <= 0) {
+      const ice = { ...a, warmth: 0, warmthRoom: a.location, isAlive: false, isAttracted: false, isFrozen: true };
+      frozen.push(ice);
+      return ice;
+    }
+    const updated = { ...a, warmth, warmthRoom: a.location };
+    if (warmth <= FROST_WARNING && a.warmth > FROST_WARNING) numb.push(updated);
+    return updated;
+  });
+  return { party: next, frozen, numb };
+}
+
+/** What a frozen adventurer is worth: half the usual, rounded up. */
+export function frozenMealAp(member: Pick<PartyMember, "group" | "type" | "apReward">): number {
+  return Math.max(1, Math.ceil(getApReward(member) / 2));
+}
+
+/** Frozen adventurers nobody has eaten yet. */
+export function uneatenFrozen(party: readonly PartyMember[]): PartyMember[] {
+  return party.filter(a => a.isFrozen && !a.isConsumed);
 }
 
 // ============================================================
@@ -1266,9 +1345,11 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bBoar\b/, "🐗"],
   [/\bFox\b/, "🦊"],
   [/\bFrog\b/, "🐸"],
-  [/\bRabbit\b/, "🐇"],
+  [/\b(Rabbit|Hare)\b/, "🐇"],
+  [/\bReindeer\b/, "🦌"],
+  [/\bOwl\b/, "🦉"],
   [/\bOtter\b/, "🦦"],
-  [/\bWeasel\b/, "🦡"], // no weasel emoji; the badger is family
+  [/\b(Weasel|Ermine)\b/, "🦡"], // no weasel emoji; the badger is family
   [/\bCrab\b/, "🦀"],
   [/\bLamb\b/, "🐑"],
   [/\bWarhorse\b/, "🐎"],

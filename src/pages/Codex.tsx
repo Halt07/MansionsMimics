@@ -8,7 +8,7 @@ import {
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
   ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier, 
   ACTION_WARNING,
-  ACTION_LIMIT, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason, seasonEnd, today,
+  ACTION_LIMIT, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason, seasonEnd, seasonRange, today,
   LOCATION_GROUPS, creatureEmoji, locationGroup, locationHunts, locationKnowledge, type HuntLocation, type LocationKnowledge} from
 "../components/game/gameData";
 import RoomMap, { MysteryMap } from "@/components/game/RoomMap";
@@ -73,7 +73,9 @@ function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card/40 px-4 py-4">
         <p className="font-cinzel text-base text-muted-foreground/60">???</p>
-        <p className="text-xs text-muted-foreground/50 italic mt-1">You haven't found this place yet.</p>
+        <p className="text-xs text-muted-foreground/50 italic mt-1">
+          {loc.holiday ? "It only opens in its season, and this isn't it." : "You haven't found this place yet."}
+        </p>
       </div>
     );
   }
@@ -88,9 +90,15 @@ function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-cinzel text-base text-foreground">{loc.name}</span>
-            <span className="text-[11px] px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
-              {loc.minTier}+{loc.minMass ? ` · Mass ${loc.minMass}+` : ""}
-            </span>
+            {loc.holiday ? (
+              <span data-holiday={loc.holiday} className="holiday-badge text-[11px]">
+                {HOLIDAYS[loc.holiday].icon} {HOLIDAYS[loc.holiday].name} · {seasonRange(loc.holiday)} · all tiers
+              </span>
+            ) : (
+              <span className="text-[11px] px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
+                {loc.minTier}+{loc.minMass ? ` · Mass ${loc.minMass}+` : ""}
+              </span>
+            )}
             <span className={`text-[11px] ${visited ? "text-primary" : "text-muted-foreground/70 italic"}`}>
               {visited ? `Hunted ${hunts} ${hunts === 1 ? 'time' : 'times'}` : "Not yet hunted"}
             </span>
@@ -111,6 +119,9 @@ function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
               <div className="flex justify-between"><span className="text-muted-foreground">Party size:</span> <span className="text-foreground">{loc.partySize[0]}–{loc.partySize[1]}</span></div>
               {visited && loc.sinkingTurns && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Sinks after:</span> <span className="text-foreground">{loc.sinkingTurns} turns</span></div>
+              )}
+              {visited && loc.snowbound && (
+                <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Snowbound:</span> <span className="text-foreground text-right">Nobody can leave, and the cold freezes them one by one</span></div>
               )}
               {visited && loc.rivalNest && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Rival mimics:</span> <span className="text-foreground">{loc.rivalNest[0]}–{loc.rivalNest[1]}, one of them the Elder</span></div>

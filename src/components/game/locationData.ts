@@ -5,6 +5,7 @@
 // ============================================================
 import type { Tier, UtilityTag } from "./vocabulary";
 import type { FormId } from "./mimicData";
+import type { HolidayId } from "./holidays";
 
 // ============================================================
 // LOCATIONS
@@ -18,6 +19,10 @@ export interface LocationCreature {
   readonly ap: number;
   readonly discipline: number;
   readonly description: string;
+  /** The only rooms it's found in and wanders between (anywhere if omitted). */
+  readonly rooms?: readonly string[];
+  /** At most this many in one hunt (no limit if omitted). */
+  readonly max?: number;
 }
 
 interface LocationDef {
@@ -51,6 +56,16 @@ interface LocationDef {
   readonly rivalNest?: readonly [number, number];
   /** The location sinks (and the hunt ends) after this many turns. */
   readonly sinkingTurns?: number;
+  /** Seasonal locations are open only while this holiday is in season, to mimics of any tier. */
+  readonly holiday?: HolidayId;
+  /**
+   * Snowed in: nobody can leave (anyone who would flee bolts to another room instead), and the
+   * cold freezes adventurers one by one (see chillParty in ./gameData). Entering the hearth room
+   * warms them a little; entering a cold room chills them.
+   */
+  readonly snowbound?: { readonly hearth: string; readonly cold: readonly string[] };
+  /** At least this many party slots go to adventurers native here (those listing it in `locations`). */
+  readonly nativeShare?: number;
 }
 
 const LOCATION_DATA = [
@@ -494,6 +509,36 @@ const LOCATION_DATA = [
     alwaysIncludes: ["Ship's Captain"],
     sinkingTurns: 15,
   },
+  // ── Seasonal ──
+  {
+    id: "snowbound_lodge", name: "Snowbound Lodge", minTier: "Minor",
+    description: "A mountain lodge buried to its eaves in snow. The pass is closed, the woodpile is shrinking, and nobody is going anywhere.",
+    flavorText: "The drifts have sealed the doors. Every guest is watching the fire, and nobody is watching the furniture.",
+    rooms: ["Great Hearth", "Bunk Loft", "Kitchen & Larder", "Boot Room", "Snowed-In Courtyard", "Woodshed"],
+    roomGraph: {
+      "Great Hearth":        ["Bunk Loft", "Boot Room"],
+      "Bunk Loft":           ["Great Hearth"],
+      "Kitchen & Larder":    ["Boot Room"],
+      "Boot Room":           ["Great Hearth", "Kitchen & Larder", "Snowed-In Courtyard"],
+      "Snowed-In Courtyard": ["Boot Room", "Woodshed"],
+      "Woodshed":            ["Snowed-In Courtyard"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Comfort", "Hospitality", "Storage", "Rural"],
+    imageHint: "snowed-in timber lodge at night, firelight through frosted windows",
+    locationCreatures: [
+      { id: "reindeer", name: "Reindeer", ap: 4, discipline: 2, description: "Sheltering among the woodpiles from the storm.", rooms: ["Woodshed", "Snowed-In Courtyard"], max: 1 },
+      { id: "snow_hare", name: "Snow Hare", ap: 1, discipline: 2, description: "White as the drifts, and only visible when it moves." },
+      { id: "ermine", name: "Ermine", ap: 1, discipline: 2, description: "Slipped in under the door after the larder mice." },
+      { id: "lodge_cat", name: "Lodge Cat", ap: 2, discipline: 2, description: "Has claimed the warmest spot by the fire and will not be moved.", rooms: ["Great Hearth", "Bunk Loft", "Kitchen & Larder"] },
+      { id: "larder_mouse", name: "Larder Mouse", ap: 1, discipline: 1, description: "Fat on the winter stores." },
+      { id: "snowy_owl", name: "Snowy Owl", ap: 2, discipline: 2, description: "Roosting under the eaves of the woodshed.", rooms: ["Woodshed", "Snowed-In Courtyard"] },
+    ],
+    holiday: "christmas",
+    alwaysIncludes: ["Lodgekeeper"],
+    nativeShare: 1,
+    snowbound: { hearth: "Great Hearth", cold: ["Snowed-In Courtyard", "Woodshed"] },
+  },
 ] as const satisfies readonly LocationDef[];
 
 /** Every location id, derived from the location data above. */
@@ -814,5 +859,19 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "standard_wardrobe":       { plausibility: -2, note: "A wardrobe on the open deck?" } },
     "Bilge":               { "minor_pillow":            { plausibility: -2, note: "Nothing soft survives the bilge." },
                              "minor_book":              { plausibility: -2, note: "Soaked through — no book would be left down here." } },
+  },
+  // ── Snowbound Lodge · all mimics, Midwinter only · wearable forms: Minor–Apex ──
+  snowbound_lodge: {
+    "Great Hearth":        { "standard_festive_tree":   { plausibility: 1, allure: 1, note: "Every lodge puts up a tree by the fire at Midwinter." },
+                             "minor_wrapped_present":   { plausibility: 1, note: "Presents pile up around the hearth." },
+                             "lesser_wassail_bowl":     { plausibility: 1, allure: 1, note: "A steaming bowl by the fire: everyone wants a cup." },
+                             "grand_antler_chandelier": { plausibility: 1, note: "An antler chandelier fits in nicely in a lodge." } },
+    "Bunk Loft":           { "greater_bed":             { plausibility: 1, note: "Bunks, and more bunks." } },
+    "Kitchen & Larder":    { "lesser_barrel":           { plausibility: 1, note: "Winter stores are kept in barrels." },
+                             "minor_teapot":            { plausibility: 1, note: "The kettle never really leaves the stove." },
+                             "lesser_wassail_bowl":     { plausibility: 1, allure: 1, note: "Drinks prepared in the Kitchen." } },
+    "Boot Room":           { "minor_boot":              { plausibility: 1, note: "One more boot drying by the door." } },
+    "Woodshed":            { "lesser_crate":            { plausibility: 1, note: "Kindling is stored in old crates." },
+                             "standard_festive_tree":   { plausibility: -1, note: "A decorated tree out with the firewood looks forgotten." } },
   },
 };

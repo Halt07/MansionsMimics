@@ -462,6 +462,11 @@
   border: 1px solid hsl(25 90% 55% / 0.6);
   background: hsl(25 90% 55% / 0.12);
 }
+.occupant-frozen {
+  min-width: 0;
+  padding: 0;
+  font-size: 13px;
+}
 .occupant-creature {
   min-width: 0;
   padding: 0;
