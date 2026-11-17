@@ -840,6 +840,42 @@ export function locationKnowledge(
 }
 
 // ============================================================
+// FIREWORKS (The Founders' Fair)
+// Every `fireworks.every` turns a volley goes up over a random room. For the turn after, everyone
+// there and next door is looking up, so a meal in those rooms has no witnesses. The catch: the
+// crew comes looking for rockets, and a mimic shaped like a crate in the launch room gets
+// rummaged, found empty and thrown out into a neighboring room.
+// ============================================================
+
+/** Whether a volley goes up at the end of this turn (turns count from 1). */
+export function fireworksDue(location: HuntLocation, turn: number): boolean {
+  return !!location.fireworks && turn > 0 && turn % location.fireworks.every === 0;
+}
+
+/** The rooms watching a volley over `room`: that room and the ones next to it. */
+export function distractedRooms(location: HuntLocation, room: RoomName): RoomName[] {
+  return [room, ...getAdjacentRooms(location, room)];
+}
+
+/** Suspicion for being rummaged as this form in the launch room (a variant counts as its base), or null if it's left alone. */
+export function fireworksRummage(location: HuntLocation, form: Pick<Form, "id" | "variantOf"> | null | undefined): number | null {
+  const crates = location.fireworks?.crates;
+  if (!crates || !form) return null;
+  const base = form.variantOf as FormId | undefined;
+  return crates[form.id] ?? (base ? crates[base] : undefined) ?? null;
+}
+
+/** Where a rummaged mimic gets thrown: a neighboring room with nobody in it if there is one. */
+export function tossRoom(
+  location: HuntLocation, from: RoomName, occupied: readonly RoomName[], random: () => number = Math.random,
+): RoomName {
+  const next = getAdjacentRooms(location, from);
+  const empty = next.filter(r => !occupied.includes(r));
+  const pool = empty.length > 0 ? empty : next;
+  return pool.length > 0 ? pool[Math.floor(random() * pool.length)] : from;
+}
+
+// ============================================================
 // STARFALL (Stargazers' Hill)
 // Every `starfall.every` turns a star fragment lands in a random room (if none is still lying
 // about). On each Wait the party heads one room closer to it instead of wandering, and the first
@@ -1374,6 +1410,9 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bReindeer\b/, "🦌"],
   [/\bOwl\b/, "🦉"],
   [/\bHedgehog\b/, "🦔"],
+  [/\bGoose\b/, "🪿"],
+  [/\bPig\b/, "🐖"],
+  [/\bSquirrel\b/, "🐿️"],
   [/\bMoth\b/, "🦋"],
   [/\bOtter\b/, "🦦"],
   [/\b(Weasel|Ermine)\b/, "🦡"], // no weasel emoji; the badger is family

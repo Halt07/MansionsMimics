@@ -73,6 +73,13 @@ interface LocationDef {
    * needs one (tests/stargazersHill.test.mjs checks).
    */
   readonly starfall?: { readonly every: number; readonly landings: Readonly<Record<string, string>> };
+  /**
+   * Fireworks: every `every` turns a volley goes up over a random room. For the next turn,
+   * everyone in that room and the rooms next to it is watching the sky, so nobody witnesses a
+   * meal there. A mimic shaped like one of the `crates` in the launch room gets rummaged for
+   * fireworks, found empty and thrown out into a neighboring room (that much suspicion).
+   */
+  readonly fireworks?: { readonly every: number; readonly crates: Readonly<Partial<Record<FormId, number>>> };
 }
 
 const LOCATION_DATA = [
@@ -547,6 +554,35 @@ const LOCATION_DATA = [
     snowbound: { hearth: "Great Hearth", cold: ["Snowed-In Courtyard", "Woodshed"] },
   },
   {
+    id: "founders_fair", name: "The Founders' Fair", minTier: "Minor",
+    description: "The whole town turns out on the green for Founders' Day: pies, ale, a brass band, and fireworks after dark.",
+    flavorText: "Every few minutes another volley goes up and every face turns to the sky. Whatever happens on the ground in that moment, nobody sees it.",
+    rooms: ["Town Gate", "Ale Stall", "Village Green", "Bandstand", "Pie-Judging Tent", "Riverbank"],
+    roomGraph: {
+      "Town Gate":        ["Ale Stall", "Village Green"],
+      "Ale Stall":        ["Town Gate", "Bandstand"],
+      "Village Green":    ["Town Gate", "Bandstand", "Pie-Judging Tent"],
+      "Bandstand":        ["Ale Stall", "Village Green", "Riverbank"],
+      "Pie-Judging Tent": ["Village Green", "Riverbank"],
+      "Riverbank":        ["Bandstand", "Pie-Judging Tent"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Entertainment", "Dining", "Social", "Storage"],
+    imageHint: "village green fair at dusk with bunting, a bandstand and fireworks over the river",
+    locationCreatures: [
+      { id: "village_goose", name: "Village Goose", ap: 2, discipline: 2, description: "Patrols the green and fears nothing, fireworks included.", rooms: ["Village Green", "Riverbank", "Town Gate"] },
+      { id: "prize_pig", name: "Prize Pig", ap: 3, discipline: 1, description: "Escaped from the livestock pen, and heading for the pies.", rooms: ["Pie-Judging Tent", "Village Green"], max: 1 },
+      { id: "squirrel", name: "Squirrel", ap: 1, discipline: 2, description: "Raiding the dropped pie crusts." },
+      { id: "stray_dog", name: "Stray Dog", ap: 2, discipline: 2, description: "Begging at every stall, flinching at every bang." },
+      { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat on fair food." },
+      { id: "fair_cat", name: "Fair Cat", ap: 2, discipline: 2, description: "Hiding under the bandstand until the noise stops." },
+    ],
+    holiday: "independence_day",
+    alwaysIncludes: ["Town Crier"],
+    nativeShare: 1,
+    fireworks: { every: 3, crates: { lesser_firework_crate: 2, lesser_crate: 1 } },
+  },
+  {
     id: "stargazers_hill", name: "Stargazers' Hill", minTier: "Minor",
     description: "An old observatory on a bald hilltop, crowded every August with people waiting for the sky to fall.",
     flavorText: "Every face is turned up. Every so often the sky splits open, and everyone runs. Nobody is looking at the furniture.",
@@ -906,12 +942,19 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "Bilge":               { "minor_pillow":            { plausibility: -2, note: "Nothing soft survives the bilge." },
                              "minor_book":              { plausibility: -2, note: "Soaked through — no book would be left down here." } },
   },
+  // ── The Founders' Fair · all mimics, Founders' Day only · wearable forms: Minor–Apex ──
+  founders_fair: {
+    "Riverbank":           { "lesser_firework_crate":   { plausibility: 1, allure: 1, note: "The fireworks crew keeps its crates down by the water." } },
+    "Village Green":       { "minor_picnic_basket":     { plausibility: 1, note: "Picnics all over the green." },
+                             "grand_parade_float":      { plausibility: 1, allure: 1, note: "The parade ends on the green." } },
+    "Ale Stall":           { "lesser_barrel":           { plausibility: 1, note: "Barrels stacked behind the stall." } },
+    "Pie-Judging Tent":    { "standard_dining_table":    { plausibility: 1, note: "A long table of pies awaiting judgment." } },
+  },
   // ── Stargazers' Hill · all mimics, Night of Falling Stars only · wearable forms: Minor–Apex ──
   stargazers_hill: {
     "Stone Circle":        { "minor_fallen_star":       { plausibility: 1, allure: 1, note: "A fallen star among the old stones. Who could resist?" },
                              "greater_wishing_well":    { plausibility: 1, note: "Wishes are made at the stones all night." } },
-    "Hilltop Lawn":        { "minor_picnic_basket":     { plausibility: 1, note: "Half the hill brought a picnic." },
-                             "minor_fallen_star":       { plausibility: 1, note: "Fragments land on the lawn all the time tonight." } },
+    "Hilltop Lawn":        { "minor_fallen_star":       { plausibility: 1, note: "Fragments land on the lawn all the time tonight." } },
     "Star-Chart Room":     { "minor_book":              { plausibility: 1, note: "Almanacs and star charts everywhere." },
                              "standard_bookshelf":      { plausibility: 1, note: "Shelves of star charts." } },
     "Lens Workshop":       { "lesser_crate":            { plausibility: 1, note: "Lenses are shipped in straw-packed crates." } },
@@ -920,12 +963,10 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   snowbound_lodge: {
     "Great Hearth":        { "standard_festive_tree":   { plausibility: 1, allure: 1, note: "Every lodge puts up a tree by the fire at Midwinter." },
                              "minor_wrapped_present":   { plausibility: 1, note: "Presents pile up around the hearth." },
-                             "lesser_wassail_bowl":     { plausibility: 1, allure: 1, note: "A steaming bowl by the fire: everyone wants a cup." },
                              "grand_antler_chandelier": { plausibility: 1, note: "An antler chandelier fits in nicely in a lodge." } },
     "Bunk Loft":           { "greater_bed":             { plausibility: 1, note: "Bunks, and more bunks." } },
     "Kitchen & Larder":    { "lesser_barrel":           { plausibility: 1, note: "Winter stores are kept in barrels." },
-                             "minor_teapot":            { plausibility: 1, note: "The kettle never really leaves the stove." },
-                             "lesser_wassail_bowl":     { plausibility: 1, allure: 1, note: "Drinks prepared in the Kitchen." } },
+                             "minor_teapot":            { plausibility: 1, note: "The kettle never really leaves the stove." } },
     "Boot Room":           { "minor_boot":              { plausibility: 1, note: "One more boot drying by the door." } },
     "Woodshed":            { "lesser_crate":            { plausibility: 1, note: "Kindling is stored in old crates." },
                              "standard_festive_tree":   { plausibility: -1, note: "A decorated tree out with the firewood looks forgotten." } },

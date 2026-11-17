@@ -43,4 +43,13 @@ export default async function ({ gameData: m, ok, log }) {
   // Among hundreds of candles, a Candlestick hides well but draws no one in
   const candle = m.getRoomContextMod('minor_candlestick', 'hollow_reliquary', 'Candle Gallery');
   ok(candle.plausibility === 2 && candle.allure === -1, 'a Candlestick in the Candle Gallery: +2 plausibility, −1 allure');
+
+  // A seasonal location is only open during its own holiday, so a bonus for another holiday's
+  // seasonal form could never apply there (no two holidays' windows overlap)
+  const offSeason = LOCATIONS.filter((l) => l.holiday).flatMap((l) =>
+    Object.entries(MODS[l.id] ?? {}).flatMap(([room, forms]) => Object.keys(forms)
+      .map((id) => ALL_FORMS.find((f) => f.id === id))
+      .filter((f) => f?.holiday && f.holiday !== l.holiday)
+      .map((f) => `${l.name} / ${room}: ${f.name} (${f.holiday})`)));
+  ok(offSeason.length === 0, `seasonal locations only give bonuses to seasonal forms of their own holiday${offSeason.length ? `: ${offSeason.join('; ')}` : ''}`);
 }

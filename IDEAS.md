@@ -4,14 +4,13 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 
 ## Features
 
-- **Room map during a hunt.** Show the location as a small graph of rooms: where you are, where each adventurer and small creature is, how far your lure reaches, and which rooms are burned. Rooms where an adventurer "vanished" could pulse, to help with tracking rivals. Today the layout only shows up as text ("Adjacent: …" and the distances in the party list).
 - **Trophy room / hoard.** Keep the special things you swallow (the Captain's strongbox, the porter's token, the Doubting Scholar's notes, biggest meals) as objects you can look at on the character sheet or Home, so easter eggs leave a souvenir behind.
 - **Mass and AP progress on Home.** Show them on each mimic's card, not just PL/AD/PA.
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
 
 ## Seasonal locations
 
-Like the Snowbound Lodge: open to every tier while their holiday is in season, each with its own twist. Drafted so far: the Snowbound Lodge (Midwinter) and Stargazers' Hill (Night of Falling Stars).
+Like the Snowbound Lodge: open to every tier while their holiday is in season, each with its own twist. Drafted so far: the Snowbound Lodge (Midwinter), Stargazers' Hill (Night of Falling Stars) and the Founders' Fair (Founders' Day).
 
 ### Year's Turning ⏳
 
@@ -35,12 +34,12 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 
 ### Founders' Day 🎆
 
-- **The Founders' Fair.** Fireworks go off every few turns. A Strike timed with the bangs makes no sound anyone notices (no acoustic suspicion). The Picnic Basket, Firework Crate and Parade Float forms are at home here.
+- **The Founders' Fair.** *Drafted.* Fireworks go off every few turns. A Strike timed with the bangs makes no sound anyone notices (no acoustic suspicion). The Picnic Basket, Firework Crate and Parade Float forms are at home here.
 - **The Town Hall Banquet.** Speeches at set times draw the whole party into one room, so you know exactly where the crowds will be, and where they won't.
 
 ### Night of Falling Stars 🌠
 
-- **Stargazers' Hill.** *Drafted.* An observatory and its lawn. Every few turns a star fragment lands in a random room and the party rushes to it: a free Lure you can predict and ambush.
+- **Stargazers' Hill.** _Drafted._ An observatory and its lawn. Every few turns a star fragment lands in a random room and the party rushes to it: a free Lure you can predict and ambush.
 - **Starfall Crater.** A smoking meadow at night. It's dark, so sight-based adventurers struggle except during meteor flashes, which light everything up for a turn.
 
 ### Brewfest 🍺
@@ -62,7 +61,7 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 
 ### Midwinter 🎁
 
-- **Snowbound Lodge.** *Drafted.* Nobody can leave, and the cold freezes them one by one.
+- **Snowbound Lodge.** _Drafted._ Nobody can leave, and the cold freezes them one by one.
 - **The Frozen Lake Fair.** Skating and stalls on the ice. Every few turns the ice cracks and a room closes for good, so the hunting ground shrinks as the hunt goes on.
 
 ## Easter eggs

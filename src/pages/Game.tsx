@@ -16,6 +16,7 @@ import {
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
   starfallDue, stepToward, claimStar, STAR_FRAGMENT,
+  fireworksDue, distractedRooms, fireworksRummage, tossRoom,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -207,6 +208,9 @@ export default function Game() {
   // Starfall locations: turns so far, and the room a fallen star fragment is lying in (if any)
   const [starTurn, setStarTurn] = useState(0);
   const [starFragment, setStarFragment] = useState<RoomName | null>(null);
+  // Fireworks locations: turns so far, and the room the last volley went up over (for one turn)
+  const [fairTurn, setFairTurn] = useState(0);
+  const [fireworksRoom, setFireworksRoom] = useState<RoomName | null>(null);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
@@ -294,6 +298,8 @@ export default function Game() {
     setFrostTurn(0);
     setStarTurn(0);
     setStarFragment(null);
+    setFairTurn(0);
+    setFireworksRoom(null);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -441,6 +447,32 @@ export default function Game() {
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
   const advanceShip = () => {
     if (location?.snowbound) setFrostTurn(t => t + 1);
+    if (location?.fireworks) {
+      const turn = fairTurn + 1;
+      setFairTurn(turn);
+      if (!fireworksDue(location, turn)) {
+        setFireworksRoom(null);
+      } else {
+        const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
+        setFireworksRoom(room);
+        addEvent("alert", `🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
+        // The crew comes looking for rockets: a crate-shaped mimic gets rummaged and thrown out
+        const form = getActiveForm(character);
+        const rummage = room === mimicRoom ? fireworksRummage(location, form) : null;
+        if (rummage !== null && mimicRoom) {
+          const occupied = [
+            ...activeAdventurers.map(a => a.location),
+            ...rivals.filter(r => !r.consumed).map(r => r.room),
+          ];
+          const to = tossRoom(location, mimicRoom, occupied);
+          addEvent("alert", `The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
+          setMimicRoom(to);
+          stillTurnsRef.current = 0;
+          setShowMovePanel(false);
+          setSuspicion(s => { const n = Math.min(s + rummage, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        }
+      }
+    }
     if (location?.starfall) {
       const turn = starTurn + 1;
       setStarTurn(turn);
@@ -467,6 +499,10 @@ export default function Game() {
       addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
     }
   };
+
+  // The Founders' Fair: whether everyone in `room` is watching the fireworks right now
+  const watchingSky = (room: RoomName | null): boolean =>
+    !!location?.fireworks && !!fireworksRoom && !!room && distractedRooms(location, fireworksRoom).includes(room);
 
   // The Snowbound Lodge: after each turn, the cold takes its toll (see chillParty)
   const applyFrost = useEffectEvent(() => {
@@ -807,10 +843,13 @@ export default function Game() {
     // Killing the last adventurer ends the hunt in success, so it never adds suspicion
     const othersRemain = party.some(a =>
       a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
-    // Other party members in the mimic's room who could notice the attack
-    const witnessCount = party.filter(a =>
+    // Other party members in the mimic's room who could notice the attack (nobody, if they're
+    // all watching fireworks)
+    const inRoom = party.filter(a =>
       a.id !== target.id && a.location === mimicRoom &&
       a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared).length;
+    const lookingUp = watchingSky(mimicRoom);
+    const witnessCount = lookingUp ? 0 : inRoom;
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
     // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
@@ -985,7 +1024,9 @@ export default function Game() {
         // A party member vanished; anyone still in the room watched it happen
         const gain = consumeSuspicion(witnessCount);
         setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
-        if (witnessCount === 0) {
+        if (witnessCount === 0 && lookingUp && inRoom > 0) {
+          addEvent("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
+        } else if (witnessCount === 0) {
           addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
         } else {
           // Witnesses catch only a glimpse: they know something happened here, not what or who
@@ -1891,6 +1932,23 @@ export default function Game() {
             );
           })()}
 
+          {phase === "hunt" && !huntOver && location?.fireworks && (() => {
+            const every = location.fireworks.every;
+            const next = every - (fairTurn % every);
+            const crate = fireworksRummage(location, activeForm) !== null;
+            return (
+              <div className="px-3 py-2 rounded border text-xs border-rose-300/30 bg-rose-400/5 text-rose-200/90">
+                <span className="font-cinzel">🎆 Fireworks every {every} turns, over a different part of the fair.</span>
+                <p className="text-[11px] mt-0.5 opacity-80">
+                  {fireworksRoom
+                    ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses.`
+                    : `The next volley goes up in ${next} ${next === 1 ? "turn" : "turns"}.`}
+                  {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
+                </p>
+              </div>
+            );
+          })()}
+
           {phase === "hunt" && !huntOver && location?.starfall && (() => {
             const every = location.starfall.every;
             const next = every - (starTurn % every);
@@ -1961,7 +2019,10 @@ export default function Game() {
                       creatures={smallCreatures.filter(c => !c.isConsumed)}
                       rivals={rivals}
                       frozen={uneatenFrozen(party)}
-                      star={location.starfall ? starFragment : null}
+                      markers={[
+                        ...(location.starfall && starFragment ? [{ room: starFragment, icon: "🌠", title: "A fallen star fragment" }] : []),
+                        ...(location.fireworks && fireworksRoom ? [{ room: fireworksRoom, icon: "🎆", title: "Fireworks overhead: everyone here and next door is looking up" }] : []),
+                      ]}
                       formName={activeForm?.name}
                     />
                   </CardContent>
