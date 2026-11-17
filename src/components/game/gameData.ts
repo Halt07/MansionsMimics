@@ -782,6 +782,57 @@ export function advanceRareLocation(
 }
 
 // ============================================================
+// CODEX: LOCATIONS
+// The Codex groups hunting grounds and only tells you about the ones you've found.
+// ============================================================
+export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare";
+
+export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; description: string }[] = [
+  { id: "common", label: "Common", description: "Hunting grounds every mimic knows from its first meal." },
+  { id: "advanced", label: "Advanced", description: "Grounds that open up as a mimic grows in tier and mass." },
+  { id: "giant", label: "Giant", description: "Where the giants live. Only the largest mimics are taken seriously there." },
+  { id: "adept", label: "Adept", description: "Grounds for mimics that have outgrown even the giants' doorways." },
+  { id: "rare", label: "Rare", description: "Places that open only now and then, for a hunt or two." },
+];
+
+/** Where a location's requirements fall in unlock order: tier first, then mass. */
+const unlockRank = (l: HuntLocation) => TIER_ORDER.indexOf(l.minTier) * 1000 + (l.minMass ?? 0);
+/** The first giant-realm location to unlock: Advanced grounds unlock before it, Adept ones after. */
+const firstGiantRank = Math.min(...LOCATIONS.filter(l => l.isGiantRealm).map(unlockRank));
+
+/** Which Codex group a location belongs to. */
+export function locationGroup(location: HuntLocation): LocationGroupId {
+  if (location.rare) return "rare";
+  if (location.isGiantRealm) return "giant";
+  if (location.minTier === TIER_ORDER[0] && !location.minMass) return "common";
+  return unlockRank(location) > firstGiantRank ? "adept" : "advanced";
+}
+
+/**
+ * What the Codex knows about a location, pooled over `characters` (one mimic, or all of them):
+ * "unknown" shows only "???"; "known" shows its name and details but not its rooms; "visited"
+ * shows everything, map included. Common grounds are always known. Advanced and Giant grounds
+ * become known once a mimic qualifies for them; Rare grounds only once one has hunted there.
+ */
+export type LocationKnowledge = "unknown" | "known" | "visited";
+
+export function locationHunts(
+  location: HuntLocation, characters: readonly Pick<MimicCharacter, "locationHuntCounts">[],
+): number {
+  return characters.reduce((sum, c) => sum + (c.locationHuntCounts?.[location.id] ?? 0), 0);
+}
+
+export function locationKnowledge(
+  location: HuntLocation, characters: readonly Pick<MimicCharacter, "tier" | "mass" | "locationHuntCounts">[],
+): LocationKnowledge {
+  if (locationHunts(location, characters) > 0) return "visited";
+  const group = locationGroup(location);
+  if (group === "common") return "known";
+  if (group === "rare") return "unknown";
+  return characters.some(c => meetsLocationRequirements(location, c.tier, c.mass)) ? "known" : "unknown";
+}
+
+// ============================================================
 // DEVOTION (The Hollow Reliquary)
 // A devoted adventurer left as the last one standing converts: it brings the mimic
 // OFFERING_COUNT small creatures from the location and leaves, ending the hunt.

@@ -6,7 +6,6 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 
 - **Room map during a hunt.** Show the location as a small graph of rooms: where you are, where each adventurer and small creature is, how far your lure reaches, and which rooms are burned. Rooms where an adventurer "vanished" could pulse, to help with tracking rivals. Today the layout only shows up as text ("Adjacent: …" and the distances in the party list).
 - **Trophy room / hoard.** Keep the special things you swallow (the Captain's strongbox, the porter's token, the Doubting Scholar's notes, biggest meals) as objects you can look at on the character sheet or Home, so easter eggs leave a souvenir behind.
-- **Codex Locations section.** One entry per hunting ground, using `locationHuntCounts` for how often you've hunted there. Rare locations could show as "???" until you've visited them.
 - **Mass and AP progress on Home.** Show them on each mimic's card, not just PL/AD/PA.
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
 

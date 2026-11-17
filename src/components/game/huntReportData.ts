@@ -104,7 +104,7 @@ const SIZE_BY_TIER: Record<Tier, string> = {
 };
 const REWARD_BY_TIER: Record<Tier, number> = { Minor: 20, Lesser: 50, Standard: 120, Greater: 300, Grand: 800, Apex: 2500 };
 
-const TAVERNS = ["the Gilded Tankard", "the Drowned Lantern", "the Three-Legged Stool", "the Honest Goblet", "the Sleeping Wyvern"];
+const TAVERNS = ["the Gilded Tankard", "the Drowned Lantern", "the Three-Legged Stool", "the Honest Goblet", "the Sleeping Wyvern", "the Pilgrim's Lantern", "the Emerald Arrow", "the Pilgrim's Rest", "the Dancing Hearth", "the Laughing Smith", "the Merchant's Table", "the Wandering Tankard", "the Ivory Swan"];
 
 // ---------- the report ----------
 

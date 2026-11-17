@@ -8,8 +8,10 @@ import {
   ACHIEVEMENTS, ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, BURN_HUNTS, BURN_SUSPICION, BEHAVIORS, isHiddenBehavior, LOCATIONS, MAGIC_EFFECTS, STARTING_STATS, STARTING_TYPES,
   ALL_STARTING_TRAITS, type StartingTrait, isMagicMaterial, pooledDiscoveries, discoveryLevel, type Discoveries, type Material, type MaterialRarity, type Tier, 
   ACTION_WARNING,
-  ACTION_LIMIT, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason, seasonEnd, today} from
+  ACTION_LIMIT, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason, seasonEnd, today,
+  LOCATION_GROUPS, creatureEmoji, locationGroup, locationHunts, locationKnowledge, type HuntLocation, type LocationKnowledge} from
 "../components/game/gameData";
+import RoomMap, { MysteryMap } from "@/components/game/RoomMap";
 import HolidayBadge from "@/components/game/HolidayBadge";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import { ChompCard } from "@/components/game/CardChomp";
@@ -23,7 +25,7 @@ const LOCATION_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
 const ALL_MIMICS = "all";
 const CODEX_VIEWING_KEY = "codex.viewing";
 
-const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Mechanics"] as const;
+const SECTIONS = ["Overview", "Tiers", "Forms", "Materials", "Traits", "Adventurers", "Locations", "Mechanics"] as const;
 type Section = (typeof SECTIONS)[number];
 
 // MATERIALS as typed [rarity, materials] pairs (Object.entries would lose the key types)
@@ -53,6 +55,94 @@ function Collapsible({ title, subtitle, children, defaultOpen = false }: Collaps
       {open && <div className="p-4 bg-card">{children}</div>}
     </div>);
 
+}
+
+interface LocationCardProps {
+  location: HuntLocation;
+  knowledge: LocationKnowledge;
+  hunts: number;
+}
+
+/**
+ * A hunting ground in the Codex. Unknown ones are just "???". Known ones show their name and
+ * description, and open to show the rest; the floor plan stays fogged until you've hunted there.
+ */
+function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
+  const [open, setOpen] = useState(false);
+  if (knowledge === "unknown") {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-card/40 px-4 py-4">
+        <p className="font-cinzel text-base text-muted-foreground/60">???</p>
+        <p className="text-xs text-muted-foreground/50 italic mt-1">You haven't found this place yet.</p>
+      </div>
+    );
+  }
+  const visited = knowledge === "visited";
+  return (
+    <div className={`rounded-lg border bg-card overflow-hidden transition-colors ${open ? "border-primary/40" : "border-border"}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="w-full px-4 py-4 flex items-start justify-between gap-3 text-left hover:bg-muted/20 transition-colors"
+      >
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-cinzel text-base text-foreground">{loc.name}</span>
+            <span className="text-[11px] px-1.5 py-0.5 rounded border border-orange-400/40 text-orange-400 bg-orange-400/5">
+              {loc.minTier}+{loc.minMass ? ` · Mass ${loc.minMass}+` : ""}
+            </span>
+            <span className={`text-[11px] ${visited ? "text-primary" : "text-muted-foreground/70 italic"}`}>
+              {visited ? `Hunted ${hunts} ${hunts === 1 ? 'time' : 'times'}` : "Not yet hunted"}
+            </span>
+          </span>
+          <span className="block text-sm text-muted-foreground mt-1">{loc.description}</span>
+        </span>
+        {open ? <ChevronDown className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Floor Plan</p>
+            {visited ? <RoomMap location={loc} /> : <MysteryMap />}
+          </div>
+          <div className="space-y-3 text-xs">
+            <p className="text-muted-foreground italic flavor-text">{loc.flavorText}</p>
+            <div className="space-y-1">
+              <div className="flex justify-between"><span className="text-muted-foreground">Party size:</span> <span className="text-foreground">{loc.partySize[0]}–{loc.partySize[1]}</span></div>
+              {visited && loc.sinkingTurns && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Sinks after:</span> <span className="text-foreground">{loc.sinkingTurns} turns</span></div>
+              )}
+              {visited && loc.rivalNest && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Rival mimics:</span> <span className="text-foreground">{loc.rivalNest[0]}–{loc.rivalNest[1]}, one of them the Elder</span></div>
+              )}
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-1">Forms at Home Here</p>
+              <div className="flex flex-wrap gap-1">
+                {loc.advantageTags.map(tag => (
+                  <span key={tag} className="text-[11px] px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">{tag}</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-1">Creatures of Opportunity</p>
+              {visited ? (
+                <div className="flex flex-wrap gap-1">
+                  {loc.locationCreatures.map(c => (
+                    <span key={c.id} title={c.description} className="text-[11px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+                      {creatureEmoji(c.name)} {c.name} <span className="text-primary">+{c.ap}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground/70 italic">Hunt here to learn what scurries about.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Codex() {
@@ -547,6 +637,40 @@ export default function Codex() {
               })}
             </div>
           }
+
+          {activeSection === "Locations" && (() => {
+            const knowers = viewedMimic ? [viewedMimic] : characters;
+            const entries = LOCATIONS.map(loc => ({ loc, knowledge: locationKnowledge(loc, knowers), hunts: locationHunts(loc, knowers) }));
+            const found = entries.filter(e => e.knowledge !== "unknown").length;
+            const mapped = entries.filter(e => e.knowledge === "visited").length;
+            return (
+            <div className="space-y-4">
+              <h2 className="font-cinzel text-2xl text-foreground mb-4">Hunt Locations</h2>
+              <p className="text-sm text-muted-foreground mb-2">
+                Every hunting ground {viewedMimic ? <span className="text-foreground">{viewedMimic.name}</span> : "your mimics"} {viewedMimic ? "has" : "have"} found. A place shows up here once {viewedMimic ? "it is" : "one of them is"} big enough to hunt there (rare places, only after hunting in one), and its floor plan once {viewedMimic ? "it has" : "one has"} hunted there.
+              </p>
+              <p className="text-xs font-cinzel text-primary mb-2">
+                Found {found}/{LOCATIONS.length} · Mapped {mapped}/{LOCATIONS.length}
+              </p>
+              {LOCATION_GROUPS.map(group => {
+                const members = entries.filter(e => locationGroup(e.loc) === group.id);
+                if (members.length === 0) return null;
+                return (
+                  <section key={group.id} className="space-y-2">
+                    <div className="flex items-baseline justify-between gap-2 pt-2">
+                      <h3 className="font-cinzel text-sm uppercase tracking-widest text-foreground">{group.label}</h3>
+                      <span className="text-[11px] text-muted-foreground">{members.filter(e => e.knowledge !== "unknown").length}/{members.length} found</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{group.description}</p>
+                    <div className="space-y-2">
+                      {members.map(e => <LocationCard key={e.loc.id} location={e.loc} knowledge={e.knowledge} hunts={e.hunts} />)}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+            );
+          })()}
 
           {activeSection === "Mechanics" &&
           <div className="space-y-4">
