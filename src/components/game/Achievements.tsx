@@ -14,7 +14,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   curiosityCabinet:  { text: "text-teal-300",   box: "bg-teal-400/10 border-teal-400/40" },
   festive:           { text: "text-pink-300",   box: "bg-pink-400/10 border-pink-400/40" },
   forAllSeasons:     { text: "text-lime-300",   box: "bg-lime-400/10 border-lime-400/40" },
-  seasonalTraveler:  { text: "text-orange-300", box: "bg-orange-400/10 border-orange-400/40" },
+  seasonedTraveler:  { text: "text-orange-300", box: "bg-orange-400/10 border-orange-400/40" },
 };
 
 /**

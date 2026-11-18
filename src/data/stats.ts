@@ -114,7 +114,7 @@ export const CANNIBAL_MIMICS = 10;
 
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
-  "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonalTraveler";
+  "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
@@ -235,7 +235,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       SEASONAL_FORMS.some(f => f.holiday === h && c.formsUsed.includes(f.id))),
   },
   {
-    id: "seasonalTraveler", name: "Seasonal Traveler", icon: "🧳",
+    id: "seasonedTraveler", name: "Seasoned Traveler", icon: "🧳",
     description: "Hunt at least once in every seasonal location, each open only around its holiday.",
     flavor: (n) => `${n} has been snowed in, starstruck, set off with the fireworks and handed out as a sweet. Wherever the holiday goes, it gets there first.`,
     // Every location with a holiday, so new seasonal locations join the list on their own

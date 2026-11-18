@@ -128,9 +128,9 @@ export default async function ({ gameData: m, ok, log }) {
   const seasonalPlaces = m.LOCATIONS.filter((l) => l.holiday).map((l) => l.id);
   const huntedAt = (ids) => ({ ...used([]), locationHuntCounts: Object.fromEntries(ids.map((id) => [id, 1])) });
   ok(seasonalPlaces.length >= 4, `there are seasonal locations to travel to (${seasonalPlaces.join(', ')})`);
-  ok(ach('seasonalTraveler').isEarned(huntedAt(seasonalPlaces)), 'Seasonal Traveler: a hunt at every seasonal location earns it');
-  ok(!ach('seasonalTraveler').isEarned(huntedAt(seasonalPlaces.slice(1))), '…missing any one does not');
-  ok(!ach('seasonalTraveler').isEarned(huntedAt(['manor', 'wizard_tower'])) && !ach('seasonalTraveler').isEarned(used([])), '…and ordinary hunting grounds don\'t count');
+  ok(ach('seasonedTraveler').isEarned(huntedAt(seasonalPlaces)), 'Seasonal Traveler: a hunt at every seasonal location earns it');
+  ok(!ach('seasonedTraveler').isEarned(huntedAt(seasonalPlaces.slice(1))), '…missing any one does not');
+  ok(!ach('seasonedTraveler').isEarned(huntedAt(['manor', 'wizard_tower'])) && !ach('seasonedTraveler').isEarned(used([])), '…and ordinary hunting grounds don\'t count');
 
   log(m.SEASONAL_FORMS.map((f) => `${f.name} [${m.HOLIDAYS[f.holiday].name}: ${f.holidayTiers.join('/')}]`).join(' | '));
 }
