@@ -62,4 +62,34 @@ export default async function ({ gameData: m, ok, log }) {
   ok(text(again) === foundText, 'the same seed always gives the same report');
   const titles = new Set(Array.from({ length: 40 }, (_, seed) => m.buildHuntReport({ ...base, seed, ending: 'discovered', party: [member('Naive Bard')] }).title));
   ok(titles.size > 1, 'different hunts get different wording');
+
+  // Spell or Sweet Street tells it the village's way, by costume
+  const street = { ...base, locationId: 'spell_or_sweet_street', locationName: 'Spell or Sweet Street', formName: 'Chest', lastRoom: "Baker's House" };
+  const dressed = (costume, trueName, over = {}) => member(costume, { costume, trueName, ...over });
+  const lane = [dressed('Dracula', 'Paranoid Cleric', { isConsumed: true }), dressed('Bedsheet Ghost', 'Naive Bard')];
+  const caught = m.buildHuntReport({ ...street, ending: 'discovered', party: lane });
+  ok(caught.kind === 'incident' && caught.heading.includes('Mayor') && /sweet|knock|doorstep/i.test(caught.title), `found out on the street: the Mayor cancels it ("${caught.title}")`);
+  ok(text(caught).includes('Bedsheet Ghost') && !text(caught).includes('Naive Bard'), 'everyone is named by their costume, not who they really were');
+  ok(text(caught).includes('chest') && text(caught).includes('not full of sweets'), 'the notice warns about the form on the doorstep');
+  const quiet = m.buildHuntReport({ ...street, ending: 'cleared', party: lane.map((a) => ({ ...a, isConsumed: true })) });
+  ok(quiet.kind === 'missing' && quiet.title === 'No More Spell or Sweeters', 'nobody home: "No More Spell or Sweeters"');
+  ok(text(quiet).includes('a Dracula') && text(quiet).includes('sweet bags'), 'the missing notice lists their costumes and finds their sweet bags');
+  ok(/prank|joke/.test(text(quiet)), 'the village half suspects a prank');
+  const rhyme = m.buildHuntReport({ ...street, ending: 'cleared', biggestMeal: { name: 'Dracula', ap: 5 }, party: lane });
+  ok(rhyme.kind === 'verse' && rhyme.heading === 'A Skipping Rhyme' && text(rhyme).includes('Spell or sweet'), 'someone got home: the children skip to a rhyme about it');
+  ok(text(rhyme).includes("The Dracula knocked"), 'the rhyme remembers who went in and didn\'t come out');
+  const gossip = m.buildHuntReport({ ...street, ending: 'abandoned', party: [dressed('Mummy', 'Naive Bard')] });
+  ok(gossip.kind === 'gossip' && gossip.postedAt.includes('Baker'), 'gave up: talk at the baker\'s');
+
+  // A real monster among them
+  const wolf = dressed('Werewolf', 'Werewolf');
+  const howl = m.buildHuntReport({ ...street, ending: 'cleared', party: [wolf, dressed('Witch', 'Hedge Witch', { isConsumed: true })] });
+  ok(text(howl).includes('Not every one of them wore a mask'), 'a real monster who got away: "not every one of them wore a mask"');
+  const ate = m.buildHuntReport({ ...street, ending: 'cleared', party: [{ ...wolf, isConsumed: true }, dressed('Witch', 'Hedge Witch', { isConsumed: true })] });
+  ok(text(ate).includes('no person at all'), 'a real monster eaten: the search party found no person under that costume');
+  const toldBy = m.buildHuntReport({ ...street, ending: 'abandoned', party: [wolf, dressed('Witch', 'Hedge Witch')] });
+  ok(text(toldBy).includes("Didn't eat a single sweet"), 'and the baker noticed the Werewolf');
+
+  // Everywhere else still gets the Guild's
+  ok(m.buildHuntReport({ ...base, locationId: 'manor', ending: 'discovered', party: [member('Naive Bard')] }).heading.includes('Guild'), 'other locations: still the Guild');
 }
