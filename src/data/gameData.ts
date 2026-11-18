@@ -9,6 +9,8 @@
 //   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
 //   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole)
 //   ./lure       luring adventurers in, and the stealth checks everyone who comes in faces
+//   ./hunt       a hunt in progress (Hunt), and what every turn shares (Turn): suspicion, meals, the end of a turn
+//   ./turns      each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait and eating
 // The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
 // re-exports all of it, so callers can keep importing everything from gameData.
 // ============================================================
@@ -43,6 +45,8 @@ export * from "./codex";
 export * from "./mealPrep";
 export * from "./strike";
 export * from "./lure";
+export * from "./hunt";
+export * from "./turns";
 
 // ============================================================
 // ROOM HELPERS

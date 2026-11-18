@@ -1,0 +1,597 @@
+// ============================================================
+// MANSIONS & MIMICS — Turns
+// What each hunt action does: starting the hunt, Relocate, Lure, Strike, Wait, eating what's
+// in the room, and changing form or appearance mid-hunt. Each takes the hunt and the character
+// and returns the next of both, the log, and what to save (see Turn in ./hunt). Game applies
+// the result. Re-exported from ./gameData.
+// ============================================================
+import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
+import type { PartyMember } from "./adventurerData";
+import type { HuntLocation, RoomName } from "./locationData";
+import type { Form } from "./mimicData";
+import {
+  ALL_FORMS, BOUNTY_START_SUSPICION, BURN_SUSPICION, CANNIBAL_MIMICS, COLLAPSE_BONUS_AP, PORTER_SISTER, PORTER_TOKEN_LINE,
+  PRANKS, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, RIVAL_STATS, STAR_FRAGMENT, TITANIC_FEAST_GIANTS, VANISHING_LINES,
+  consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, hasMagic, isTheRealThing,
+  lureRange, maxTargetForChance, moveCreatures, moveParty, needsPartialBites, pickStrikeTarget, pickTreasurePrize,
+  resolveBite, resolveLure, resolveRivalStrike, resolveSwallow, rivalInRoom, rollDice, startHunt, strikeCandidates,
+  strikeDice, strikeWitnesses, today, unmask, withBiggestMeal, withDiscovered, withFormUsed,
+  type RivalMimic, type Witnesses,
+} from "./gameData";
+import { Turn, skyward, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+
+/** How a devoured rival is named in the "biggest meal" stat. */
+const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
+/** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
+export const WAIT_MIN_CHANCE = 0.4;
+
+// ---------- the start ----------
+
+/** The mimic has picked its room: set up the hunt (see startHunt) and write it up. */
+export function beginHunt(character: MimicCharacter, location: HuntLocation, room: RoomName, opts: TurnOptions = {}): TurnResult {
+  const random = opts.random ?? Math.random;
+  const start = startHunt(character, location, room, random);
+  const hunt: Hunt = {
+    location, mimicRoom: room, party: start.party, creatures: start.creatures, rivals: start.rivals,
+    suspicion: start.suspicion, bounty: start.bounty, sickness: start.sickness,
+    actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, ending: null,
+    stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null,
+    seed: Math.floor(random() * 2 ** 31), recorded: false,
+  };
+  const t = new Turn(hunt, character, { ...opts, random });
+  t.update(start.changes);
+  const { party, rivals, creatures, sickness, startForm, burned } = start;
+
+  if (start.bounty) {
+    t.say("alert", `⚠️ A bounty has been placed on the mimic known as "${character.name}". Hunters from across the realm have come to collect.`);
+    t.say("alert", `${party.length} bounty hunters are sweeping the ${location.name} — they know exactly what they are looking for.`);
+    t.say("alert", `The hunters enter with weapons drawn. Suspicion starts at ${BOUNTY_START_SUSPICION}.`);
+  } else {
+    t.say("info", `You settle into the ${room} of the ${location.name}, perfectly still.`);
+    t.say("system", `${party.length} adventurers are exploring the premises.`);
+  }
+  if (burned.location) t.say("alert", `🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
+  if (burned.form && startForm) t.say("alert", `🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
+  if (sickness) {
+    t.say("alert", `⚠ You are afflicted with ${sickness.name}: ${sickness.description} ${Object.entries(sickness.penalties).map(([k, v]) => `–${v} ${k}`).join(", ")} this hunt.`);
+  }
+  if (location.rivalNest) {
+    t.say("alert", `The air is thick with hunger. Others of your kind nest here — and one of them is old. Very old.`);
+    t.say("alert", `Find the Elder Mimic and devour it. Watch where the adventurers vanish: something hungry hides there.`);
+  } else if (rivals.length > 0) {
+    t.say("alert", `Something feels wrong. Another predator lurks within these walls — and it is not you.`);
+  }
+  // Soulglass senses the strongest presence: the Elder if there is one
+  const sensed = rivals.find(r => r.kind === "elder") ?? rivals[0];
+  if (sensed && hasMagic(character.currentAppearance, "Soulglass")) {
+    t.say("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
+  }
+  t.say("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
+  party.forEach(a => t.say("info", a.costume
+    ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
+    : `${a.name} (${a.type}) — currently in the ${a.location}.`));
+  if (start.openedRare) {
+    t.say("system", `✦ Whispers reach you of somewhere new: ${start.openedRare.name}. It won't stay within reach for long.`);
+  }
+  return t.finish();
+}
+
+// ---------- Relocate ----------
+
+/** Slip into an empty room next door (+1 suspicion, and a stealth check for anyone already there). */
+export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: RoomName, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const fromRoom = hunt.mimicRoom;
+  t.stir();
+  t.say("info", `You silently flow toward the ${targetRoom}... (+1 suspicion)`);
+  t.set({ mimicRoom: targetRoom });
+
+  // Rival mimic reveal: entering a rival's room exposes it
+  const found = rivalInRoom(hunt.rivals, targetRoom);
+  if (found && !found.revealed) {
+    if (found.kind === "elder") {
+      t.say("alert", `The whole room seems to lean toward you. Something vast and patient has been waiting in the ${targetRoom} — the Elder Mimic.`);
+      t.say("alert", `It is older and stronger than anything you have faced. Strike to devour it, and the nest is yours.`);
+    } else if (found.kind === "nest") {
+      t.say("alert", `A young mimic is nested here in the ${targetRoom}, gorged and sluggish. It is not the Elder, but it will feed you. Strike!`);
+    } else {
+      t.say("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
+      t.say("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
+    }
+    const sameShape = t.random() < RIVAL_SAME_SHAPE_CHANCE;
+    if (sameShape) t.say("info", RIVAL_SAME_SHAPE_LINE);
+    // When it's wearing your shape, the map shows it too (if your form has a marker; see disguiseOf)
+    const mirrored = sameShape ? disguiseOf(t.form) : null;
+    t.patchRival(found.id, { revealed: true, ...(mirrored ? { disguise: mirrored } : {}) });
+  }
+
+  t.countAction();
+  t.raise(1);
+  // Anyone already in the room gets a look at you
+  t.stealth(hunt.party.filter(a => a.isAlive && !a.isConsumed && !a.fled && a.location === targetRoom));
+  t.react("relocate", { fromRoom });
+  t.endTurn();
+  return t.finish();
+}
+
+// ---------- Lure ----------
+
+/** Lure everyone in range (see resolveLure); whoever falls for it comes into your room. */
+export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const form = t.form;
+  if (!form) {
+    t.say("alert", "No active form!");
+    return t.finish();
+  }
+  t.countAction();
+  const { location, mimicRoom } = hunt;
+  const range = lureRange(character);
+  const outcome = resolveLure(hunt.party, { location, mimicRoom, range, form, mimic: character, plausibility: t.stats.plausibility }, t.random);
+
+  if (outcome.roomMod.allure !== 0) {
+    t.say(outcome.roomMod.allure > 0 ? "allure" : "alert",
+      `Room context: ${outcome.roomMod.note} (Allure ${outcome.roomMod.allure > 0 ? "+" : ""}${outcome.roomMod.allure})`);
+  }
+  for (const { member, result, drawnIn } of outcome.attempts) {
+    t.say(result.success ? "allure" : "info", result.narrative);
+    if (result.disliked.length > 0) {
+      t.say("info", `${member.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
+    }
+    if (result.suspicionChange > 0) t.say("alert", `${member.name} grows suspicious of the excessive allure!`);
+    if (drawnIn) t.say("allure", `${member.name} is drawn into the ${mimicRoom}...`);
+  }
+  t.raise(outcome.suspicion);
+
+  if (outcome.attempts.length === 0) {
+    const rivalHere = rivalInRoom(hunt.rivals, mimicRoom);
+    if (rivalHere?.revealed) {
+      t.say("alert", `The ${RIVAL_STATS[rivalHere.kind].name} does not respond to your lure — it knows your tricks. You must Strike directly!`);
+    } else {
+      t.say("info", `No adventurers are within lure range (${range} rooms). Wait for them to wander closer.`);
+    }
+  }
+  t.set({ party: outcome.party });
+  // A Lure that draws nobody into the room still counts as holding still (the spiderweb)
+  t.holdStill(outcome.arrivals.length > 0);
+  // Whoever came in faces a stealth check
+  t.stealth(outcome.arrivals);
+  t.endTurn();
+  return t.finish();
+}
+
+// ---------- Strike ----------
+
+/** Whether a Strike has anything to strike: someone lured, a revealed rival here, or (under the fireworks) anyone here. */
+export function canStrike(hunt: Hunt): boolean {
+  return hunt.party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) ||
+    !!rivalInRoom(hunt.rivals, hunt.mimicRoom)?.revealed ||
+    (skyward(hunt) && hunt.party.some(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && a.location === hunt.mimicRoom));
+}
+
+/** Strike (see strike.ts for the rules). With nothing in reach it takes no turn. */
+export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  t.stir();
+  const dice = strikeDice(t.stats.adhesion, character.currentAppearance);
+  const { location, mimicRoom } = hunt;
+
+  // A revealed rival mimic in the room comes first
+  const rival = rivalInRoom(hunt.rivals, mimicRoom);
+  if (rival?.revealed) {
+    t.set({ actionCount: 0 });
+    strikeRival(t, rival, dice);
+    t.endTurn();
+    return t.finish();
+  }
+
+  // Under the fireworks, anyone in your room is staring at the sky: no need to lure them first
+  const looking = skyward(hunt);
+  const candidates = strikeCandidates(hunt.party, mimicRoom, looking);
+  if (candidates.length === 0) {
+    t.say("info", "No adventurers are close enough to strike. Use Allure first.");
+    return t.finish();
+  }
+  const form = t.form;
+  if (!form) {
+    t.say("alert", "No active form!");
+    return t.finish();
+  }
+  const target = pickStrikeTarget(candidates, location, mimicRoom, form, character.currentAppearance);
+  if (!target) return t.finish();
+  t.set({ actionCount: 0 });
+  if (!target.isAttracted) t.say("info", `🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+  const seen = strikeWitnesses(hunt.party, target, mimicRoom, looking);
+  t.react("strike", { excludeIds: [target.id] });
+
+  // Minor mimics always bite; so does anyone facing a giant too big to swallow yet
+  if (needsPartialBites(character, target)) strikeBite(t, target, form, dice, seen);
+  else strikeSwallow(t, target, form, dice, seen, looking);
+  t.endTurn();
+  return t.finish();
+}
+
+/** Strike a revealed rival mimic: devour it, or it slips away and hides again. */
+function strikeRival(t: Turn, rival: RivalMimic, dice: number) {
+  const { location, mimicRoom, rivals, party } = t.hunt;
+  const stats = RIVAL_STATS[rival.kind];
+  const outcome = resolveRivalStrike(rival, dice, location, rivals, mimicRoom, t.random);
+  if (!outcome.devoured) {
+    t.say("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
+    t.patchRival(rival.id, { revealed: false, room: outcome.hidesIn });
+    t.say("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
+    t.raise(1);
+    return;
+  }
+  if (rival.kind === "elder") {
+    t.say("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${outcome.ap} AP.`);
+    t.say("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+    // Easter egg: the porter she was searching for
+    if (party.some(a => a.name === PORTER_SISTER)) t.say("info", PORTER_TOKEN_LINE);
+  } else {
+    t.say("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${outcome.ap} AP — and its stolen prey.`);
+  }
+  t.patchRival(rival.id, { consumed: true });
+  t.noteMeal(RIVAL_MEAL_NAMES[rival.kind], outcome.ap);
+  const mimicsConsumed = t.character.mimicsConsumed + 1;
+  if (mimicsConsumed === CANNIBAL_MIMICS) {
+    t.say("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
+  }
+  t.feed(outcome.ap, {
+    mimicsConsumed,
+    biggestMeal: withBiggestMeal(t.character.biggestMeal, RIVAL_MEAL_NAMES[rival.kind], outcome.ap),
+  });
+}
+
+// Spell or Sweet Street: eating someone shows who was under the costume
+function revealCostume(t: Turn, member: PartyMember) {
+  if (isTheRealThing(member)) {
+    t.say("evolve", `😱 That wasn't a costume. It was a real ${member.trueName?.toLowerCase() ?? "monster"}!`);
+  } else if (member.costume && member.trueName) {
+    t.say("evolve", `🎭 Under the ${member.costume} costume: ${/^The /.test(member.trueName) ? member.trueName.replace(/^The /, "the ") : `a ${member.trueName}`}!`);
+  }
+}
+
+// Elusive adventurers never leave the hunting ground: when they get away they bolt to another
+// room instead (unattracted, and more wary).
+function boltAway(t: Turn, target: PartyMember, extraSuspicion: number, hitsTaken?: number) {
+  const room = escapeRoom(t.hunt.location, target.location, t.hunt.mimicRoom, t.random);
+  t.say("escape", `${target.name} bolts for the ${room}!`);
+  t.patchMember(target.id, a => ({ location: room, isAttracted: false, suspicion: a.suspicion + extraSuspicion, hitsTaken: hitsTaken ?? a.hitsTaken }));
+}
+
+/** A partial bite: tear a piece off, and maybe wear them down until they collapse (or run). */
+function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen: Witnesses) {
+  const { character } = t;
+  if (target.group === "giantKin" && character.tier !== "Minor") {
+    t.say("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
+  }
+  const bite = resolveBite(target, {
+    dice, patience: t.stats.patience, form, knownMaterials: character.learnedMaterials, snowbound: !!t.hunt.location.snowbound, witnesses: seen,
+  }, t.random);
+  if (!bite.latched) {
+    t.say("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
+    t.raise(bite.suspicion);
+    t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion }));
+    return;
+  }
+  t.say("attack", `You latch onto ${target.name}'s ${bite.part}!`);
+
+  if (!bite.held) {
+    t.say("escape", `${target.name} wrenches free before you can tear anything loose!`);
+    t.raise(bite.suspicion);
+    if (bite.ending === "bolts") boltAway(t, target, bite.targetSuspicion, bite.hits);
+    else if (bite.ending === "trapped") {
+      t.say("escape", `Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
+      boltAway(t, target, bite.targetSuspicion, bite.hits);
+    } else if (bite.ending === "flees") {
+      t.say("escape", `Badly shaken, ${target.name} turns and flees the building!`);
+      t.patchMember(target.id, () => ({ isAlive: false, fled: true }));
+    } else {
+      t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+    }
+    return;
+  }
+
+  const biteAp = bite.ending === "collapses" ? bite.ap - COLLAPSE_BONUS_AP : bite.ap;
+  t.say("consume", `You tear free with a ${bite.scrap}! +${biteAp} AP. ${target.name} staggers back. (${bite.hits}/${bite.maxHits} hits taken)`);
+  if (bite.material) t.say("evolve", `New material absorbed from the bite: ${bite.material}!`);
+  t.react("feed", { excludeIds: [target.id] });
+  if (bite.loudCry) t.say("alert", `${target.name}'s cry turns every head in the room. (+${bite.crySuspicion} suspicion)`);
+
+  // The bite (and, if it finishes them off, the rest of the meal) is fed in one go below
+  let changes: Partial<MimicCharacter> = {
+    learnedMaterials: bite.material ? [...character.learnedMaterials, bite.material] : character.learnedMaterials,
+  };
+  if (bite.ending === "bolts") {
+    boltAway(t, target, bite.targetSuspicion, bite.hits);
+  } else if (bite.ending === "trapped") {
+    t.say("escape", `${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
+    boltAway(t, target, bite.targetSuspicion, bite.hits);
+  } else if (bite.ending === "flees") {
+    t.say("escape", `${target.name} has had enough — they flee the building entirely!`);
+    t.patchMember(target.id, () => ({ isAlive: false, isConsumed: false, fled: true }));
+  } else if (bite.ending === "collapses") {
+    t.say("consume", `${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
+    revealCostume(t, target);
+    changes = {
+      ...changes,
+      adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+      partyMembersEaten: character.partyMembersEaten + 1,
+    };
+    t.patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+  } else {
+    t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+  }
+  t.raise(bite.suspicion);
+  t.feed(bite.ap, changes);
+}
+
+const STRONGBOX_SHRUGS = [
+  "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
+  "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
+  "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
+];
+
+/** Swallow them whole, treasure and all (or lunge, miss, and be seen). */
+function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, seen: Witnesses, looking: boolean) {
+  const { character } = t;
+  const meal = resolveSwallow(target, character, { dice, form, witnesses: seen }, t.random);
+  t.say(meal.swallowed ? "attack" : "escape", meal.narrative);
+
+  if (!meal.swallowed) {
+    t.raise(meal.suspicion);
+    t.say("alert", `${target.name} saw you lunge — they've seen your true nature! (+${meal.suspicion} suspicion${meal.suspicion < 4 ? ", softened by your Dragonhide" : ""})`);
+    if (meal.bolts) boltAway(t, target, 3);
+    else t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + 3 }));
+    return;
+  }
+
+  const { learning } = meal;
+  const total = meal.ap + meal.treasureAp;
+  t.patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+  t.say("consume", `${target.name} has been consumed! +${meal.ap} Assimilation Points.`);
+  revealCostume(t, target);
+  if (target.treasure) {
+    t.say("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
+    if (learning.prize) {
+      t.say("evolve", `The ${target.treasure.noun ?? "strongbox"} ${target.treasure.noun ? "flares" : "cracks open"} inside you: ${learning.prize.name}! New ${learning.prize.kind} learned.`);
+    } else if (target.treasure.noun) {
+      t.say("info", `The ${target.treasure.noun} glows a moment inside you, then fades. Nothing you haven't tasted before.`);
+    } else {
+      t.say("info", t.pick(STRONGBOX_SHRUGS));
+    }
+  }
+  if (meal.sankWithShip) t.say("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
+
+  if (seen.othersRemain) {
+    // A party member vanished; anyone still in the room watched it happen
+    const gain = meal.suspicion;
+    t.raise(gain);
+    if (seen.witnesses === 0 && looking && seen.inRoom > 0) {
+      t.say("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
+    } else if (seen.witnesses === 0) {
+      t.say("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
+    } else {
+      // Witnesses catch only a glimpse: they know something happened here, not what or who
+      const glimpses = seen.witnesses === 1
+        ? [
+            `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
+            `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
+            `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
+          ]
+        : [
+            `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
+            `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
+            `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
+          ];
+      t.say("alert", t.pick(glimpses));
+    }
+  } else {
+    t.say("consume", `The last of the party is gone. No one remains to grow suspicious.`);
+  }
+  t.react("feed", { excludeIds: [target.id] });
+  if (learning.newMaterials.length > 0) t.say("evolve", `New materials absorbed: ${learning.newMaterials.join(", ")}!`);
+  if (learning.newTraits.length > 0) t.say("evolve", `New traits assimilated: ${learning.newTraits.join(", ")}!`);
+  if (learning.newMaterials.length === 0 && learning.newTraits.length === 0 && (learning.materials.length > 0 || learning.traits.length > 0)) {
+    t.say("info", `The prey yields nothing new — you already know these materials.`);
+  }
+  if (meal.feastProgress) {
+    t.say("evolve", `Giant consumed whole: ${meal.giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
+  }
+  if (meal.feastComplete) t.say("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
+
+  t.noteMeal(target.name, total);
+  t.feed(total, {
+    learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...learning.materials])],
+    learnedTraits: [...new Set([...(character.learnedTraits || []), ...learning.traits])],
+    giantsConsumedWhole: meal.giantsConsumedWhole,
+    titanicFeastReached: character.titanicFeastReached || meal.feastComplete,
+    downWithTheShipReached: character.downWithTheShipReached || meal.sankWithShip,
+    adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+    partyMembersEaten: character.partyMembersEaten + 1,
+    biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, total),
+  });
+}
+
+// ---------- Wait ----------
+
+/**
+ * The chance a Wait lowers suspicion: roll effective Patience (after sickness and form-tier
+ * penalties; Runestone adds a die) against a threshold set by base Patience, so penalties lower
+ * the odds (~67–79% unpenalized). The threshold is capped so the dice actually rolled still
+ * succeed at least WAIT_MIN_CHANCE of the time.
+ */
+export function waitSettles(
+  character: Pick<MimicCharacter, "patience" | "currentAppearance">, patience: number, random: () => number = Math.random,
+): boolean {
+  const dice = patience + (hasMagic(character.currentAppearance, "Runestone") ? 1 : 0);
+  const threshold = Math.min(character.patience * 3, maxTargetForChance(dice, WAIT_MIN_CHANCE));
+  return rollDice(dice, random) >= threshold;
+}
+
+/** Hold still: maybe lower suspicion, while everyone else (adventurers and small creatures) moves. */
+export function wait(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const { location, mimicRoom } = hunt;
+  t.countAction();
+  if (waitSettles(character, t.stats.patience, t.random)) {
+    t.set({ suspicion: Math.max(0, t.hunt.suspicion - 1) });
+    t.say("stealth", `You wait in perfect stillness. Suspicion decreases.`);
+  } else {
+    t.say("info", `You wait. The adventurers continue their search.`);
+  }
+
+  // Everyone takes their turn (see moveParty): wandering, heading for a star, or door to door
+  const form = t.form;
+  const moves = moveParty(t.hunt.party, location, { mimicRoom, rivals: hunt.rivals, starFragment: hunt.starFragment, form }, t.random);
+  for (const step of moves.steps) {
+    if (step.vanishedInto) {
+      // Walked into a hidden rival: it eats them, and all you hear is the silence
+      t.say("alert", t.pick(VANISHING_LINES)(step.member.name, step.to));
+      t.patchRival(step.vanishedInto, { clueGiven: true });
+    } else {
+      t.say("info", `${step.member.name} moves from the ${step.from} to the ${step.to}.`);
+    }
+  }
+  t.set({ party: moves.party });
+  // Knock knock: the right shape hands out sweets and they come right up; any other gets pranked
+  if (moves.knock?.answered) {
+    moves.knock.callers.forEach(a => t.say("info", `🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
+  } else if (moves.knock) {
+    const callers = moves.knock.callers;
+    t.say("alert", `🪄 ${callers.map(a => a.name).join(" and ")} ${callers.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${mimicRoom}. ${t.pick(PRANKS)} (+1 suspicion)`);
+    t.raise(1);
+  }
+  if (moves.claimedStar) {
+    t.set({ starFragment: null });
+    t.say("info", `🌠 ${moves.claimedStar.name} scoops up the star fragment and pockets it, still glowing.`);
+  }
+
+  t.holdStill(moves.arrivals.length > 0);
+  // Whoever wandered into the mimic's room faces a stealth check
+  t.stealth(moves.arrivals);
+
+  // Small creatures also wander (toward you, sometimes, if you wear Honeyamber)
+  const honeyamber = hasMagic(character.currentAppearance, "Honeyamber");
+  const critters = moveCreatures(hunt.creatures, location, mimicRoom, honeyamber, t.random);
+  t.set({ creatures: critters.creatures });
+  if (honeyamber) {
+    critters.arrivals.forEach(c => t.say("info", `🍯 A ${c.name} creeps into the ${mimicRoom}, following a sweet smell only it can catch.`));
+  }
+  t.endTurn();
+  return t.finish();
+}
+
+// ---------- meals in the room (no turn taken) ----------
+
+/** Snap up a small creature in your room. */
+export function eatCreature(hunt: Hunt, character: MimicCharacter, uid: string, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const creature = hunt.creatures.find(c => c.uid === uid && !c.isConsumed);
+  if (!creature) return t.finish();
+  t.say("consume", `You snap up the ${creature.name} — a modest feast. +${creature.ap} AP.`);
+  t.set({ creatures: hunt.creatures.map(c => c.uid === uid ? { ...c, isConsumed: true } : c), actionCount: 0 });
+  t.noteMeal(creature.name, creature.ap);
+  t.feed(creature.ap);
+  return t.finish();
+}
+
+// Anyone in the room sees a meal vanish from under their noses
+function seenEating(t: Turn, line: (gain: number) => string) {
+  const witnesses = t.active.filter(a => a.location === t.hunt.mimicRoom).length;
+  if (witnesses === 0) return;
+  const gain = consumeSuspicion(witnesses);
+  t.say("alert", line(gain));
+  t.raise(gain);
+}
+
+/**
+ * Stargazers' Hill: a star fragment in your room can be swallowed before anyone else gets to
+ * it. It's worth a little AP and may teach something; anyone watching sees it vanish.
+ */
+export function eatStar(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  if (!hunt.starFragment || hunt.starFragment !== hunt.mimicRoom) return t.finish();
+  t.set({ starFragment: null });
+  const prize = pickTreasurePrize(STAR_FRAGMENT, character.learnedMaterials, character.learnedTraits, t.random);
+  t.say("consume", `You swallow the star fragment whole. It's warm all the way down. +${STAR_FRAGMENT.ap} AP.`);
+  if (prize) t.say("evolve", `The star fragment flares inside you: ${prize.name}! New ${prize.kind} learned.`);
+  seenEating(t, gain => `Someone was reaching for the fragment when its glow simply went out. (+${gain} suspicion)`);
+  t.noteMeal("Star Fragment", STAR_FRAGMENT.ap);
+  t.feed(STAR_FRAGMENT.ap, {
+    learnedMaterials: prize?.kind === "material" ? [...character.learnedMaterials, prize.name] : character.learnedMaterials,
+    learnedTraits: prize?.kind === "trait" ? [...character.learnedTraits, prize.name] : character.learnedTraits,
+  });
+  return t.finish();
+}
+
+/**
+ * The Snowbound Lodge: a frozen adventurer in your room is a cheap meal. Easy to take (no roll,
+ * any size of mimic), but worth less, and it teaches nothing: the flavor is locked in the ice.
+ */
+export function eatFrozen(hunt: Hunt, character: MimicCharacter, id: string, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const body = hunt.party.find(a => a.id === id);
+  if (!body?.isFrozen || body.isConsumed) return t.finish();
+  const ap = frozenMealAp(body);
+  t.say("consume", `You crack ${body.name} free of the ice and swallow them, stiff and cold. +${ap} AP.`);
+  seenEating(t, gain => `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
+  t.patchMember(body.id, () => ({ isConsumed: true }));
+  t.noteMeal(body.name, ap);
+  t.set({ actionCount: 0 });
+  t.feed(ap, {
+    adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(body)]),
+    partyMembersEaten: character.partyMembersEaten + 1,
+    biggestMeal: withBiggestMeal(character.biggestMeal, unmask(body).name, ap),
+  });
+  return t.finish();
+}
+
+// ---------- changing shape mid-hunt ----------
+
+/** Shift into another of your forms (Feywood makes it free; otherwise +1 suspicion). */
+export function changeForm(hunt: Hunt, character: MimicCharacter, formIndex: number, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  t.stir();
+  const formId = character.forms[formIndex]?.formId;
+  t.update({ activeFormIndex: formIndex, formsUsed: withFormUsed(character.formsUsed, formId) });
+  const name = ALL_FORMS.find(f => f.id === formId)?.name || "new shape";
+  if (hasMagic(character.currentAppearance, "Feywood")) {
+    t.say("info", `You flow seamlessly into the form of a ${name} — the Feywood makes the shift effortless.`);
+  } else {
+    t.say("info", `You shift into the form of a ${name}. (Takes 1 turn — stealth suspended.)`);
+    t.raise(1);
+  }
+  t.react("formChange");
+  return t.finish();
+}
+
+/**
+ * Change your surface appearance. Thimblewood changes the mimic's size: forms that no longer fit
+ * are dropped, and (like a tier-up) new ones have to be chosen (chooseForms in the result).
+ */
+export function changeAppearance(hunt: Hunt, character: MimicCharacter, appearance: Appearance, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  const resized = hasMagic(appearance, "Thimblewood") !== hasMagic(character.currentAppearance, "Thimblewood");
+  if (resized) {
+    const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: appearance }), character.mass, character, today());
+    const activeId = character.forms[character.activeFormIndex]?.formId;
+    t.update({ forms: kept, activeFormIndex: Math.max(0, kept.findIndex(f => f.formId === activeId)) });
+    t.say("evolve", hasMagic(appearance, "Thimblewood")
+      ? "🪵 The Thimblewood draws you in. You are one size smaller now."
+      : "🪵 You let the Thimblewood go and swell back to your full size.");
+    const lost = character.forms.filter(f => !kept.includes(f)).map(f => f.name);
+    if (lost.length > 0) t.say("evolve", `These forms no longer fit you and have been lost: ${lost.join(", ")}. Choose replacements.`);
+    t.chooseForms = true;
+  }
+  t.update({ currentAppearance: appearance });
+  t.say("info", `You adjust your surface appearance.`);
+  const soulglassNew = hasMagic(appearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
+  const hidden = hunt.rivals.filter(r => !r.consumed && !r.revealed);
+  const sensed = hidden.find(r => r.kind === "elder") ?? hidden[0];
+  if (soulglassNew && sensed) {
+    t.say("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : `The ${RIVAL_STATS[sensed.kind].name}`} hides in the ${sensed.room}.`);
+  }
+  return t.finish();
+}

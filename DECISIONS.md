@@ -10,6 +10,7 @@ entries as decisions are made, with the reason if one was given.
 - **A hunt in progress is not saved.** Refreshing, closing the tab or leaving mid-hunt forfeits it, and that's intended: if you leave a hunt, you know what you're doing, and it wouldn't make sense to come back and find the same adventurers still waiting. The planned "Confirm New Hunt mid-hunt" dialog (IDEAS.md) is how this gets made explicit, not saving.
 - **Stealth: spotted flaws only add suspicion when the check fails.** A passed check that noticed a flaw costs nothing. Something not looking quite right for a moment doesn't mean someone actually grows suspicious. (Pinned by tests/lure.test.mjs.)
 - **A missed lunge costs the full penalty, even under the fireworks.** The fireworks hide a meal from onlookers, not from the one you lunged at: they saw you.
+- **Starfall waits a turn after a star is claimed.** If a star fragment was lying about when the turn began, no new one falls that turn, even if it's due and someone pockets the old one mid-turn. (Pinned by tests/hunt.test.mjs.)
 
 ## Seasonal locations
 
