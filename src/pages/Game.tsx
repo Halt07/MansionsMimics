@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
+  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, wanderCreature, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
@@ -18,6 +18,7 @@ import {
   fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
   dressParty, unmask, nextHouse, housesAway, placeProcession, answersDoor, PRANKS, addRealMonster, isTheRealThing,
   generateParty, spawnSmallCreatures, type SmallCreature,
+  STAT_CAP, getActiveForm, effectiveStats,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -62,13 +63,6 @@ const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimi
 const CEREMONY_STEP_MS = 2000;
 /** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
 const WAIT_MIN_CHANCE = 0.4;
-const STAT_CAP = 6;
-
-function getActiveForm(character: MimicCharacter | null): Form | null {
-  const formRef = character?.forms[character.activeFormIndex];
-  if (!formRef) return null;
-  return ALL_FORMS.find(f => f.id === formRef.formId) ?? null;
-}
 
 export default function Game() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -173,6 +167,30 @@ export default function Game() {
       const message = err instanceof Error ? err.message : String(err);
       addEvent("alert", `⚠ Your progress could not be saved: ${message.split("\n")[0]}`);
     });
+  };
+
+  /** Raises suspicion (capped at 10). Reaching 10 ends the hunt: you've been found out. */
+  const raiseSuspicion = (amount: number) => {
+    setSuspicion(s => {
+      const next = Math.min(s + amount, 10);
+      if (next >= 10) triggerHuntEnd();
+      return next;
+    });
+  };
+
+  /**
+   * A meal: adds `ap` and any other changes to the character, saves them (and that it just fed),
+   * and opens the upgrade screen once there's enough AP to evolve. Returns the updated character.
+   */
+  const feed = (base: MimicCharacter, ap: number, changes: Partial<MimicCharacter> = {}): MimicCharacter => {
+    const updated = { ...base, ...changes, assimilationPoints: (base.assimilationPoints || 0) + ap };
+    setCharacter(updated);
+    persist({ ...changes, assimilationPoints: updated.assimilationPoints, lastFedAt: new Date().toISOString() });
+    if (updated.assimilationPoints >= TIER_CONFIG[base.tier].apToEvolve) {
+      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
+      setPhase("evolve");
+    }
+    return updated;
   };
 
   const chooseLocation = (loc: HuntLocation) => {
@@ -375,7 +393,7 @@ export default function Game() {
           setMimicRoom(to);
           stillTurnsRef.current = 0;
           setShowMovePanel(false);
-          setSuspicion(s => { const n = Math.min(s + rummage, 10); if (n >= 10) triggerHuntEnd(); return n; });
+          raiseSuspicion(rummage);
         }
       }
     }
@@ -463,7 +481,6 @@ export default function Game() {
         `Room context: ${roomMod.note} (Plausibility ${roomMod.plausibility > 0 ? "+" : ""}${roomMod.plausibility})`);
     }
 
-    const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
       // Now and then, the newcomer acts out one of its quirks on your form
@@ -516,11 +533,7 @@ export default function Game() {
     let suspDelta = reactions.suspicion;
     if (reactions.arrivals.length > 0) suspDelta += runStealthChecks(reactions.arrivals, roomNow);
     if (suspDelta > 0) {
-      setSuspicion(s => {
-        const next = Math.min(s + suspDelta, 10);
-        if (next >= 10) triggerHuntEnd();
-        return next;
-      });
+      raiseSuspicion(suspDelta);
     }
   };
 
@@ -570,11 +583,7 @@ export default function Game() {
     const inTargetRoom = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && a.location === targetRoom);
     const stealthSusp = runStealthChecks(inTargetRoom, targetRoom);
     const totalSusp = 1 + stealthSusp;
-    setSuspicion(s => {
-      const next = Math.min(s + totalSusp, 10);
-      if (next >= 10) triggerHuntEnd();
-      return next;
-    });
+    raiseSuspicion(totalSusp);
     applyBehaviorReactions("relocate", { mimicRoom: targetRoom, fromRoom: mimicRoom });
     checkActionLimit(newCount);
     advanceShip();
@@ -608,7 +617,7 @@ export default function Game() {
       if (dist > range) return adv;
       anyInRange = true;
       const result = allureCheck(
-        character.baseAllure, Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty), form,
+        character.baseAllure, effectivePlausibility, form,
         character.currentAppearance || {}, adv, roomMod
       );
       addEvent(result.success ? "allure" : "info", result.narrative);
@@ -616,11 +625,7 @@ export default function Game() {
         addEvent("info", `${adv.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
       }
       if (result.suspicionChange > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + result.suspicionChange, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+        raiseSuspicion(result.suspicionChange);
         addEvent("alert", `${adv.name} grows suspicious of the excessive allure!`);
       }
       if (result.success) {
@@ -653,11 +658,7 @@ export default function Game() {
     if (newlyAttracted.length > 0) {
       const suspDelta = runStealthChecks(newlyAttracted, mimicRoom);
       if (suspDelta > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + suspDelta, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+        raiseSuspicion(suspDelta);
       }
     }
     checkActionLimit(newCount);
@@ -704,34 +705,21 @@ export default function Game() {
         }
         setRivals(updatedRivals);
         noteMeal(RIVAL_MEAL_NAMES[rivalTarget.kind], apGained);
-        const updatedChar = {
-          ...character,
-          assimilationPoints: (character.assimilationPoints || 0) + apGained,
-          mimicsConsumed: character.mimicsConsumed + 1,
-          biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rivalTarget.kind], apGained),
-        };
-        setCharacter(updatedChar);
-        persist({
-          assimilationPoints: updatedChar.assimilationPoints,
-          mimicsConsumed: updatedChar.mimicsConsumed,
-          biggestMeal: updatedChar.biggestMeal,
-          lastFedAt: new Date().toISOString(),
-        });
-        if (updatedChar.mimicsConsumed === CANNIBAL_MIMICS) {
+        const mimicsConsumed = character.mimicsConsumed + 1;
+        if (mimicsConsumed === CANNIBAL_MIMICS) {
           addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
         }
-        const cfg2 = TIER_CONFIG[character.tier];
-        if (updatedChar.assimilationPoints >= cfg2.apToEvolve) {
-          addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-          setPhase("evolve");
-        }
+        feed(character, apGained, {
+          mimicsConsumed,
+          biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rivalTarget.kind], apGained),
+        });
       } else {
         addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
         // The rival escapes to a room away from you and the other rivals
         const newRoom = rivalEscapeRoom(location, rivals, rivalTarget, mimicRoom);
         setRivals(prev => prev.map(r => r.id === rivalTarget.id ? { ...r, revealed: false, room: newRoom } : r));
         addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
-        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        raiseSuspicion(1);
       }
       setActing(false);
       return true;
@@ -807,25 +795,16 @@ export default function Game() {
           if (!finalKill) {
             // A bite is always noticed (+2); a crowd of 3+ others in the room raises it to +3
             const gain = Math.max(2, consumeSuspicion(witnessCount));
-            setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+            raiseSuspicion(gain);
             if (gain > 2) {
               addEvent("alert", `${target.name}'s cry turns every head in the room. (+${gain} suspicion)`);
             }
           }
-          const learnedMaterials = newMaterial
-            ? [...character.learnedMaterials, newMaterial]
-            : character.learnedMaterials;
-          const updatedChar = {
-            ...character,
-            assimilationPoints: (character.assimilationPoints || 0) + apGained,
-            learnedMaterials,
+          // The bite (and, if it finishes them off, the rest of the meal) is fed in one go below
+          let mealAp = apGained;
+          let mealChanges: Partial<MimicCharacter> = {
+            learnedMaterials: newMaterial ? [...character.learnedMaterials, newMaterial] : character.learnedMaterials,
           };
-          setCharacter(updatedChar);
-          persist({
-            assimilationPoints: updatedChar.assimilationPoints,
-            learnedMaterials: updatedChar.learnedMaterials,
-            lastFedAt: new Date().toISOString(),
-          });
 
           if (finishing) {
             // Dead or fled
@@ -837,22 +816,16 @@ export default function Game() {
             } else if (flees) {
               addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
-              setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
+              raiseSuspicion(3);
             } else {
               addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
               revealCostume(target);
-              const finalChar = {
-                ...updatedChar,
-                assimilationPoints: updatedChar.assimilationPoints + 2,
+              mealAp += 2;
+              mealChanges = {
+                ...mealChanges,
                 adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
                 partyMembersEaten: character.partyMembersEaten + 1,
               };
-              setCharacter(finalChar);
-              persist({
-                assimilationPoints: finalChar.assimilationPoints,
-                adventurersEaten: finalChar.adventurersEaten,
-                partyMembersEaten: finalChar.partyMembersEaten,
-              });
               setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
             }
           } else {
@@ -861,16 +834,11 @@ export default function Game() {
               : a));
           }
 
-          const cfg = TIER_CONFIG[character.tier];
-          const checkChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
-          if (checkChar.assimilationPoints >= cfg.apToEvolve) {
-            addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-            setPhase("evolve");
-          }
+          feed(character, mealAp, mealChanges);
         } else {
           const hitsSoFarMissed = (target.hitsTaken || 0);
           addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
-          setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
+          raiseSuspicion(3);
           if (hitsSoFarMissed + 1 >= (target.constitution || 3) && target.behavior === "elusive") {
             boltAway(target, 4, hitsSoFarMissed + 1);
           } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && location?.snowbound) {
@@ -887,7 +855,7 @@ export default function Game() {
         }
       } else {
         addEvent("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
-        setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        raiseSuspicion(2);
         setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 2 } : a));
       }
       setActing(false);
@@ -944,7 +912,7 @@ export default function Game() {
       if (othersRemain) {
         // A party member vanished; anyone still in the room watched it happen
         const gain = consumeSuspicion(witnessCount);
-        setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        raiseSuspicion(gain);
         if (witnessCount === 0 && lookingUp && inRoom > 0) {
           addEvent("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
         } else if (witnessCount === 0) {
@@ -987,9 +955,8 @@ export default function Game() {
         addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
       }
 
-      const updatedChar = {
-        ...character,
-        assimilationPoints: (character.assimilationPoints || 0) + apGained,
+      noteMeal(target.name, apGained);
+      feed(character, apGained, {
         learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...matsToLearn])],
         learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
         giantsConsumedWhole,
@@ -998,30 +965,10 @@ export default function Game() {
         adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
         partyMembersEaten: character.partyMembersEaten + 1,
         biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, apGained),
-      };
-      noteMeal(target.name, apGained);
-      setCharacter(updatedChar);
-      persist({
-        assimilationPoints: updatedChar.assimilationPoints,
-        learnedMaterials: updatedChar.learnedMaterials,
-        learnedTraits: updatedChar.learnedTraits,
-        giantsConsumedWhole: updatedChar.giantsConsumedWhole,
-        titanicFeastReached: updatedChar.titanicFeastReached,
-        downWithTheShipReached: updatedChar.downWithTheShipReached,
-        adventurersEaten: updatedChar.adventurersEaten,
-        partyMembersEaten: updatedChar.partyMembersEaten,
-        biggestMeal: updatedChar.biggestMeal,
-        lastFedAt: new Date().toISOString(),
       });
-
-      const cfg = TIER_CONFIG[character.tier];
-      if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
-        addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-        setPhase("evolve");
-      }
     } else {
       const lungePenalty = hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4;
-      setSuspicion(s => { const n = Math.min(s + lungePenalty, 10); if (n >= 10) triggerHuntEnd(); return n; });
+      raiseSuspicion(lungePenalty);
       addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${lungePenalty} suspicion${lungePenalty < 4 ? ", softened by your Dragonhide" : ""})`);
       if (target.behavior === "elusive") {
         boltAway(target, 3);
@@ -1045,17 +992,7 @@ export default function Game() {
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
     noteMeal(creature.name, creature.ap);
     setActionCount(0); // Eating resets the stagnation counter
-    const updatedChar = {
-      ...character,
-      assimilationPoints: (character.assimilationPoints || 0) + creature.ap,
-    };
-    setCharacter(updatedChar);
-    persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
-    const cfg = TIER_CONFIG[character.tier];
-    if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
-      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-      setPhase("evolve");
-    }
+    feed(character, creature.ap);
   };
 
   // Stargazers' Hill: a star fragment in your room can be swallowed before anyone else gets to
@@ -1071,26 +1008,13 @@ export default function Game() {
     if (witnesses > 0) {
       const gain = consumeSuspicion(witnesses);
       addEvent("alert", `Someone was reaching for the fragment when its glow simply went out. (+${gain} suspicion)`);
-      setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+      raiseSuspicion(gain);
     }
     noteMeal("Star Fragment", STAR_FRAGMENT.ap);
-    const updatedChar = {
-      ...character,
-      assimilationPoints: (character.assimilationPoints || 0) + STAR_FRAGMENT.ap,
+    feed(character, STAR_FRAGMENT.ap, {
       learnedMaterials: prize?.kind === "material" ? [...character.learnedMaterials, prize.name] : character.learnedMaterials,
       learnedTraits: prize?.kind === "trait" ? [...character.learnedTraits, prize.name] : character.learnedTraits,
-    };
-    setCharacter(updatedChar);
-    persist({
-      assimilationPoints: updatedChar.assimilationPoints,
-      learnedMaterials: updatedChar.learnedMaterials,
-      learnedTraits: updatedChar.learnedTraits,
-      lastFedAt: new Date().toISOString(),
     });
-    if (updatedChar.assimilationPoints >= TIER_CONFIG[character.tier].apToEvolve) {
-      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-      setPhase("evolve");
-    }
   };
 
   // The Snowbound Lodge: a frozen adventurer in your room is a cheap meal. Easy to take (no
@@ -1104,30 +1028,16 @@ export default function Game() {
     if (witnesses > 0) {
       const gain = consumeSuspicion(witnesses);
       addEvent("alert", `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
-      setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
+      raiseSuspicion(gain);
     }
     setParty(prev => prev.map(a => a.id === body.id ? { ...a, isConsumed: true } : a));
     noteMeal(body.name, ap);
     setActionCount(0);
-    const updatedChar = {
-      ...character,
-      assimilationPoints: (character.assimilationPoints || 0) + ap,
+    feed(character, ap, {
       adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(body)]),
       partyMembersEaten: character.partyMembersEaten + 1,
-      biggestMeal: withBiggestMeal(character.biggestMeal, body.name, ap),
-    };
-    setCharacter(updatedChar);
-    persist({
-      assimilationPoints: updatedChar.assimilationPoints,
-      adventurersEaten: updatedChar.adventurersEaten,
-      partyMembersEaten: updatedChar.partyMembersEaten,
-      biggestMeal: updatedChar.biggestMeal,
-      lastFedAt: new Date().toISOString(),
+      biggestMeal: withBiggestMeal(character.biggestMeal, unmask(body).name, ap),
     });
-    if (updatedChar.assimilationPoints >= TIER_CONFIG[character.tier].apToEvolve) {
-      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-      setPhase("evolve");
-    }
   };
 
   // Devotion (The Hollow Reliquary): once a devoted pilgrim is the last one left, it
@@ -1223,11 +1133,7 @@ export default function Game() {
     } else {
       addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
       // Shifting takes time, slight suspicion risk
-      setSuspicion(s => {
-        const next = Math.min(s + 1, 10);
-        if (next >= 10) triggerHuntEnd();
-        return next;
-      });
+      raiseSuspicion(1);
     }
     applyBehaviorReactions("formChange");
     setShowFormPanel(false);
@@ -1364,7 +1270,7 @@ export default function Game() {
       } else {
         const who = newlyArrived.map(a => a.name).join(" and ");
         addEvent("alert", `🪄 ${who} ${newlyArrived.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${currentMimicRoom}. ${PRANKS[Math.floor(Math.random() * PRANKS.length)]} (+1 suspicion)`);
-        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
+        raiseSuspicion(1);
       }
     }
     if (claimedBy) {
@@ -1379,11 +1285,7 @@ export default function Game() {
     if (newlyArrived.length > 0) {
       const suspDelta = runStealthChecks(newlyArrived, currentMimicRoom);
       if (suspDelta > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + suspDelta, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+        raiseSuspicion(suspDelta);
       }
     }
 
@@ -1545,25 +1447,14 @@ export default function Game() {
   }, [character, addEvent]);
   const consumedCount = party.filter(a => a.isConsumed).length;
 
-  // Mass-below-tier plausibility penalty
-  const getMassPenalty = () => {
-    if (!character) return 0;
-    const tierIdx = TIER_ORDER.indexOf(character.tier);
-    const tierMin = TIER_CONFIG[character.tier]?.massRange[0] ?? 0;
-    const oneTierBelowMin = tierIdx > 0 ? (TIER_CONFIG[TIER_ORDER[tierIdx - 1]]?.massRange[0] ?? 0) : 0;
-    if (character.mass < oneTierBelowMin) return 2;
-    if (character.mass < tierMin) return 1;
-    return 0;
-  };
-  const massPenalty = getMassPenalty();
-  const sickPlausibilityPenalty = (currentSickness?.penalties?.plausibility ?? 0);
-  const sickAdhesionPenalty = (currentSickness?.penalties?.adhesion ?? 0);
-  const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
-  const activeForm = character ? getActiveForm(character) : null;
-  // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
-  const formTierPenalties = activeForm && character ? getFormTierPenalties(effectiveFormTier(activeForm, formTier(character)), formTier(character)) : { plausibility: 0, patience: 0 };
-  const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
-  const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
+  // Stats after mass, sickness and form-tier penalties (see effectiveStats)
+  const activeForm = getActiveForm(character);
+  const stats = character ? effectiveStats(character, currentSickness, activeForm) : null;
+  const massPenalty = stats?.penalties.mass ?? 0;
+  const formTierPenalties = stats?.penalties.formTier ?? { plausibility: 0, patience: 0 };
+  const effectivePlausibility = stats?.plausibility ?? 1;
+  const effectiveAdhesion = stats?.adhesion ?? 1;
+  const effectivePatience = stats?.patience ?? 1;
   const cfg = character ? TIER_CONFIG[character.tier] : null;
   const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
 
@@ -1593,6 +1484,7 @@ export default function Game() {
     party,
     mimicsDevoured: rivals.filter(r => r.consumed).length,
     sank: !!location.sinkingTurns && shipTurn >= location.sinkingTurns,
+    locationId: location.id,
   }) : null;
 
   // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):
@@ -1790,7 +1682,7 @@ export default function Game() {
               })()}
               <div className="space-y-2 pt-1 border-t border-border">
                 <StatBar label="Plausibility" value={character.plausibility} max={6} color="bg-green-500"
-                  penalty={massPenalty + (currentSickness?.penalties?.plausibility ?? 0) + formTierPenalties.plausibility}
+                  penalty={massPenalty + (stats?.penalties.sickness.plausibility ?? 0) + formTierPenalties.plausibility}
                   penaltyLabel={currentSickness?.penalties?.plausibility ? `–${currentSickness.penalties.plausibility} ${currentSickness.name}` : null}
                   massPenalty={massPenalty}
                   formPenalty={formTierPenalties.plausibility}
@@ -1801,7 +1693,7 @@ export default function Game() {
                   penaltyLabel={currentSickness?.penalties?.adhesion ? `–${currentSickness.penalties.adhesion} ${currentSickness.name}` : null}
                 />
                 <StatBar label="Patience" value={character.patience} max={6} color="bg-purple-500"
-                  penalty={(currentSickness?.penalties?.patience ?? 0) + formTierPenalties.patience}
+                  penalty={(stats?.penalties.sickness.patience ?? 0) + formTierPenalties.patience}
                   penaltyLabel={currentSickness?.penalties?.patience ? `–${currentSickness.penalties.patience} ${currentSickness.name}` : null}
                   formPenalty={formTierPenalties.patience}
                   formPenaltyNote="Your form is from the tier below — too much mass in a small space makes you restless."

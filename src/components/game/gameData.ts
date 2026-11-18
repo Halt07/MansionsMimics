@@ -360,6 +360,69 @@ export function getFormTierPenalties(formTier: Tier, mimicTier: Tier): { plausib
 }
 
 // ============================================================
+// EFFECTIVE STATS
+// What a mimic's stats are worth right now, after everything weighing on them: being small for
+// its tier, a sickness, and wearing a form from the tier above or below.
+// ============================================================
+/** The most any combat stat can be raised to. */
+export const STAT_CAP = 6;
+
+/** The form the mimic is wearing, if any. */
+export function getActiveForm(character: Pick<MimicCharacter, "forms" | "activeFormIndex"> | null | undefined): Form | null {
+  const ref = character?.forms[character.activeFormIndex];
+  return ref ? ALL_FORMS.find(f => f.id === ref.formId) ?? null : null;
+}
+
+/**
+ * Plausibility lost for being small for its tier (usually from mass decay): 1 below the tier's
+ * minimum mass, 2 below the minimum of the tier under it as well.
+ */
+export function massPenalty(character: Pick<MimicCharacter, "tier" | "mass">): number {
+  const tierIdx = TIER_ORDER.indexOf(character.tier);
+  const tierMin = TIER_CONFIG[character.tier].massRange[0];
+  const tierBelowMin = tierIdx > 0 ? TIER_CONFIG[TIER_ORDER[tierIdx - 1]].massRange[0] : 0;
+  if (character.mass < tierBelowMin) return 2;
+  if (character.mass < tierMin) return 1;
+  return 0;
+}
+
+export interface EffectiveStats {
+  /** For stealth and allure checks (at least 1). Stealth checks take the form-tier penalty off themselves. */
+  plausibility: number;
+  /** For strikes and bites (at least 1). */
+  adhesion: number;
+  /** For waiting and holding on (at least 1), form-tier penalty included. */
+  patience: number;
+  /** Each penalty on its own, for showing where the points went. */
+  penalties: {
+    mass: number;
+    sickness: { plausibility: number; adhesion: number; patience: number };
+    formTier: { plausibility: number; patience: number };
+  };
+}
+
+export function effectiveStats(
+  character: Pick<MimicCharacter, "tier" | "mass" | "plausibility" | "adhesion" | "patience" | "currentAppearance">,
+  sickness: Pick<Sickness, "penalties"> | null | undefined,
+  form: Form | null | undefined,
+): EffectiveStats {
+  const mass = massPenalty(character);
+  const sick = {
+    plausibility: sickness?.penalties.plausibility ?? 0,
+    adhesion: sickness?.penalties.adhesion ?? 0,
+    patience: sickness?.penalties.patience ?? 0,
+  };
+  const ownTier = formTier(character);
+  const formTierPenalty = form ? getFormTierPenalties(effectiveFormTier(form, ownTier), ownTier) : { plausibility: 0, patience: 0 };
+  return {
+    plausibility: Math.max(1, character.plausibility - mass - sick.plausibility),
+    adhesion: Math.max(1, character.adhesion - sick.adhesion),
+    patience: Math.max(1, character.patience - sick.patience - formTierPenalty.patience),
+    penalties: { mass, sickness: sick, formTier: formTierPenalty },
+  };
+}
+
+// ============================================================
 // COMPANIONS
 // ============================================================
 const COMPANION_PERCEPTION: Readonly<Record<PerceptionSense, number>> = {
