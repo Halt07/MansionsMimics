@@ -1592,8 +1592,6 @@ export default function Game() {
       {phase === "hunt" && <div className="suspicion-vignette" aria-hidden />}
       {/* Remounted for each turn with an effect, which replays its animation */}
       {fx && fx !== "shake" && <div key={`${latestTurn}-${fx}`} className="fx-layer" data-fx={fx} aria-hidden />}
-      {MassDecayBanner}
-      {SeasonBanner}
       {/* Top bar */}
       <div className="border-b border-border bg-card/50 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1613,6 +1611,10 @@ export default function Game() {
           </Link>
         </div>
       </div>
+
+      {/* Notices that need dismissing sit under the top bar, not above it */}
+      {MassDecayBanner}
+      {SeasonBanner}
 
       {showSheet && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSheet(false)}>
