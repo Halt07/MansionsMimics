@@ -6,17 +6,18 @@ import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@
 import {
   ALL_FORMS, TIER_CONFIG, TIER_ORDER,
   rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
-  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, wanderCreature, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
-  shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions, isStationary,
+  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
+  shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen,
-  starfallDue, stepToward, claimStar, STAR_FRAGMENT,
+  starfallDue, STAR_FRAGMENT,
   fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
-  dressParty, unmask, nextHouse, placeProcession, answersDoor, PRANKS, addRealMonster, isTheRealThing,
+  dressParty, unmask, placeProcession, PRANKS, addRealMonster, isTheRealThing,
   generateParty, spawnSmallCreatures, type SmallCreature,
+  moveParty, moveCreatures, VANISHING_LINES,
   STAT_CAP, getActiveForm, effectiveStats, lureRange,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
@@ -1205,101 +1206,47 @@ export default function Game() {
       addEvent("info", `You wait. The adventurers continue their search.`);
     }
 
-    // Compute adventurer movement SYNCHRONOUSLY before any setState
-    const currentParty = party;
-    const currentMimicRoom = mimicRoom;
-    const currentRivals = rivals;
-
-    const newlyArrived: PartyMember[] = [];
-    // A fallen star: everyone heads for it instead of wandering (Stargazers' Hill)
-    const star = location.starfall ? starFragment : null;
-    // Door to door: everyone moves on to the next house (Spell or Sweet Street)
-    const doorToDoor = !!location.procession;
-    const movedParty = currentParty.map(adv => {
-      if (!adv.isAlive || adv.isConsumed) return adv;
-      if (isStationary(adv)) return adv;
-      if (star && adv.location === star) return adv;
-      if (!star && !doorToDoor && Math.random() < 0.5) return adv;
-      const adjacent = getAdjacentRooms(location, adv.location);
-      const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = star ? stepToward(location, adv.location, star)
-        : doorToDoor ? nextHouse(location, adv.location)
-        : candidates[Math.floor(Math.random() * candidates.length)];
-      if (newRoom !== adv.location) {
-        // Rival mimic: silently consume this adventurer if they move into the rival's room
-        const lurker = rivalInRoom(currentRivals, newRoom);
-        if (lurker) {
-          // The rival eats them — adventurer silently vanishes with a cryptic message
-          const crypticMessages = [
-            `${adv.name} heads toward the ${newRoom}... and does not emerge.`,
-            `A muffled sound comes from the ${newRoom}. ${adv.name} never reappears.`,
-            `${adv.name} rounds the corner into the ${newRoom}. Silence follows.`,
-            `You hear ${adv.name}'s footsteps enter the ${newRoom} — then stop abruptly.`,
-            `Something in the ${newRoom} has ${adv.name}'s attention. They do not return.`,
-          ];
-          addEvent("alert", crypticMessages[Math.floor(Math.random() * crypticMessages.length)]);
-          setRivals(prev => prev.map(r => r.id === lurker.id ? { ...r, clueGiven: true } : r));
-          return { ...adv, isAlive: false, isConsumed: false, isDisappeared: true, location: newRoom };
-        }
-        addEvent("info", `${adv.name} moves from the ${adv.location} to the ${newRoom}.`);
-        if (newRoom === currentMimicRoom) {
-          newlyArrived.push({ ...adv, location: newRoom });
-        }
-      }
-      return { ...adv, location: newRoom, isAttracted: false };
-    });
-
-    // Whoever reaches the fragment first pockets it
-    const { party: claimedParty, claimedBy } = star ? claimStar(movedParty, star) : { party: movedParty, claimedBy: null };
-    // Knock knock: whoever reaches your house wants a sweet. The right shape hands one over and
-    // they come right up to you; any other shape doesn't answer, and gets pranked.
-    let updatedParty = claimedParty;
-    // (Only houses get knocked on: nobody knocks on the village green)
-    const onLoop = !!currentMimicRoom && (location.procession?.order as readonly string[] | undefined)?.includes(currentMimicRoom);
-    if (doorToDoor && onLoop && newlyArrived.length > 0 && currentMimicRoom) {
-      const form = getActiveForm(character);
-      if (answersDoor(location, form)) {
-        const callers = new Set(newlyArrived.map(a => a.id));
-        updatedParty = claimedParty.map(a => callers.has(a.id) && a.isAlive ? { ...a, isAttracted: true } : a);
-        newlyArrived.forEach(a => addEvent("info", `🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
+    // Everyone takes their turn (see moveParty): wandering, heading for a star, or door to door
+    const form = getActiveForm(character);
+    const moves = moveParty(party, location, { mimicRoom, rivals, starFragment, form });
+    for (const step of moves.steps) {
+      if (step.vanishedInto) {
+        // Walked into a hidden rival: it eats them, and all you hear is the silence
+        const line = VANISHING_LINES[Math.floor(Math.random() * VANISHING_LINES.length)];
+        addEvent("alert", line(step.member.name, step.to));
+        setRivals(prev => prev.map(r => r.id === step.vanishedInto ? { ...r, clueGiven: true } : r));
       } else {
-        const who = newlyArrived.map(a => a.name).join(" and ");
-        addEvent("alert", `🪄 ${who} ${newlyArrived.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${currentMimicRoom}. ${PRANKS[Math.floor(Math.random() * PRANKS.length)]} (+1 suspicion)`);
-        raiseSuspicion(1);
+        addEvent("info", `${step.member.name} moves from the ${step.from} to the ${step.to}.`);
       }
     }
-    if (claimedBy) {
-      setStarFragment(null);
-      addEvent("info", `🌠 ${claimedBy.name} scoops up the star fragment and pockets it, still glowing.`);
+    // Knock knock: the right shape hands out sweets and they come right up; any other gets pranked
+    if (moves.knock?.answered) {
+      moves.knock.callers.forEach(a => addEvent("info", `🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
+    } else if (moves.knock) {
+      const callers = moves.knock.callers;
+      addEvent("alert", `🪄 ${callers.map(a => a.name).join(" and ")} ${callers.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${mimicRoom}. ${PRANKS[Math.floor(Math.random() * PRANKS.length)]} (+1 suspicion)`);
+      raiseSuspicion(1);
     }
-    setParty(updatedParty);
+    if (moves.claimedStar) {
+      setStarFragment(null);
+      addEvent("info", `🌠 ${moves.claimedStar.name} scoops up the star fragment and pockets it, still glowing.`);
+    }
+    setParty(moves.party);
 
-    countStillTurn(newlyArrived.length > 0);
+    countStillTurn(moves.arrivals.length > 0);
 
     // Auto stealth check for adventurers who just wandered into the mimic's room
-    if (newlyArrived.length > 0) {
-      const suspDelta = runStealthChecks(newlyArrived, currentMimicRoom);
-      if (suspDelta > 0) {
-        raiseSuspicion(suspDelta);
-      }
+    if (moves.arrivals.length > 0) {
+      const suspDelta = runStealthChecks(moves.arrivals, mimicRoom);
+      if (suspDelta > 0) raiseSuspicion(suspDelta);
     }
 
     // Small creatures also wander (toward you, sometimes, if you wear Honeyamber)
     const honeyamber = hasMagic(character.currentAppearance, "Honeyamber");
-    const wandered = smallCreatures.map(c => {
-      if (c.isConsumed) return c;
-      const room = wanderCreature(location, c.location, mimicRoom, honeyamber);
-      const allowed = !c.rooms || c.rooms.includes(room);
-      return room === c.location || !allowed ? c : { ...c, location: room };
-    });
-    setSmallCreatures(wandered);
-    // While wearing Honeyamber, any critter that wanders into your room gets a line
-    if (honeyamber && mimicRoom) {
-      wandered.forEach((c, i) => {
-        if (c.location === mimicRoom && smallCreatures[i].location !== mimicRoom) {
-          addEvent("info", `🍯 A ${c.name} creeps into the ${mimicRoom}, following a sweet smell only it can catch.`);
-        }
-      });
+    const critters = moveCreatures(smallCreatures, location, mimicRoom, honeyamber);
+    setSmallCreatures(critters.creatures);
+    if (honeyamber) {
+      critters.arrivals.forEach(c => addEvent("info", `🍯 A ${c.name} creeps into the ${mimicRoom}, following a sweet smell only it can catch.`));
     }
 
     checkActionLimit(newCount);

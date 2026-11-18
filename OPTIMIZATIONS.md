@@ -1,8 +1,3 @@
-4. Party movement into gameData.ts (medium)
-
-- doWaitTurn decides where everyone walks: random wandering, heading for a star, or the next house.
-- That decision could be a pure moveParty(...) returning the moves, with the component only logging and applying them. Every location twist so far has added a branch here, so tests would pay off.
-
 6. Break up resolveStrike (large, highest risk)
 
 - It's about 350 lines: rival strikes, partial bites and swallowing whole are all in one function.
