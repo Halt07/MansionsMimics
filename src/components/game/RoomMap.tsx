@@ -63,7 +63,9 @@ export default function RoomMap({
             <div className="room-occupants">
               {here && <span className="occupant occupant-you" title={formName ? `You (${formName})` : "You"}>You</span>}
               {rivalsHere.map(r => (
-                <span key={r.id} className="occupant occupant-rival" title={RIVAL_STATS[r.kind].name}>🕸</span>
+                <span key={r.id} className="occupant occupant-rival" title={`${r.kind === "elder" ? "The Elder Mimic" : `A ${RIVAL_STATS[r.kind].name}`}, posing as a ${r.disguise.name}`}>
+                  {r.disguise.icon}
+                </span>
               ))}
               {advs.map(a => (
                 <span

@@ -291,6 +291,14 @@ export function rollOfferings(location: HuntLocation, random: () => number = Mat
 // ============================================================
 export type RivalKind = "lone" | "nest" | "elder";
 
+/** What a rival mimic is posing as once it's found (its marker on the room map). */
+export const RIVAL_DISGUISES = [
+  { icon: "📦", name: "crate" },
+  { icon: "🧰", name: "chest" },
+  { icon: "🛢️", name: "barrel" },
+] as const;
+export type RivalDisguise = (typeof RIVAL_DISGUISES)[number];
+
 export interface RivalMimic {
   id: string;
   kind: RivalKind;
@@ -299,6 +307,8 @@ export interface RivalMimic {
   consumed: boolean;
   /** It has eaten someone, so the player knows it's out there. */
   clueGiven: boolean;
+  /** Chosen when it's placed, and kept all hunt (even after it slips away and hides again). */
+  disguise: RivalDisguise;
 }
 
 /** Dice a rival resists a Strike with, the AP it's worth, and what the log calls it. */
@@ -327,6 +337,7 @@ export function placeRivals(
   }
   return kinds.slice(0, rooms.length).map((kind, i) => ({
     id: `rival_${i}`, kind, room: rooms[i], revealed: false, consumed: false, clueGiven: false,
+    disguise: RIVAL_DISGUISES[Math.floor(random() * RIVAL_DISGUISES.length)],
   }));
 }
 

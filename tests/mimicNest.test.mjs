@@ -44,4 +44,11 @@ export default async function ({ gameData: m, ok }) {
   ok(!m.isNestCleared(rivals), 'the nest is not cleared at the start');
   ok(!m.isNestCleared(rivals.map((r) => (r.kind === 'nest' ? { ...r, consumed: true } : r))), 'eating every young mimic is not enough');
   ok(m.isNestCleared(rivals.map((r) => (r.kind === 'elder' ? { ...r, consumed: true } : r))), 'devouring the Elder clears the nest, even with others left');
+
+  // Found rivals show on the room map as what they're posing as: a crate, a chest or a barrel
+  const nestLoc = m.LOCATIONS.find((l) => l.id === 'mimic_nest');
+  const placed = Array.from({ length: 300 }, () => m.placeRivals(nestLoc, nestLoc.rooms[0], ['elder', 'nest', 'nest', 'nest'])).flat();
+  ok(placed.every((r) => m.RIVAL_DISGUISES.includes(r.disguise)), 'every rival is placed with a disguise');
+  ok(m.RIVAL_DISGUISES.every((d) => placed.some((r) => r.disguise === d)), `all of them turn up (${m.RIVAL_DISGUISES.map((d) => d.icon + ' ' + d.name).join(', ')})`);
+  ok(m.RIVAL_DISGUISES.every((d) => placed.some((r) => r.kind === 'elder' && r.disguise === d)), 'the Elder can be any of them too: you can\'t tell it by its shape');
 }
