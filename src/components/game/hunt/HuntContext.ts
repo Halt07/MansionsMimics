@@ -36,11 +36,11 @@ export interface HuntState {
   /** Mid-turn: actions are locked until it resolves. */
   acting: boolean;
 
-  /** The location's twist: turns so far, and what's lying about (see the location fields). */
-  shipTurn: number;
-  fairTurn: number;
+  /** Full turns taken this hunt; the location's twist (sinking, stars, fireworks, cold) runs off it. */
+  huntTurn: number;
+  /** Fireworks: the room the last volley went up over (for the turn after). */
   fireworksRoom: RoomName | null;
-  starTurn: number;
+  /** Starfall: where a fallen star fragment is lying, if anywhere. */
   starFragment: RoomName | null;
   /** Everyone in your room is watching fireworks right now. */
   skyward: boolean;

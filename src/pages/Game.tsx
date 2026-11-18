@@ -92,16 +92,12 @@ export default function Game() {
   const [actionCount, setActionCount] = useState(0); // actions since last Strike
   // Rival mimics hiding in the location: none, a lone rival, or a whole nest
   const [rivals, setRivals] = useState<RivalMimic[]>([]);
-  // The Sinking Ship: turns taken so far this hunt (see advanceShip)
-  const [shipTurn, setShipTurn] = useState(0);
-  // Snowbound locations: bumped at the end of every turn; the cold is applied once the turn's
-  // moves have landed (see applyFrost)
-  const [frostTurn, setFrostTurn] = useState(0);
-  // Starfall locations: turns so far, and the room a fallen star fragment is lying in (if any)
-  const [starTurn, setStarTurn] = useState(0);
+  // Full turns taken this hunt (Relocate, Lure, Strike or Wait; see endTurn). The location's
+  // twist runs off it: when the ship sinks, when stars fall, when fireworks go up, the cold, etc.
+  const [huntTurn, setHuntTurn] = useState(0);
+  // Starfall: the room a fallen star fragment is lying in, if any
   const [starFragment, setStarFragment] = useState<RoomName | null>(null);
-  // Fireworks locations: turns so far, and the room the last volley went up over (for one turn)
-  const [fairTurn, setFairTurn] = useState(0);
+  // Fireworks: the room the last volley went up over (for the turn after it)
   const [fireworksRoom, setFireworksRoom] = useState<RoomName | null>(null);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
@@ -208,11 +204,8 @@ export default function Game() {
     setMimicRoom(null);
     setIsBountyHunt(false);
     setRivals([]);
-    setShipTurn(0);
-    setFrostTurn(0);
-    setStarTurn(0);
+    setHuntTurn(0);
     setStarFragment(null);
-    setFairTurn(0);
     setFireworksRoom(null);
     setActionCount(0);
     setGameoverReason("discovered");
@@ -364,61 +357,67 @@ export default function Game() {
   });
   useEffect(() => trackLifetimeAp(), [character?.assimilationPoints]);
 
+  /**
+   * The end of a full turn (Relocate, Lure, Strike or Wait): the hunt clock ticks, and the
+   * location's twist, if it has one, takes its turn. (The cold waits until the turn's moves have
+   * landed; see applyFrost.)
+   */
+  const endTurn = () => {
+    if (!location) return;
+    const turn = huntTurn + 1;
+    setHuntTurn(turn);
+    if (location.fireworks) fireworksTurn(location, turn);
+    if (location.starfall) starfallTurn(location, turn);
+    if (location.sinkingTurns) sinkingTurn(location.sinkingTurns, turn);
+  };
+
+  // The Founders' Fair: a volley over a random room every few turns, distracting it and the rooms
+  // next to it for a turn. The crew comes looking for rockets: a crate-shaped mimic gets thrown out.
+  const fireworksTurn = (loc: HuntLocation, turn: number) => {
+    if (!fireworksDue(loc, turn)) {
+      setFireworksRoom(null);
+      return;
+    }
+    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    setFireworksRoom(room);
+    addEvent("alert", `🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
+    const rummage = room === mimicRoom ? fireworksRummage(loc, getActiveForm(character)) : null;
+    if (rummage === null || !mimicRoom) return;
+    const occupied = [
+      ...activeAdventurers.map(a => a.location),
+      ...rivals.filter(r => !r.consumed).map(r => r.room),
+    ];
+    const to = tossRoom(loc, mimicRoom, occupied);
+    addEvent("alert", `The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
+    setMimicRoom(to);
+    stillTurnsRef.current = 0;
+    setShowMovePanel(false);
+    raiseSuspicion(rummage);
+  };
+
+  // Stargazers' Hill: every few turns a star fragment lands somewhere (unless one is still lying about)
+  const starfallTurn = (loc: HuntLocation, turn: number) => {
+    if (!loc.starfall || !starfallDue(loc, turn) || starFragment) return;
+    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    setStarFragment(room);
+    const landing = loc.starfall.landings[room] ?? `comes down in the ${room}`;
+    addEvent("alert", room === mimicRoom
+      ? `🌠 The sky splits open, and a fragment of star ${landing}, right beside you. Every head on the hill turns your way.`
+      : `🌠 The sky splits open, and a fragment of star ${landing}! Every head turns.`);
+  };
+
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
-  const advanceShip = () => {
-    if (location?.snowbound) setFrostTurn(t => t + 1);
-    if (location?.fireworks) {
-      const turn = fairTurn + 1;
-      setFairTurn(turn);
-      if (!fireworksDue(location, turn)) {
-        setFireworksRoom(null);
-      } else {
-        const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-        setFireworksRoom(room);
-        addEvent("alert", `🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
-        // The crew comes looking for rockets: a crate-shaped mimic gets rummaged and thrown out
-        const form = getActiveForm(character);
-        const rummage = room === mimicRoom ? fireworksRummage(location, form) : null;
-        if (rummage !== null && mimicRoom) {
-          const occupied = [
-            ...activeAdventurers.map(a => a.location),
-            ...rivals.filter(r => !r.consumed).map(r => r.room),
-          ];
-          const to = tossRoom(location, mimicRoom, occupied);
-          addEvent("alert", `The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
-          setMimicRoom(to);
-          stillTurnsRef.current = 0;
-          setShowMovePanel(false);
-          raiseSuspicion(rummage);
-        }
-      }
-    }
-    if (location?.starfall) {
-      const turn = starTurn + 1;
-      setStarTurn(turn);
-      if (starfallDue(location, turn) && !starFragment) {
-        const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-        setStarFragment(room);
-        const landing = location.starfall.landings[room] ?? `comes down in the ${room}`;
-        addEvent("alert", room === mimicRoom
-          ? `🌠 The sky splits open, and a fragment of star ${landing}, right beside you. Every head on the hill turns your way.`
-          : `🌠 The sky splits open, and a fragment of star ${landing}! Every head turns.`);
-      }
-    }
-    const total = location?.sinkingTurns;
-    if (!total || shipTurn >= total) return;
-    const turn = shipTurn + 1;
-    setShipTurn(turn);
+  const sinkingTurn = (total: number, turn: number) => {
+    if (turn > total) return;
     const warning = sinkingWarning(total, turn);
     if (warning) addEvent("alert", warning);
-    if (turn >= total) {
-      setParty(prev => prev.map(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared
-        ? { ...a, isAlive: false, isAttracted: false, fled: true }
-        : a));
-      addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
-      addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
-    }
+    if (turn < total) return;
+    setParty(prev => prev.map(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared
+      ? { ...a, isAlive: false, isAttracted: false, fled: true }
+      : a));
+    addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
+    addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
   };
 
   // Spell or Sweet Street: eating someone shows who was under the costume
@@ -436,7 +435,7 @@ export default function Game() {
 
   // The Snowbound Lodge: after each turn, the cold takes its toll (see chillParty)
   const applyFrost = useEffectEvent(() => {
-    if (!location?.snowbound || frostTurn === 0) return;
+    if (!location?.snowbound || huntTurn === 0) return;
     const { party: chilled, frozen, numb } = chillParty(party, location);
     setParty(chilled);
     numb.forEach(a => addEvent("info", `❄️ ${a.name}'s teeth are chattering. They won't last much longer in this cold.`));
@@ -448,7 +447,7 @@ export default function Game() {
   // Intentional: every kind of turn moves the party in its own way (wandering, lures, bolting),
   // so the cold is applied once that turn's moves have landed rather than inside each action.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => applyFrost(), [frostTurn]);
+  useEffect(() => applyFrost(), [huntTurn]);
 
   // Called whenever suspicion hits 10 — ends hunt immediately
   const triggerHuntEnd = () => {
@@ -583,7 +582,7 @@ export default function Game() {
     raiseSuspicion(totalSusp);
     applyBehaviorReactions("relocate", { mimicRoom: targetRoom, fromRoom: mimicRoom });
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
   };
 
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
@@ -658,7 +657,7 @@ export default function Game() {
       }
     }
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
     setActing(false);
   };
 
@@ -978,7 +977,7 @@ export default function Game() {
 
   const doStrikeTurn = () => {
     beginTurn();
-    if (resolveStrike()) advanceShip();
+    if (resolveStrike()) endTurn();
   };
 
   const doConsumeCreature = (creature: SmallCreature) => {
@@ -1304,7 +1303,7 @@ export default function Game() {
     }
 
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
   };
 
   // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
@@ -1463,7 +1462,7 @@ export default function Game() {
     biggestMeal: huntMealRef.current,
     party,
     mimicsDevoured: rivals.filter(r => r.consumed).length,
-    sank: !!location.sinkingTurns && shipTurn >= location.sinkingTurns,
+    sank: !!location.sinkingTurns && huntTurn >= location.sinkingTurns,
     locationId: location.id,
   }) : null;
 
@@ -1578,7 +1577,7 @@ export default function Game() {
     character, activeForm, stats: effectiveStats(character, currentSickness, activeForm), sickness: currentSickness,
     suspicion, lureRange: lureRange(character),
     location, mimicRoom, party, activeAdventurers, creatures: smallCreatures, rivals, isBountyHunt, huntOver, actionCount, acting,
-    shipTurn, fairTurn, fireworksRoom, starTurn, starFragment, skyward: watchingSky(mimicRoom),
+    huntTurn, fireworksRoom, starFragment, skyward: watchingSky(mimicRoom),
   };
 
   return (

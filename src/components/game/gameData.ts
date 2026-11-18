@@ -1051,6 +1051,11 @@ export function massDecay(
 // rummaged, found empty and thrown out into a neighboring room.
 // ============================================================
 
+/** For twists on a beat (a volley every 3 turns, a star every 4): turns until the next one, after `turn` turns. */
+export function turnsUntil(every: number, turn: number): number {
+  return every - (turn % every);
+}
+
 /** Whether a volley goes up at the end of this turn (turns count from 1). */
 export function fireworksDue(location: HuntLocation, turn: number): boolean {
   return !!location.fireworks && turn > 0 && turn % location.fireworks.every === 0;

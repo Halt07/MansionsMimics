@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway,
+  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, turnsUntil,
   type HuntLocation, type RoomName,
 } from "../gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export default function LocationBanners() {
   return (
     <>
       {live && props.rivals.some(r => !r.consumed) && <RivalStatus {...props} />}
-      {live && location.sinkingTurns && <SinkingBanner total={location.sinkingTurns} turn={props.shipTurn} />}
+      {live && location.sinkingTurns && <SinkingBanner total={location.sinkingTurns} turn={props.huntTurn} />}
       {live && location.procession && props.mimicRoom && <ProcessionBanner {...props} mimicRoom={props.mimicRoom} />}
       {live && location.fireworks && <FireworksBanner {...props} />}
       {live && location.starfall && <StarfallBanner {...props} />}
@@ -123,7 +123,7 @@ function ProcessionBanner({ location, mimicRoom, activeForm, activeAdventurers }
   );
 }
 
-function FireworksBanner({ location, fairTurn, fireworksRoom, activeForm, skyward }: BannerProps) {
+function FireworksBanner({ location, huntTurn, fireworksRoom, activeForm, skyward }: BannerProps) {
   const every = location.fireworks?.every ?? 1;
   const crate = fireworksRummage(location, activeForm) !== null;
   return (
@@ -131,21 +131,21 @@ function FireworksBanner({ location, fairTurn, fireworksRoom, activeForm, skywar
       <Note>
         {fireworksRoom
           ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses${skyward ? ", and you can Strike anyone in your room without luring them first" : ""}.`
-          : `The next volley goes up in ${turns(every - (fairTurn % every))}.`}
+          : `The next volley goes up in ${turns(turnsUntil(every, huntTurn))}.`}
         {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
       </Note>
     </Banner>
   );
 }
 
-function StarfallBanner({ location, starTurn, starFragment }: BannerProps) {
+function StarfallBanner({ location, huntTurn, starFragment }: BannerProps) {
   const every = location.starfall?.every ?? 1;
   return (
     <Banner tone="border-indigo-300/30 bg-indigo-400/5 text-indigo-200/90" title="🌠 Stars are falling. When one lands, the whole party runs for it.">
       <Note>
         {starFragment
           ? `A fragment glows in the ${starFragment}. Each time you wait, they all move a room closer to it.`
-          : `The next one should fall in ${turns(every - (starTurn % every))}.`}
+          : `The next one should fall in ${turns(turnsUntil(every, huntTurn))}.`}
       </Note>
     </Banner>
   );

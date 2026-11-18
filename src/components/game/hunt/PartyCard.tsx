@@ -1,4 +1,4 @@
-import { FROST_WARNING, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "../gameData";
+import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "../gameData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";
@@ -53,6 +53,7 @@ function MapView({ location, mimicRoom, lureRange, activeAdventurers, creatures,
         creatures={creatures.filter(c => !c.isConsumed)}
         rivals={rivals}
         frozen={uneatenFrozen(party)}
+        distracted={location.fireworks && fireworksRoom ? distractedRooms(location, fireworksRoom) : []}
         markers={[
           ...(location.starfall && starFragment ? [{ room: starFragment, icon: "🌠", title: "A fallen star fragment" }] : []),
           ...(location.fireworks && fireworksRoom ? [{ room: fireworksRoom, icon: "🎆", title: "Fireworks overhead: everyone here and next door is looking up" }] : []),

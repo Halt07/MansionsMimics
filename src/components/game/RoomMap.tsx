@@ -16,6 +16,8 @@ interface RoomMapProps {
   rivals?: readonly RivalMimic[];
   /** Adventurers frozen solid (snowbound locations), still waiting to be eaten. */
   frozen?: readonly { id: string; name: string; location: RoomName }[];
+  /** Rooms where everyone is looking the other way (under the fireworks): they glow. */
+  distracted?: readonly RoomName[];
   /** Things to mark in a room: a fallen star, fireworks overhead… */
   markers?: readonly { room: RoomName; icon: string; title: string }[];
   /** The mimic's current form, for its marker's tooltip. */
@@ -35,7 +37,7 @@ function initials(name: string): string {
  * styling is under ROOM MAP in index.css, driven by the data attributes set here.
  */
 export default function RoomMap({
-  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], markers = [], formName,
+  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], distracted = [], markers = [], formName,
 }: RoomMapProps) {
   const plan = floorPlan(location);
   return (
@@ -53,6 +55,7 @@ export default function RoomMap({
             style={{ gridColumn: cell.col + 1, gridRow: cell.row + 1 }}
             data-here={here || undefined}
             data-in-range={(!here && dist <= lureRange) || undefined}
+            data-distracted={distracted.includes(cell.room) || undefined}
             data-door-right={cell.doorRight || undefined}
             data-door-down={cell.doorDown || undefined}
           >

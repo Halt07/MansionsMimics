@@ -26,6 +26,8 @@ export default async function ({ gameData: m, ok }) {
   const every = hill.starfall.every;
   ok(!m.starfallDue(hill, 0) && !m.starfallDue(hill, every - 1) && m.starfallDue(hill, every) && m.starfallDue(hill, every * 2), `a star falls every ${every} turns`);
   ok(!m.starfallDue(m.LOCATIONS.find((l) => l.id === 'manor'), every), 'and nowhere else');
+  ok(m.turnsUntil(every, 0) === every && m.turnsUntil(every, every - 1) === 1 && m.turnsUntil(every, every) === every,
+    'the banner counts down to the next one, and starts over once it falls');
 
   // The party heads for it, one room per Wait
   ok(m.stepToward(hill, 'Observatory Dome', 'Stone Circle') === 'Stair Hall', 'from the dome, the way to the stones is down the stairs');

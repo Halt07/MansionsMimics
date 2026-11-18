@@ -1,17 +1,7 @@
-3. Split the screen into components (medium size, low logic risk)
-
-- About 800 lines of the component are screen layout. Natural pieces: the status sidebar, the location banners, the action bar, and the setup, room-select, evolve and game-over screens.
-- The banners stand out: sinking, snowbound, starfall, fireworks, procession and rival status are six near-identical blocks of about 150 lines. A LocationBanners component would hold them.
-
 4. Party movement into gameData.ts (medium)
 
 - doWaitTurn decides where everyone walks: random wandering, heading for a star, or the next house.
 - That decision could be a pure moveParty(...) returning the moves, with the component only logging and applying them. Every location twist so far has added a branch here, so tests would pay off.
-
-5. One end-of-turn step for all location twists (medium)
-
-- advanceShip has turned into the general end-of-turn handler for four locations, each with its own turn counter (ship, frost, star, fair).
-- One counter and an endOfTurn step, perhaps a useLocationHazards hook, would make the next seasonal location a one-place change.
 
 6. Break up resolveStrike (large, highest risk)
 
