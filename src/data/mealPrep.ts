@@ -5,9 +5,17 @@
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { TIER_ORDER, type CombatStat, type PerceptionSense, type Tier } from "./vocabulary";
-import { SICKNESSES, type Sickness } from "./mimicData";
+import { SICKNESSES, type Form, type Sickness } from "./mimicData";
 import { ADVENTURER_TEMPLATES, type AdventurerGroupId, type AdventurerTemplate, type CompanionOption, type PartyMember } from "./adventurerData";
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
+import {
+  BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, tickBurns, type RareLocationState,
+} from "./gameData";
+import {
+  addRealMonster, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
+} from "./events";
+import { STAT_CAP, getActiveForm, withCount, withFormUsed } from "./stats";
+import { withDiscovered } from "./codex";
 
 // ============================================================
 // COMPANIONS
@@ -17,9 +25,9 @@ const COMPANION_PERCEPTION: Readonly<Record<PerceptionSense, number>> = {
 };
 
 /** Picks one companion option, honoring each option's `weight`. */
-export function pickCompanionOption(options: readonly CompanionOption[]): CompanionOption {
+export function pickCompanionOption(options: readonly CompanionOption[], random: () => number = Math.random): CompanionOption {
   const total = options.reduce((sum, o) => sum + (o.weight ?? 1), 0);
-  let r = Math.random() * total;
+  let r = random() * total;
   for (const o of options) {
     r -= o.weight ?? 1;
     if (r < 0) return o;
@@ -30,6 +38,7 @@ export function pickCompanionOption(options: readonly CompanionOption[]): Compan
 /** Builds the party member for an adventurer's companion. */
 export function createCompanion(
   owner: Pick<AdventurerTemplate, "name">, option: CompanionOption, id: string, room: RoomName,
+  random: () => number = Math.random,
 ): PartyMember {
   return {
     name: owner.name + option.nameSuffix,
@@ -47,7 +56,7 @@ export function createCompanion(
     lootTraits: option.lootTraits ?? [],
     partialLoot: option.partialLoot ?? ["scruff of fur", "a claw", "patch of hide"],
     wholeMealMass: option.wholeMealMass,
-    behavior: option.behavior && Math.random() < (option.behaviorChance ?? 1) ? option.behavior : undefined,
+    behavior: option.behavior && random() < (option.behaviorChance ?? 1) ? option.behavior : undefined,
     apReward: option.ap,
     id,
     isAlive: true,
@@ -80,10 +89,10 @@ export function isTemplateEligible(
 // Returns true if the current hunt should be a Bounty Hunt (mimic hunters specifically targeting the mimic)
 // Chance scales with mass. At mass 30+ it becomes possible; at 36+ it is more common.
 // ============================================================
-export function shouldTriggerBountyHunt(mass: number): boolean {
+export function shouldTriggerBountyHunt(mass: number, random: () => number = Math.random): boolean {
   if (mass < 30) return false;
-  if (mass >= 36) return Math.random() < 0.50; // 50% chance at mass 36+
-  return Math.random() < 0.25; // 25% chance at mass 30-35
+  if (mass >= 36) return random() < 0.50; // 50% chance at mass 36+
+  return random() < 0.25; // 25% chance at mass 30-35
 }
 
 // ============================================================
@@ -162,9 +171,9 @@ export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass
     // Companion/familiar injection
     if (t.companion && random() < t.companion.chance) {
       const opts = t.companion.options;
-      const chosen = pickCompanionOption(opts);
+      const chosen = pickCompanionOption(opts, random);
       const companionRoom = location.rooms[Math.floor(random() * location.rooms.length)];
-      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom));
+      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom, random));
     }
   });
 
@@ -199,14 +208,14 @@ export function spawnSmallCreatures(loc: HuntLocation, random: () => number = Ma
 }
 
 // Build a Bounty Hunt party — all members are mimic hunter variants
-export function generateBountyParty(location: HuntLocation, mimicMass: number): PartyMember[] {
+export function generateBountyParty(location: HuntLocation, mimicMass: number, random: () => number = Math.random): PartyMember[] {
   const hunterTemplates = ADVENTURER_TEMPLATES.filter(t => t.isMimicHunter);
   const size = mimicMass >= 36 ? 4 : 3;
-  const shuffled = [...hunterTemplates].sort(() => Math.random() - 0.5);
+  const shuffled = [...hunterTemplates].sort(() => random() - 0.5);
   const members: PartyMember[] = [];
   for (let i = 0; i < size; i++) {
     const t = shuffled[i % shuffled.length];
-    const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
+    const room = location.rooms[Math.floor(random() * location.rooms.length)];
     members.push({
       ...t,
       id: `bounty_${Date.now()}_${i}`,
@@ -221,12 +230,89 @@ export function generateBountyParty(location: HuntLocation, mimicMass: number): 
 }
 
 // Returns a sickness if all stats are capped and the random roll hits (20% chance)
-export function rollForSickness(character: Pick<MimicCharacter, CombatStat>): Sickness | null {
-  const STAT_CAP = 6;
+export function rollForSickness(character: Pick<MimicCharacter, CombatStat>, random: () => number = Math.random): Sickness | null {
   const allCapped = character.plausibility >= STAT_CAP &&
                     character.adhesion >= STAT_CAP &&
                     character.patience >= STAT_CAP;
   if (!allCapped) return null;
-  if (Math.random() > 0.20) return null;
-  return SICKNESSES[Math.floor(Math.random() * SICKNESSES.length)];
+  if (random() > 0.20) return null;
+  return SICKNESSES[Math.floor(random() * SICKNESSES.length)];
+}
+
+// ============================================================
+// STARTING A HUNT
+// Everything decided when the mimic picks its room: who's there (an ordinary party, or bounty
+// hunters after it), rival mimics, small creatures, a sickness, and how suspicious everyone is
+// from the start. Pure: Game writes the log, sets up the hunt and saves `changes`.
+// ============================================================
+/** Chance of a lone rival mimic in an ordinary hunt (Greater tier and up). */
+export const RIVAL_CHANCE = 1 / 7;
+/** The smallest tier a lone rival comes after. */
+export const RIVAL_MIN_TIER: Tier = "Greater";
+/** Bounty hunters know the mimic is there: they start at this suspicion. */
+export const BOUNTY_START_SUSPICION = 4;
+/** Starting suspicion never reaches 10 (that would end the hunt before it begins). */
+export const MAX_START_SUSPICION = 9;
+
+export interface HuntStart {
+  /** Hunters after the mimic itself, instead of an ordinary party. */
+  bounty: boolean;
+  party: PartyMember[];
+  rivals: RivalMimic[];
+  creatures: SmallCreature[];
+  sickness: Sickness | null;
+  suspicion: number;
+  /** The form the mimic starts in. */
+  startForm: Form | null;
+  /** Burned here before, and/or burned in this shape before (each adds BURN_SUSPICION). */
+  burned: { location: boolean; form: boolean };
+  /** A rare location that just came within reach (for the next hunts). */
+  openedRare: HuntLocation | null;
+  /** What to save on the character now: burns tick down, the rare location, discovery, hunt counts. */
+  changes: Partial<MimicCharacter>;
+}
+
+/** Set up a hunt at `location`, with the mimic waiting in `room`. */
+export function startHunt(
+  character: MimicCharacter, location: HuntLocation, room: RoomName, random: () => number = Math.random,
+): HuntStart {
+  // Rare locations tell their own story: no bounty hunters or rival mimics there
+  const bounty = !location.rare && shouldTriggerBountyHunt(character.mass, random);
+  const rivalTier = TIER_ORDER.indexOf(character.tier) >= TIER_ORDER.indexOf(RIVAL_MIN_TIER);
+  const lone = !bounty && !location.rare && rivalTier && random() < RIVAL_CHANCE;
+  // The Mimic Nest always holds its nest (Elder included); elsewhere maybe a lone rival
+  const rivals = location.rivalNest
+    ? placeRivals(location, room, rollNestKinds(location, random), random)
+    : lone ? placeRivals(location, room, ["lone"], random) : [];
+
+  // The party: warmed up if it's snowed in; on Spell or Sweet Street maybe a real monster among
+  // them, everyone in costume, a few walking together and the rest spread out
+  const base = withWarmth(bounty
+    ? generateBountyParty(location, character.mass, random)
+    : generateParty(location, character.tier, character.mass, random), location, random);
+  const withMonster = bounty ? base : addRealMonster(base, location, character.tier, character.mass, random);
+  const dressed = location.costumes ? dressParty(withMonster, random) : withMonster;
+  const party = location.procession ? placeProcession(dressed, location, room, random) : dressed;
+  const creatures = spawnSmallCreatures(location, random);
+  const sickness = rollForSickness(character, random);
+
+  // Burned places and shapes (from being found out before) start the hunt under suspicion
+  const startForm = getActiveForm(character);
+  const burned = { location: locationBurn(character, location.id) > 0, form: !!startForm && formBurn(character, startForm.id) > 0 };
+  const burnSuspicion = (burned.location ? BURN_SUSPICION : 0) + (burned.form ? BURN_SUSPICION : 0);
+  const suspicion = Math.min((bounty ? BOUNTY_START_SUSPICION : 0) + burnSuspicion, MAX_START_SUSPICION);
+
+  // Rare locations: visiting closes the open one, hunting elsewhere uses up one of its hunts,
+  // and if none was open there's a chance one opens for the next hunts
+  const rare: { state: RareLocationState | null; opened: HuntLocation | null } =
+    advanceRareLocation(character.rareLocation, location.id, character.tier, character.mass, random);
+  const changes: Partial<MimicCharacter> = {
+    rareLocation: rare.state,
+    ...tickBurns(character),                                           // burns count down a hunt
+    adventurersMet: withDiscovered(character.adventurersMet, party),   // the Codex: everyone here is met
+    formsUsed: withFormUsed(character.formsUsed, startForm?.id),
+    formHuntCounts: withCount(character.formHuntCounts, startForm?.id),
+    locationHuntCounts: withCount(character.locationHuntCounts, location.id),
+  };
+  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, changes };
 }

@@ -4,18 +4,14 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_FORMS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
-  shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions,
+  ALL_FORMS, TIER_CONFIG,
+  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod, getBehaviorReactions,
   needsPartialBites, hasMagic,
-  TITANIC_FEAST_GIANTS, advanceRareLocation, findDevotee, rollOfferings,
+  TITANIC_FEAST_GIANTS, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
-  sinkingWarning, pickTreasurePrize, escapeRoom,
-  withWarmth, chillParty, frozenMealAp, uneatenFrozen,
+  sinkingWarning, pickTreasurePrize, escapeRoom, chillParty, frozenMealAp, uneatenFrozen,
   starfallDue, STAR_FRAGMENT,
-  fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
-  dressParty, unmask, placeProcession, PRANKS, addRealMonster, isTheRealThing,
-  generateParty, spawnSmallCreatures, type SmallCreature,
+  fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay, unmask, PRANKS, isTheRealThing, type SmallCreature, startHunt, BOUNTY_START_SUSPICION,
   moveParty, moveCreatures, VANISHING_LINES,
   strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
   COLLAPSE_BONUS_AP, type Witnesses,
@@ -24,9 +20,8 @@ import {
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
-  withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
-  BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
-  placeRivals, rollNestKinds, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
+  withDiscovered, withFormUsed, withBiggestMeal, ACHIEVEMENTS,
+  BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type BehaviorContext, type BehaviorTrigger,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness,
@@ -215,57 +210,32 @@ export default function Game() {
     setRoomSelecting(true);
   };
 
+  // The mimic has picked its room: set up the hunt (see startHunt), write it up and begin
   const confirmRoom = (room: RoomName, loc: HuntLocation) => {
+    if (!character) return;
     beginTurn();
-    // Rare locations tell their own story: no bounty hunters or rival mimics there
-    const bounty = !loc.rare && shouldTriggerBountyHunt(character?.mass ?? 0);
-    // Rival mimic: ~1 in 7 chance, only on non-bounty hunts, Greater tier+
-    const tierIdx = TIER_ORDER.indexOf(character?.tier ?? "Minor");
-    const canHaveRival = !bounty && !loc.rare && tierIdx >= TIER_ORDER.indexOf("Greater");
-    const hasRival = canHaveRival && Math.random() < (1/7);
-    // The Mimic Nest always holds its nest (Elder included); elsewhere maybe a lone rival
-    const newRivals = loc.rivalNest
-      ? placeRivals(loc, room, rollNestKinds(loc))
-      : hasRival ? placeRivals(loc, room, ["lone"]) : [];
-
-    const generated = withWarmth(bounty
-      ? generateBountyParty(loc, character?.mass ?? 26)
-      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0), loc);
-    // Spell or Sweet Street: maybe a real monster among them, everyone in costume, a few walking
-    // together and the rest spread out
-    const withMonster = bounty ? generated : addRealMonster(generated, loc, character?.tier ?? "Minor", character?.mass ?? 0);
-    const dressed = loc.costumes ? dressParty(withMonster) : withMonster;
-    const newParty = loc.procession ? placeProcession(dressed, loc, room) : dressed;
-    const creatures = spawnSmallCreatures(loc);
+    const start = startHunt(character, loc, room);
+    const { party: newParty, rivals: newRivals, creatures, sickness, startForm, burned } = start;
     setMimicRoom(room);
     setParty(newParty);
     setSmallCreatures(creatures);
-    setIsBountyHunt(bounty);
+    setIsBountyHunt(start.bounty);
     setRivals(newRivals);
     setActionCount(0);
     setRoomSelecting(false);
-    // Roll for sickness (only when all stats are capped)
-    const sickness = character ? rollForSickness(character) : null;
     setCurrentSickness(sickness);
+    setSuspicion(start.suspicion);
 
-    // Burned locations and forms (from earlier discoveries) start the hunt under suspicion
-    const startForm = character ? getActiveForm(character) : null;
-    const burnLoc = character ? locationBurn(character, loc.id) > 0 : false;
-    const burnForm = character && startForm ? formBurn(character, startForm.id) > 0 : false;
-    const burnExtra = (burnLoc ? BURN_SUSPICION : 0) + (burnForm ? BURN_SUSPICION : 0);
-
-    if (bounty) {
-      setSuspicion(Math.min(4 + burnExtra, 9)); // Hunters know the mimic is here
-      addEvent("alert", `⚠️ A bounty has been placed on the mimic known as "${character?.name}". Hunters from across the realm have come to collect.`);
+    if (start.bounty) {
+      addEvent("alert", `⚠️ A bounty has been placed on the mimic known as "${character.name}". Hunters from across the realm have come to collect.`);
       addEvent("alert", `${newParty.length} bounty hunters are sweeping the ${loc.name} — they know exactly what they are looking for.`);
-      addEvent("alert", `The hunters enter with weapons drawn. Suspicion starts at 4.`);
+      addEvent("alert", `The hunters enter with weapons drawn. Suspicion starts at ${BOUNTY_START_SUSPICION}.`);
     } else {
-      setSuspicion(Math.min(burnExtra, 9));
       addEvent("info", `You settle into the ${room} of the ${loc.name}, perfectly still.`);
       addEvent("system", `${newParty.length} adventurers are exploring the premises.`);
     }
-    if (burnLoc) addEvent("alert", `🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
-    if (burnForm && startForm) addEvent("alert", `🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
+    if (burned.location) addEvent("alert", `🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
+    if (burned.form && startForm) addEvent("alert", `🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
     if (sickness) {
       addEvent("alert", `⚠ You are afflicted with ${sickness.name}: ${sickness.description} ${Object.entries(sickness.penalties).map(([k, v]) => `–${v} ${k}`).join(", ")} this hunt.`);
     }
@@ -277,38 +247,26 @@ export default function Game() {
     }
     // Soulglass senses the strongest presence: the Elder if there is one
     const sensed = newRivals.find(r => r.kind === "elder") ?? newRivals[0];
-    if (sensed && hasMagic(character?.currentAppearance, "Soulglass")) {
+    if (sensed && hasMagic(character.currentAppearance, "Soulglass")) {
       addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
     newParty.forEach(a => addEvent("info", a.costume
       ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
       : `${a.name} (${a.type}) — currently in the ${a.location}.`));
-
-    // Rare locations: visiting closes the open one, hunting elsewhere uses up one of its hunts,
-    // and if none was open there's a chance one opens for the next hunts
-    if (character) {
-      const { state, opened } = advanceRareLocation(character.rareLocation, loc.id, character.tier, character.mass);
-      if (opened) {
-        addEvent("system", `✦ Whispers reach you of somewhere new: ${opened.name}. It won't stay within reach for long.`);
-      }
-      // Burns count down one hunt each time a hunt starts
-      const burns = tickBurns(character);
-      // Codex discovery: everyone in this party has now been met
-      const adventurersMet = withDiscovered(character.adventurersMet, newParty);
-      const formsUsed = withFormUsed(character.formsUsed, startForm?.id);
-      const formHuntCounts = withCount(character.formHuntCounts, startForm?.id);
-      const locationHuntCounts = withCount(character.locationHuntCounts, loc.id);
-      const startUpdates = { rareLocation: state, ...burns, adventurersMet, formsUsed, formHuntCounts, locationHuntCounts };
-      setCharacter(prev => prev ? { ...prev, ...startUpdates } : prev);
-      persist(startUpdates);
-      huntRecordedRef.current = false;
-      stillTurnsRef.current = 0;
-      catsThatKnowRef.current = new Set();
-      peakSuspicionRef.current = 0;
-      huntMealRef.current = null;
-      huntSeedRef.current = Math.floor(Math.random() * 2 ** 31);
+    if (start.openedRare) {
+      addEvent("system", `✦ Whispers reach you of somewhere new: ${start.openedRare.name}. It won't stay within reach for long.`);
     }
+
+    setCharacter(prev => prev ? { ...prev, ...start.changes } : prev);
+    persist(start.changes);
+    // A fresh hunt: reset what's tracked per hunt
+    huntRecordedRef.current = false;
+    stillTurnsRef.current = 0;
+    catsThatKnowRef.current = new Set();
+    peakSuspicionRef.current = 0;
+    huntMealRef.current = null;
+    huntSeedRef.current = Math.floor(Math.random() * 2 ** 31);
     setPhase("hunt");
   };
 
