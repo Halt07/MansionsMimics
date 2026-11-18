@@ -7,6 +7,7 @@
 //   ./stats      effective stats, mass decay, achievements and lifetime stats
 //   ./codex      what the Codex knows (adventurers met and eaten, hunting grounds found)
 //   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
+//   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole)
 // The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
 // re-exports all of it, so callers can keep importing everything from gameData.
 // ============================================================
@@ -39,6 +40,7 @@ export * from "./events";
 export * from "./stats";
 export * from "./codex";
 export * from "./mealPrep";
+export * from "./strike";
 
 // ============================================================
 // ROOM HELPERS
@@ -111,10 +113,10 @@ export function wanderCreature(
 // ============================================================
 // DICE ENGINE
 // ============================================================
-export function rollDice(numDice: number): number {
+export function rollDice(numDice: number, random: () => number = Math.random): number {
   let total = 0;
   for (let i = 0; i < numDice; i++) {
-    total += Math.floor(Math.random() * 6) + 1;
+    total += Math.floor(random() * 6) + 1;
   }
   return total;
 }
@@ -554,9 +556,9 @@ export function escapeRoom(
   return options.length > 0 ? options[Math.floor(random() * options.length)] : fromRoom;
 }
 
-export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember): CheckResult {
-  const mimicRoll = rollDice(adhesion);
-  const advRoll = rollDice(strikeResistDice(adventurer));
+export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember, random: () => number = Math.random): CheckResult {
+  const mimicRoll = rollDice(adhesion, random);
+  const advRoll = rollDice(strikeResistDice(adventurer), random);
   const success = mimicRoll >= advRoll;
   return {
     success, mimicRoll, advRoll, suspicionChange: 0, detectedFlaws: [],
@@ -589,15 +591,15 @@ export function needsPartialBites(
 }
 
 /** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
-export function getBiteAp(target: Pick<PartyMember, "group">): number {
-  return target.group === "giantKin" ? 2 + Math.floor(Math.random() * 2) : 1;
+export function getBiteAp(target: Pick<PartyMember, "group">, random: () => number = Math.random): number {
+  return target.group === "giantKin" ? 2 + Math.floor(random() * 2) : 1;
 }
 
 /** Maybe learn a real material from a bite. Returns a material name or null. */
-export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Material | null {
+export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">, random: () => number = Math.random): Material | null {
   const mats = target.lootMaterials || [];
-  if (mats.length === 0 || Math.random() >= BITE_MATERIAL_CHANCE) return null;
-  return mats[Math.floor(Math.random() * mats.length)];
+  if (mats.length === 0 || random() >= BITE_MATERIAL_CHANCE) return null;
+  return mats[Math.floor(random() * mats.length)];
 }
 
 // ============================================================

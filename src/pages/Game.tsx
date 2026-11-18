@@ -5,11 +5,10 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_CONFIG, TIER_ORDER,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
-  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
+  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions,
-  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
-  TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
+  needsPartialBites, hasMagic,
+  TITANIC_FEAST_GIANTS, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen,
@@ -18,6 +17,8 @@ import {
   dressParty, unmask, placeProcession, PRANKS, addRealMonster, isTheRealThing,
   generateParty, spawnSmallCreatures, type SmallCreature,
   moveParty, moveCreatures, VANISHING_LINES,
+  strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
+  COLLAPSE_BONUS_AP, type Witnesses,
   STAT_CAP, getActiveForm, effectiveStats, lureRange,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
@@ -25,7 +26,7 @@ import {
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
-  placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
+  placeRivals, rollNestKinds, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type BehaviorContext, type BehaviorTrigger, type CombatStat,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness, type Tier,
@@ -673,307 +674,234 @@ export default function Game() {
       : a));
   };
 
-  // Resolves a Strike. Returns whether it took a turn (false if there was nothing to strike).
+  // Resolves a Strike (see strike.ts for what happens; this writes it up and applies it).
+  // Returns whether it took a turn (false if there was nothing to strike).
   const resolveStrike = (): boolean => {
     if (!character || !location) return false;
     stillTurnsRef.current = 0;
-    // Bonesteel: +1 die on strike rolls
-    const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
+    const dice = strikeDice(effectiveAdhesion, character.currentAppearance);
 
-    // Check if a rival mimic can be struck (revealed + in same room)
-    const rivalTarget = rivalInRoom(rivals, mimicRoom);
-    if (rivalTarget?.revealed && mimicRoom) {
+    // A revealed rival mimic in the room comes first
+    const rival = rivalInRoom(rivals, mimicRoom);
+    if (rival?.revealed && mimicRoom) {
       setActing(true);
-      setActionCount(0); // Strike resets action counter
-      const stats = RIVAL_STATS[rivalTarget.kind];
-      const roll = rollDice(strikeAdhesion);
-      const rivalRoll = rollDice(stats.dice);
-      if (roll >= rivalRoll) {
-        const apGained = stats.ap;
-        const updatedRivals = rivals.map(r => r.id === rivalTarget.id ? { ...r, consumed: true } : r);
-        if (rivalTarget.kind === "elder") {
-          addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${apGained} AP.`);
-          addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
-          // Easter egg: the porter she was searching for
-          if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
-        } else {
-          addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
-        }
-        setRivals(updatedRivals);
-        noteMeal(RIVAL_MEAL_NAMES[rivalTarget.kind], apGained);
-        const mimicsConsumed = character.mimicsConsumed + 1;
-        if (mimicsConsumed === CANNIBAL_MIMICS) {
-          addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
-        }
-        feed(character, apGained, {
-          mimicsConsumed,
-          biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rivalTarget.kind], apGained),
-        });
-      } else {
-        addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
-        // The rival escapes to a room away from you and the other rivals
-        const newRoom = rivalEscapeRoom(location, rivals, rivalTarget, mimicRoom);
-        setRivals(prev => prev.map(r => r.id === rivalTarget.id ? { ...r, revealed: false, room: newRoom } : r));
-        addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
-        raiseSuspicion(1);
-      }
+      setActionCount(0); // Strike resets the action counter
+      strikeRival(rival, dice, mimicRoom);
       setActing(false);
       return true;
     }
 
     // Under the fireworks, anyone in your room is staring at the sky: no need to lure them first
     const skyward = watchingSky(mimicRoom);
-    const attracted = party.filter(a => a.isAlive && !a.isConsumed &&
-      (a.isAttracted || (skyward && a.location === mimicRoom && !a.fled && !a.isDisappeared)));
-    if (attracted.length === 0) {
+    const candidates = strikeCandidates(party, mimicRoom, skyward);
+    if (candidates.length === 0) {
       addEvent("info", "No adventurers are close enough to strike. Use Allure first.");
       return false;
     }
     const form = getActiveForm(character);
     if (!form) { addEvent("alert", "No active form!"); return false; }
+    const target = pickStrikeTarget(candidates, location, mimicRoom, form, character.currentAppearance);
+    if (!target) return false;
     setActing(true);
     setActionCount(0); // Strike resets the action counter
-
-    // Pick target: closest to mimic, break ties by highest allure interest score
-    const scored = attracted.map(a => ({
-      adv: a,
-      dist: mimicRoom ? getRoomDistance(location, mimicRoom, a.location) : 0,
-      interest: calcAllureInterest(form, character.currentAppearance || {}, a),
-    }));
-    scored.sort((a, b) => a.dist - b.dist || b.interest - a.interest);
-    const target = scored[0].adv;
     if (!target.isAttracted) addEvent("info", `🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
-    // Killing the last adventurer ends the hunt in success, so it never adds suspicion
-    const othersRemain = party.some(a =>
-      a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
-    // Other party members in the mimic's room who could notice the attack (nobody, if they're
-    // all watching fireworks)
-    const inRoom = party.filter(a =>
-      a.id !== target.id && a.location === mimicRoom &&
-      a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared).length;
-    const lookingUp = watchingSky(mimicRoom);
-    const witnessCount = lookingUp ? 0 : inRoom;
+    const seen = strikeWitnesses(party, target, mimicRoom, skyward);
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
-    // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
-    if (needsPartialBites(character, target)) {
-      const isGiantTarget = target.group === "giantKin";
-      if (isGiantTarget && character.tier !== "Minor") {
-        addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
-      }
-      const biteResult = adhesionCheck(strikeAdhesion, form, target);
-      const bodyParts = isGiantTarget
-        ? ["ankle", "bootlace, thick as rope", "cloak hem", "calloused toe", "belt edge", "trailing sleeve"]
-        : ["hand", "forearm", "boot", "calf", "pant leg", "cloak edge", "shirt sleeve"];
-      const part = bodyParts[Math.floor(Math.random() * bodyParts.length)];
-      if (biteResult.success) {
-        addEvent("attack", `You latch onto ${target.name}'s ${part}!`);
-        const escapeRoll = rollDice(effectivePatience);
-        const pursuitRoll = rollDice(target.discipline + 1);
-        const held = escapeRoll >= pursuitRoll;
-        const hitsSoFar = (target.hitsTaken || 0) + 1;
-        const maxHits = target.constitution || 3;
-
-        if (held) {
-          // The scrap is flavor; sometimes the bite also teaches one of the target's real materials
-          const partialLoot = target.partialLoot || ["scrap of cloth"];
-          const scrap = partialLoot[Math.floor(Math.random() * partialLoot.length)];
-          const apGained = getBiteAp(target);
-          addEvent("consume", `You tear free with a ${scrap}! +${apGained} AP. ${target.name} staggers back. (${hitsSoFar}/${maxHits} hits taken)`);
-          const biteMaterial = rollBiteMaterial(target);
-          const newMaterial = biteMaterial && !character.learnedMaterials.includes(biteMaterial) ? biteMaterial : null;
-          if (newMaterial) addEvent("evolve", `New material absorbed from the bite: ${newMaterial}!`);
-          applyBehaviorReactions("feed", { excludeIds: [target.id] });
-          // A bite that wears the target down may make them collapse (killed) or flee
-          const finishing = hitsSoFar >= maxHits;
-          const flees = finishing && target.discipline >= 3 && Math.random() < 0.5;
-          const finalKill = finishing && !flees && !othersRemain;
-          if (!finalKill) {
-            // A bite is always noticed (+2); a crowd of 3+ others in the room raises it to +3
-            const gain = Math.max(2, consumeSuspicion(witnessCount));
-            raiseSuspicion(gain);
-            if (gain > 2) {
-              addEvent("alert", `${target.name}'s cry turns every head in the room. (+${gain} suspicion)`);
-            }
-          }
-          // The bite (and, if it finishes them off, the rest of the meal) is fed in one go below
-          let mealAp = apGained;
-          let mealChanges: Partial<MimicCharacter> = {
-            learnedMaterials: newMaterial ? [...character.learnedMaterials, newMaterial] : character.learnedMaterials,
-          };
-
-          if (finishing) {
-            // Dead or fled
-            if (flees && target.behavior === "elusive") {
-              boltAway(target, 2, hitsSoFar);
-            } else if (flees && location?.snowbound) {
-              addEvent("escape", `${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
-              boltAway(target, 3, hitsSoFar);
-            } else if (flees) {
-              addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
-              setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
-              raiseSuspicion(3);
-            } else {
-              addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
-              revealCostume(target);
-              mealAp += 2;
-              mealChanges = {
-                ...mealChanges,
-                adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
-                partyMembersEaten: character.partyMembersEaten + 1,
-              };
-              setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
-            }
-          } else {
-            setParty(prev => prev.map(a => a.id === target.id
-              ? { ...a, isAttracted: false, suspicion: a.suspicion + 2, hitsTaken: hitsSoFar }
-              : a));
-          }
-
-          feed(character, mealAp, mealChanges);
-        } else {
-          const hitsSoFarMissed = (target.hitsTaken || 0);
-          addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
-          raiseSuspicion(3);
-          if (hitsSoFarMissed + 1 >= (target.constitution || 3) && target.behavior === "elusive") {
-            boltAway(target, 4, hitsSoFarMissed + 1);
-          } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && location?.snowbound) {
-            addEvent("escape", `Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
-            boltAway(target, 4, hitsSoFarMissed + 1);
-          } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && Math.random() < 0.6) {
-            addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
-            setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, fled: true } : a));
-          } else {
-            setParty(prev => prev.map(a => a.id === target.id
-              ? { ...a, isAttracted: false, suspicion: a.suspicion + 4, hitsTaken: (a.hitsTaken || 0) + 1 }
-              : a));
-          }
-        }
-      } else {
-        addEvent("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
-        raiseSuspicion(2);
-        setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 2 } : a));
-      }
-      setActing(false);
-      return true;
-    }
-
-    // Full-size mimics: full consumption
-    const result = adhesionCheck(strikeAdhesion, form, target);
-    addEvent(result.success ? "attack" : "escape", result.narrative);
-
-    if (result.success) {
-      // Treasure carried by the target (e.g. the Captain's strongbox) goes down with them
-      const apGained = getApReward(target) + (target.treasure?.ap ?? 0);
-      const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
-      const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
-      // Variable learning: learn 1–all materials randomly (at least 1 if any exist)
-      const shuffledMats = [...allMaterials].sort(() => Math.random() - 0.5);
-      const shuffledTraits = [...allTraits].sort(() => Math.random() - 0.5);
-      const matsToLearn = shuffledMats.slice(0, Math.max(1, Math.floor(Math.random() * (shuffledMats.length + 1))));
-      const traitsToLearn = shuffledTraits.length > 0
-        ? shuffledTraits.slice(0, Math.random() < 0.6 ? 1 : shuffledTraits.length)
-        : [];
-      const learnedNewMats = matsToLearn.filter(m => !(character.learnedMaterials || []).includes(m));
-      const learnedNewTraits = traitsToLearn.filter(t => !(character.learnedTraits || []).includes(t));
-      // Treasure guarantees one prize the mimic doesn't know yet (counting this meal's learning)
-      const prize = target.treasure
-        ? pickTreasurePrize(target.treasure, [...character.learnedMaterials, ...matsToLearn], [...character.learnedTraits, ...traitsToLearn])
-        : null;
-      if (prize?.kind === "material") matsToLearn.push(prize.name);
-      if (prize?.kind === "trait") traitsToLearn.push(prize.name);
-      const sankWithShip = target.name === "Ship's Captain" && !character.downWithTheShipReached;
-
-      setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
-      addEvent("consume", `${target.name} has been consumed! +${apGained - (target.treasure?.ap ?? 0)} Assimilation Points.`);
-      revealCostume(target);
-      if (target.treasure) {
-        addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
-        if (prize) {
-          addEvent("evolve", `The ${target.treasure.noun ?? "strongbox"} ${target.treasure.noun ? "flares" : "cracks open"} inside you: ${prize.name}! New ${prize.kind} learned.`);
-        } else if (target.treasure.noun) {
-          addEvent("info", `The ${target.treasure.noun} glows a moment inside you, then fades. Nothing you haven't tasted before.`);
-        } else {
-          const shrugs = [
-            "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
-            "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
-            "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
-          ];
-          addEvent("info", shrugs[Math.floor(Math.random() * shrugs.length)]);
-        }
-      }
-      if (sankWithShip) {
-        addEvent("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
-      }
-      if (othersRemain) {
-        // A party member vanished; anyone still in the room watched it happen
-        const gain = consumeSuspicion(witnessCount);
-        raiseSuspicion(gain);
-        if (witnessCount === 0 && lookingUp && inRoom > 0) {
-          addEvent("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
-        } else if (witnessCount === 0) {
-          addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
-        } else {
-          // Witnesses catch only a glimpse: they know something happened here, not what or who
-          const glimpses = witnessCount === 1
-            ? [
-                `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
-                `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
-                `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
-              ]
-            : [
-                `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
-                `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
-                `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
-              ];
-          addEvent("alert", glimpses[Math.floor(Math.random() * glimpses.length)]);
-        }
-      } else {
-        addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
-      }
-      applyBehaviorReactions("feed", { excludeIds: [target.id] });
-      if (learnedNewMats.length > 0) addEvent("evolve", `New materials absorbed: ${learnedNewMats.join(", ")}!`);
-      if (learnedNewTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learnedNewTraits.join(", ")}!`);
-      if (learnedNewMats.length === 0 && learnedNewTraits.length === 0 && (matsToLearn.length > 0 || traitsToLearn.length > 0)) {
-        addEvent("info", `The prey yields nothing new — you already know these materials.`);
-      }
-
-      // Titanic Feast: track Cloud Kingdom giants consumed whole
-      const isFeastGiant = !target.isCompanion && TITANIC_FEAST_GIANTS.includes(target.name);
-      const giantsConsumedWhole = isFeastGiant && !character.giantsConsumedWhole.includes(target.name)
-        ? [...character.giantsConsumedWhole, target.name]
-        : character.giantsConsumedWhole;
-      const feastNowComplete = !character.titanicFeastReached && isTitanicFeastComplete(giantsConsumedWhole);
-      if (isFeastGiant && giantsConsumedWhole !== character.giantsConsumedWhole && !feastNowComplete) {
-        addEvent("evolve", `Giant consumed whole: ${giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
-      }
-      if (feastNowComplete) {
-        addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
-      }
-
-      noteMeal(target.name, apGained);
-      feed(character, apGained, {
-        learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...matsToLearn])],
-        learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
-        giantsConsumedWhole,
-        titanicFeastReached: character.titanicFeastReached || feastNowComplete,
-        downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
-        adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
-        partyMembersEaten: character.partyMembersEaten + 1,
-        biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, apGained),
-      });
-    } else {
-      const lungePenalty = hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4;
-      raiseSuspicion(lungePenalty);
-      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${lungePenalty} suspicion${lungePenalty < 4 ? ", softened by your Dragonhide" : ""})`);
-      if (target.behavior === "elusive") {
-        boltAway(target, 3);
-      } else {
-        setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 3 } : a));
-      }
-    }
+    // Minor mimics always bite; so does anyone facing a giant too big to swallow yet
+    if (needsPartialBites(character, target)) strikeBite(target, form, dice, seen);
+    else strikeSwallow(target, form, dice, seen, skyward);
     setActing(false);
     return true;
+  };
+
+  /** Strike a revealed rival mimic: devour it, or it slips away and hides again. */
+  const strikeRival = (rival: RivalMimic, dice: number, room: RoomName) => {
+    if (!character || !location) return;
+    const stats = RIVAL_STATS[rival.kind];
+    const outcome = resolveRivalStrike(rival, dice, location, rivals, room);
+    if (!outcome.devoured) {
+      addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
+      setRivals(prev => prev.map(r => r.id === rival.id ? { ...r, revealed: false, room: outcome.hidesIn } : r));
+      addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
+      raiseSuspicion(1);
+      return;
+    }
+    if (rival.kind === "elder") {
+      addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${outcome.ap} AP.`);
+      addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+      // Easter egg: the porter she was searching for
+      if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
+    } else {
+      addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${outcome.ap} AP — and its stolen prey.`);
+    }
+    setRivals(prev => prev.map(r => r.id === rival.id ? { ...r, consumed: true } : r));
+    noteMeal(RIVAL_MEAL_NAMES[rival.kind], outcome.ap);
+    const mimicsConsumed = character.mimicsConsumed + 1;
+    if (mimicsConsumed === CANNIBAL_MIMICS) {
+      addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
+    }
+    feed(character, outcome.ap, {
+      mimicsConsumed,
+      biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rival.kind], outcome.ap),
+    });
+  };
+
+  /** Update one party member. */
+  const patchMember = (id: string, patch: (a: PartyMember) => Partial<PartyMember>) =>
+    setParty(prev => prev.map(a => a.id === id ? { ...a, ...patch(a) } : a));
+
+  /** A partial bite: tear a piece off, and maybe wear them down until they collapse (or run). */
+  const strikeBite = (target: PartyMember, form: Form, dice: number, seen: Witnesses) => {
+    if (!character || !location) return;
+    if (target.group === "giantKin" && character.tier !== "Minor") {
+      addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
+    }
+    const bite = resolveBite(target, {
+      dice, patience: effectivePatience, form, knownMaterials: character.learnedMaterials, snowbound: !!location.snowbound, witnesses: seen,
+    });
+    if (!bite.latched) {
+      addEvent("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
+      raiseSuspicion(bite.suspicion);
+      patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion }));
+      return;
+    }
+    addEvent("attack", `You latch onto ${target.name}'s ${bite.part}!`);
+
+    if (!bite.held) {
+      addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
+      raiseSuspicion(bite.suspicion);
+      if (bite.ending === "bolts") boltAway(target, bite.targetSuspicion, bite.hits);
+      else if (bite.ending === "trapped") {
+        addEvent("escape", `Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
+        boltAway(target, bite.targetSuspicion, bite.hits);
+      } else if (bite.ending === "flees") {
+        addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
+        patchMember(target.id, () => ({ isAlive: false, fled: true }));
+      } else {
+        patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+      }
+      return;
+    }
+
+    const biteAp = bite.ending === "collapses" ? bite.ap - COLLAPSE_BONUS_AP : bite.ap;
+    addEvent("consume", `You tear free with a ${bite.scrap}! +${biteAp} AP. ${target.name} staggers back. (${bite.hits}/${bite.maxHits} hits taken)`);
+    if (bite.material) addEvent("evolve", `New material absorbed from the bite: ${bite.material}!`);
+    applyBehaviorReactions("feed", { excludeIds: [target.id] });
+    if (bite.loudCry) addEvent("alert", `${target.name}'s cry turns every head in the room. (+${bite.crySuspicion} suspicion)`);
+
+    // The bite (and, if it finishes them off, the rest of the meal) is fed in one go below
+    let changes: Partial<MimicCharacter> = {
+      learnedMaterials: bite.material ? [...character.learnedMaterials, bite.material] : character.learnedMaterials,
+    };
+    if (bite.ending === "bolts") {
+      boltAway(target, bite.targetSuspicion, bite.hits);
+    } else if (bite.ending === "trapped") {
+      addEvent("escape", `${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
+      boltAway(target, bite.targetSuspicion, bite.hits);
+    } else if (bite.ending === "flees") {
+      addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
+      patchMember(target.id, () => ({ isAlive: false, isConsumed: false, fled: true }));
+    } else if (bite.ending === "collapses") {
+      addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
+      revealCostume(target);
+      changes = {
+        ...changes,
+        adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+        partyMembersEaten: character.partyMembersEaten + 1,
+      };
+      patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+    } else {
+      patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+    }
+    raiseSuspicion(bite.suspicion);
+    feed(character, bite.ap, changes);
+  };
+
+  /** Swallow them whole, treasure and all (or lunge, miss, and be seen). */
+  const strikeSwallow = (target: PartyMember, form: Form, dice: number, seen: Witnesses, skyward: boolean) => {
+    if (!character) return;
+    const meal = resolveSwallow(target, character, { dice, form, witnesses: seen });
+    addEvent(meal.swallowed ? "attack" : "escape", meal.narrative);
+
+    if (!meal.swallowed) {
+      raiseSuspicion(meal.suspicion);
+      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${meal.suspicion} suspicion${meal.suspicion < 4 ? ", softened by your Dragonhide" : ""})`);
+      if (meal.bolts) boltAway(target, 3);
+      else patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + 3 }));
+      return;
+    }
+
+    const { learning } = meal;
+    const total = meal.ap + meal.treasureAp;
+    patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+    addEvent("consume", `${target.name} has been consumed! +${meal.ap} Assimilation Points.`);
+    revealCostume(target);
+    if (target.treasure) {
+      addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
+      if (learning.prize) {
+        addEvent("evolve", `The ${target.treasure.noun ?? "strongbox"} ${target.treasure.noun ? "flares" : "cracks open"} inside you: ${learning.prize.name}! New ${learning.prize.kind} learned.`);
+      } else if (target.treasure.noun) {
+        addEvent("info", `The ${target.treasure.noun} glows a moment inside you, then fades. Nothing you haven't tasted before.`);
+      } else {
+        const shrugs = [
+          "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
+          "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
+          "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
+        ];
+        addEvent("info", shrugs[Math.floor(Math.random() * shrugs.length)]);
+      }
+    }
+    if (meal.sankWithShip) addEvent("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
+
+    if (seen.othersRemain) {
+      // A party member vanished; anyone still in the room watched it happen
+      const gain = meal.suspicion;
+      raiseSuspicion(gain);
+      if (seen.witnesses === 0 && skyward && seen.inRoom > 0) {
+        addEvent("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
+      } else if (seen.witnesses === 0) {
+        addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
+      } else {
+        // Witnesses catch only a glimpse: they know something happened here, not what or who
+        const glimpses = seen.witnesses === 1
+          ? [
+              `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
+              `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
+              `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
+            ]
+          : [
+              `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
+              `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
+              `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
+            ];
+        addEvent("alert", glimpses[Math.floor(Math.random() * glimpses.length)]);
+      }
+    } else {
+      addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
+    }
+    applyBehaviorReactions("feed", { excludeIds: [target.id] });
+    if (learning.newMaterials.length > 0) addEvent("evolve", `New materials absorbed: ${learning.newMaterials.join(", ")}!`);
+    if (learning.newTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learning.newTraits.join(", ")}!`);
+    if (learning.newMaterials.length === 0 && learning.newTraits.length === 0 && (learning.materials.length > 0 || learning.traits.length > 0)) {
+      addEvent("info", `The prey yields nothing new — you already know these materials.`);
+    }
+    if (meal.feastProgress) {
+      addEvent("evolve", `Giant consumed whole: ${meal.giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
+    }
+    if (meal.feastComplete) addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
+
+    noteMeal(target.name, total);
+    feed(character, total, {
+      learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...learning.materials])],
+      learnedTraits: [...new Set([...(character.learnedTraits || []), ...learning.traits])],
+      giantsConsumedWhole: meal.giantsConsumedWhole,
+      titanicFeastReached: character.titanicFeastReached || meal.feastComplete,
+      downWithTheShipReached: character.downWithTheShipReached || meal.sankWithShip,
+      adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+      partyMembersEaten: character.partyMembersEaten + 1,
+      biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, total),
+    });
   };
 
   const doStrikeTurn = () => {
