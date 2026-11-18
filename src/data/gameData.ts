@@ -8,6 +8,7 @@
 //   ./codex      what the Codex knows (adventurers met and eaten, hunting grounds found)
 //   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
 //   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole)
+//   ./lure       luring adventurers in, and the stealth checks everyone who comes in faces
 // The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
 // re-exports all of it, so callers can keep importing everything from gameData.
 // ============================================================
@@ -41,6 +42,7 @@ export * from "./stats";
 export * from "./codex";
 export * from "./mealPrep";
 export * from "./strike";
+export * from "./lure";
 
 // ============================================================
 // ROOM HELPERS
@@ -402,7 +404,7 @@ export const ACTION_WARNING = 20;
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
 export function stealthCheck(
   plausibility: number, patience: number, formTier: Tier, mimicTier: Tier, form: Form, adventurer: PartyMember,
-  roomContextMod: Partial<RoomContextMod> = {}, appearance: AppearanceLike = {},
+  roomContextMod: Partial<RoomContextMod> = {}, appearance: AppearanceLike = {}, random: () => number = Math.random,
 ): CheckResult {
   // Gravecloth: undead take the mimic for one of their own
   if (adventurer.type === "Undead" && hasMagic(appearance, "Gravecloth")) {
@@ -428,15 +430,15 @@ export function stealthCheck(
   else if (plausibility <= 3) flawCount = 1;
 
   const detectedFlaws: string[] = [];
-  const shuffled = [...form.flawProfiles].sort(() => Math.random() - 0.5).slice(0, flawCount);
+  const shuffled = [...form.flawProfiles].sort(() => random() - 0.5).slice(0, flawCount);
   shuffled.forEach((flaw) => {
     // Void Marble: acoustic flaws can't be spotted
     if (flaw.type === "acoustic" && hasMagic(appearance, "Void Marble")) return;
     // Flaw types that are also senses get the adventurer's bonus for that sense
     const affinityBonus = isPerceptionSense(flaw.type) ? adventurer.perceptionAffinity[flaw.type] : 0;
     const scentPenalty = flaw.type === "environmental" && hasMagic(appearance, "Direwolf Pelt") ? 1 : 0;
-    const advRollResult = rollDice(Math.max(1, adventurer.discipline + affinityBonus - scentPenalty - hunterPenalty));
-    const mimicRollResult = rollDice(stealthDice);
+    const advRollResult = rollDice(Math.max(1, adventurer.discipline + affinityBonus - scentPenalty - hunterPenalty), random);
+    const mimicRollResult = rollDice(stealthDice, random);
     if (advRollResult > mimicRollResult) detectedFlaws.push(flaw.description);
   });
 
@@ -444,14 +446,14 @@ export function stealthCheck(
   const magicalAffinity = adventurer.perceptionAffinity.magical || 0;
   if (magicalAffinity >= 2) {
     wornMagic(appearance).forEach((mat) => {
-      const advRollResult = rollDice(Math.max(1, adventurer.discipline + magicalAffinity - hunterPenalty));
-      const mimicRollResult = rollDice(stealthDice);
+      const advRollResult = rollDice(Math.max(1, adventurer.discipline + magicalAffinity - hunterPenalty), random);
+      const mimicRollResult = rollDice(stealthDice, random);
       if (advRollResult > mimicRollResult) detectedFlaws.push(`Faint arcane residue clings to it (${mat})`);
     });
   }
 
-  const mimicRoll = rollDice(stealthDice);
-  const advRoll = rollDice(Math.max(1, adventurer.discipline + adventurer.suspicion - hunterPenalty));
+  const mimicRoll = rollDice(stealthDice, random);
+  const advRoll = rollDice(Math.max(1, adventurer.discipline + adventurer.suspicion - hunterPenalty), random);
   const success = mimicRoll >= advRoll;
   const suspicionChange = detectedFlaws.length + (success ? 0 : 1);
 
@@ -508,7 +510,7 @@ export function calcAllureInterest(
 // roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
 export function allureCheck(
   baseAllure: number, plausibility: number, form: Form, currentAppearance: AppearanceLike, adventurer: PartyMember,
-  roomContextMod: Partial<RoomContextMod> = {},
+  roomContextMod: Partial<RoomContextMod> = {}, random: () => number = Math.random,
 ): AllureResult {
   // Base mimic allure dice = baseAllure + form modifier + room context
   let allureDice = baseAllure + (form.baseAllureModifier || 0) + (roomContextMod.allure || 0);
@@ -527,8 +529,8 @@ export function allureCheck(
 
   // Adventurer resists with discipline + suspicion (wariness makes luring harder)
   const resistDice = adventurer.discipline + Math.ceil(adventurer.suspicion / 2);
-  const mimicRoll = rollDice(allureDice);
-  const advRoll = rollDice(resistDice);
+  const mimicRoll = rollDice(allureDice, random);
+  const advRoll = rollDice(resistDice, random);
   const success = mimicRoll >= advRoll;
 
   return {

@@ -1,8 +1,7 @@
 1. Move the remaining turn logic out of Game.tsx (high value, one piece at a time)
 
-- Game.tsx is still about 1,600 lines, with 29 useStates and 13 refs. Its biggest handlers still mix rules with logging, as resolveStrike did.
-- Lure and stealth (doAllureTurn and runStealthChecks, about 120 lines): the same treatment as resolveStrike.
-- Each is self-contained, like the strike refactor, with its own tests.
+- Game.tsx is now about 1,475 lines (from about 2,500), with 29 useStates and 13 refs.
+- Starting a hunt, upgrading, the Lure and stealth checks are now done (startHunt, applyUpgrade, resolveLure, resolveStealth). What's left in Game.tsx is mostly applying results and writing the log, which 2 addresses.
 
 2. Hold the hunt as one state object (bigger, builds on 1)
 
@@ -35,4 +34,4 @@
 - Don't just run `npm audit fix --force`: some of its suggested fixes are downgrades (vite 8 → 6.2.7, @vitejs/plugin-react 6 → 5.2.0), and the Tailwind fix is a major upgrade (3 → 4).
 - The likely path: first try plain `npm audit fix` and updating vite, @vitejs/plugin-react and typescript-eslint within their current majors, then re-run the audit. Tailwind 4 is a real migration (its config moves into CSS), so it's best treated as its own task, with a visual check of every screen afterwards.
 
-Suggested order: 1, piece by piece (upgrading and starting a hunt are done; the Lure next), which leads into 2 and 3.
+Suggested order: 2, then 3.

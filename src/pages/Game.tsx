@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_CONFIG,
-  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod, getBehaviorReactions,
+  rollDice, maxTargetForChance, consumeSuspicion, getAdjacentRooms, getBehaviorReactions,
   needsPartialBites, hasMagic,
   TITANIC_FEAST_GIANTS, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
@@ -16,10 +16,11 @@ import {
   strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
   COLLAPSE_BONUS_AP, type Witnesses,
   STAT_CAP, getActiveForm, effectiveStats, lureRange, applyUpgrade, type UpgradeChoice,
-  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine, disguiseOf,
+  resolveLure, resolveStealth, DUPLICATE_ROOM_SUSPICION,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, disguiseOf,
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
+  VARIANT_FORMS, isVariantUnlocked, formTier, formsStillAllowed, today, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
   type BehaviorContext, type BehaviorTrigger,
@@ -425,48 +426,28 @@ export default function Game() {
     setPhase("gameover");
   };
 
-  // Runs stealth checks for a given list of adventurers entering/in the mimic's room.
-  // Returns total suspicion gained so caller can apply it.
-  const runStealthChecks = (advs: PartyMember[], currentMimicRoom: RoomName | null): number => {
+  // Stealth checks for adventurers who just came into the mimic's room (see resolveStealth):
+  // writes them up, and returns the suspicion for the caller to raise.
+  const runStealthChecks = (arrivals: PartyMember[], room: RoomName | null): number => {
     const form = getActiveForm(character);
-    if (!form || !character || !location || !currentMimicRoom || advs.length === 0) return 0;
-
-    const roomMod = getRoomContextMod(form.id, location.id, currentMimicRoom);
+    if (!form || !character || !location || !room || arrivals.length === 0) return 0;
+    const stealth = resolveStealth(arrivals, {
+      location, mimicRoom: room, form, mimic: character, plausibility: effectivePlausibility, patience: effectivePatience,
+    });
+    const { roomMod } = stealth;
     if (roomMod.plausibility !== 0) {
       addEvent(roomMod.plausibility > 0 ? "stealth" : "alert",
         `Room context: ${roomMod.note} (Plausibility ${roomMod.plausibility > 0 ? "+" : ""}${roomMod.plausibility})`);
     }
-
-    let totalSuspicionChange = 0;
-    advs.forEach(adv => {
-      // Now and then, the newcomer acts out one of its quirks on your form
-      const quirk = quirkLine(adv, form.name);
+    for (const { member, quirk, result } of stealth.checks) {
       if (quirk) addEvent("info", quirk);
-      const result = stealthCheck(effectivePlausibility, effectivePatience, effectiveFormTier(form, formTier(character)), formTier(character), form, adv, roomMod, character.currentAppearance);
-      if (result.detectedFlaws.length > 0) {
-        result.detectedFlaws.forEach(f => addEvent("flaw", `${adv.name} notices: "${f}"`));
-      }
+      result.detectedFlaws.forEach(f => addEvent("flaw", `${member.name} notices: "${f}"`));
       addEvent(result.success ? "stealth" : "alert", result.narrative);
-      if (!result.success) totalSuspicionChange += result.suspicionChange;
-    });
-
-    // Duplicate room-type plausibility check (Grand/Apex room-forms only)
-    const form2 = getActiveForm(character);
-    // Variants of room-forms (Atheneum, Cathedral) count as their base room type
-    if (form2 && ROOM_FORM_IDS.has(formFamily(form2.id))) {
-      const formRoomType = FORM_ROOM_TYPE[formFamily(form2.id)];
-      if (formRoomType) {
-        const otherRooms = location.rooms.filter(r => r !== currentMimicRoom);
-        const hasDuplicate = otherRooms.some(r => r.toLowerCase().includes(formRoomType));
-        if (hasDuplicate) {
-          const duplicateRoom = otherRooms.find(r => r.toLowerCase().includes(formRoomType));
-          totalSuspicionChange += 2;
-          addEvent("alert", `There is already a ${duplicateRoom} in this location — a second one raises immediate suspicion! (+2)`);
-        }
-      }
     }
-
-    return totalSuspicionChange;
+    if (stealth.duplicateRoom) {
+      addEvent("alert", `There is already a ${stealth.duplicateRoom} in this location — a second one raises immediate suspicion! (+${DUPLICATE_ROOM_SUSPICION})`);
+    }
+    return stealth.suspicion;
   };
 
   // Let adventurers with special behaviors (see BEHAVIORS in gameData) react to an action.
@@ -551,6 +532,7 @@ export default function Game() {
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
   const getAllureRange = () => lureRange(character);
 
+  // Lure everyone in range (see resolveLure); whoever falls for it comes into your room
   const doAllureTurn = () => {
     if (!character || !location || !mimicRoom) return;
     beginTurn();
@@ -560,45 +542,23 @@ export default function Game() {
     const form = getActiveForm(character);
     if (!form) { addEvent("alert", "No active form!"); setActing(false); return; }
     const range = getAllureRange();
-    const roomMod = getRoomContextMod(form.id, location.id, mimicRoom);
+    const lure = resolveLure(party, { location, mimicRoom, range, form, mimic: character, plausibility: effectivePlausibility });
 
-    if (roomMod.allure !== 0) {
-      addEvent(roomMod.allure > 0 ? "allure" : "alert",
-        `Room context: ${roomMod.note} (Allure ${roomMod.allure > 0 ? "+" : ""}${roomMod.allure})`);
+    if (lure.roomMod.allure !== 0) {
+      addEvent(lure.roomMod.allure > 0 ? "allure" : "alert",
+        `Room context: ${lure.roomMod.note} (Allure ${lure.roomMod.allure > 0 ? "+" : ""}${lure.roomMod.allure})`);
     }
-
-    let anyInRange = false;
-    const newlyAttracted: PartyMember[] = [];
-    const updatedParty = party.map(adv => {
-      if (!adv.isAlive || adv.isConsumed || adv.isAttracted) return adv;
-      const dist = getRoomDistance(location, mimicRoom, adv.location);
-      if (dist > range) return adv;
-      anyInRange = true;
-      const result = allureCheck(
-        character.baseAllure, effectivePlausibility, form,
-        character.currentAppearance || {}, adv, roomMod
-      );
+    for (const { member, result, drawnIn } of lure.attempts) {
       addEvent(result.success ? "allure" : "info", result.narrative);
       if (result.disliked.length > 0) {
-        addEvent("info", `${adv.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
+        addEvent("info", `${member.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
       }
-      if (result.suspicionChange > 0) {
-        raiseSuspicion(result.suspicionChange);
-        addEvent("alert", `${adv.name} grows suspicious of the excessive allure!`);
-      }
-      if (result.success) {
-        // Move the adventurer into the mimic's room if they were in an adjacent room
-        const newLocation = adv.location !== mimicRoom ? mimicRoom : adv.location;
-        if (adv.location !== mimicRoom) {
-          addEvent("allure", `${adv.name} is drawn into the ${mimicRoom}...`);
-          newlyAttracted.push({ ...adv, location: newLocation });
-        }
-        return { ...adv, isAttracted: true, location: newLocation };
-      }
-      return adv;
-    });
+      if (result.suspicionChange > 0) addEvent("alert", `${member.name} grows suspicious of the excessive allure!`);
+      if (drawnIn) addEvent("allure", `${member.name} is drawn into the ${mimicRoom}...`);
+    }
+    if (lure.suspicion > 0) raiseSuspicion(lure.suspicion);
 
-    if (!anyInRange) {
+    if (lure.attempts.length === 0) {
       // If the rival is revealed and in the same room, give flavor instead of generic message
       const rivalHere = rivalInRoom(rivals, mimicRoom);
       if (rivalHere?.revealed) {
@@ -607,17 +567,15 @@ export default function Game() {
         addEvent("info", `No adventurers are within lure range (${range} rooms). Wait for them to wander closer.`);
       }
     }
-    setParty(updatedParty);
+    setParty(lure.party);
 
     // A Lure that draws nobody into the room still counts as holding still (the spiderweb)
-    countStillTurn(newlyAttracted.length > 0);
+    countStillTurn(lure.arrivals.length > 0);
 
-    // Run stealth check for newly attracted adventurers who just entered the room
-    if (newlyAttracted.length > 0) {
-      const suspDelta = runStealthChecks(newlyAttracted, mimicRoom);
-      if (suspDelta > 0) {
-        raiseSuspicion(suspDelta);
-      }
+    // Whoever came in faces a stealth check
+    if (lure.arrivals.length > 0) {
+      const suspDelta = runStealthChecks(lure.arrivals, mimicRoom);
+      if (suspDelta > 0) raiseSuspicion(suspDelta);
     }
     checkActionLimit(newCount);
     endTurn();
