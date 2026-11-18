@@ -9,7 +9,7 @@
  * JSX and extensionless imports work exactly as they do in the browser build.
  *
  * Each test file default-exports `async function ({ gameData, db, storage, ok, log })`:
- *   gameData  the exports of src/components/game/gameData.ts
+ *   gameData  the exports of src/data/gameData.ts
  *   db        the exports of src/api/db.ts (backed by an in-memory localStorage)
  *   storage   the Map behind that localStorage, so a test can inspect or reset it
  *   ok(cond, message)  record a check
@@ -57,7 +57,7 @@ const server = await createServer({
 let totalPassed = 0;
 let totalFailed = 0;
 try {
-  const gameData = await server.ssrLoadModule('/src/components/game/gameData.ts');
+  const gameData = await server.ssrLoadModule('/src/data/gameData.ts');
   const db = await server.ssrLoadModule('/src/api/db.ts');
 
   const files = readdirSync(testsDir)

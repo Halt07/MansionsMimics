@@ -1,4 +1,4 @@
-import { ACHIEVEMENTS, type AchievementId, type LocationId } from "./gameData";
+import { ACHIEVEMENTS, type AchievementId, type LocationId } from "@/data/gameData";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 
 /** Colors for each achievement's banner, badge and Codex entry. */
@@ -14,6 +14,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   curiosityCabinet:  { text: "text-teal-300",   box: "bg-teal-400/10 border-teal-400/40" },
   festive:           { text: "text-pink-300",   box: "bg-pink-400/10 border-pink-400/40" },
   forAllSeasons:     { text: "text-lime-300",   box: "bg-lime-400/10 border-lime-400/40" },
+  seasonedTraveler:  { text: "text-orange-300", box: "bg-orange-400/10 border-orange-400/40" },
 };
 
 /**

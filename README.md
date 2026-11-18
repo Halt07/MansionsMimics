@@ -15,7 +15,7 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck`, `npm test`.
 
-The game's content lives in `src/components/game/`:
+The game's content and rules live in `src/data/` (the screens that show them are in `src/components/game/`):
 
 | File | Contains |
 |---|---|
@@ -24,13 +24,19 @@ The game's content lives in `src/components/game/`:
 | `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks |
 | `locationData.ts` | Hunting grounds, rooms, local creatures, room/form modifiers |
 | `roomLayouts.ts` | Where each location's rooms sit on the hunt's floor plan (doors and stairs follow from the room graph) |
-| `gameData.ts` | The rules (dice, checks, bites, spawning, behavior reactions…). Re-exports all of the above, so the rest of the app imports from here |
+| `holidays.ts` | Holiday seasons and the dates they run |
+| `gameData.ts` | The core rules (rooms, dice, forms, checks, bites, burns, party movement, behavior reactions…). Re-exports everything in this folder, so the rest of the app imports from here |
+| `events.ts` | Location events: rival mimics, the Sinking Ship, Devotion, and the seasonal locations' twists |
+| `stats.ts` | Effective stats, mass decay, achievements and lifetime stats |
+| `codex.ts` | What the Codex knows: adventurers met and eaten, hunting grounds found |
+| `mealPrep.ts` | Setting up a hunt: the party, companions, small creatures, sickness |
+| `huntReportData.ts` | The end-of-hunt report (Guild notices, verses, gossip, and location-specific versions) |
 
 Names are type-checked everywhere, so a misspelled material, trait, form, location or room is a compile error.
 
 ## Tests
 
-`npm test` runs the checks in `tests/` against the game rules (`src/components/game/gameData.ts`)
+`npm test` runs the checks in `tests/` against the game rules (`src/data/gameData.ts`)
 and the data layer (`src/api/db.ts`). Source files are loaded through Vite with the app's own
 config, so there is no separate build step.
 

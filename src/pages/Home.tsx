@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TIER_ORDER, TIER_CONFIG } from "../components/game/gameData";
+import { TIER_ORDER, TIER_CONFIG } from "@/data/gameData";
 import { AchievementBadges } from "../components/game/Achievements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

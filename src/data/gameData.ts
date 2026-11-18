@@ -1,29 +1,33 @@
 // ============================================================
 // MANSIONS & MIMICS — Game rules
-// The functions that run the game: dice, form availability, magic, checks, AP,
-// bites, spawning, behaviors, bounty hunts and sickness, plus anything not covered
-// by the data files. The data lives in ./mimicData, ./adventurerData and
-// ./locationData; this module re-exports all of it (and ./vocabulary) so callers
-// can keep importing everything from gameData.
+// The core rules of a hunt: rooms, dice, which forms a mimic can take, magic, the stealth,
+// allure and adhesion checks, bites, burns, where the party moves, and how adventurers react.
+// The rest lives alongside it:
+//   ./events     location events (rivals, the Sinking Ship, Devotion, the seasonal twists)
+//   ./stats      effective stats, mass decay, achievements and lifetime stats
+//   ./codex      what the Codex knows (adventurers met and eaten, hunting grounds found)
+//   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
+//   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole)
+// The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
+// re-exports all of it, so callers can keep importing everything from gameData.
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_MATERIALS, ALL_STARTING_TRAITS, LEARNABLE_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense, type CombatStat,
-  type GameEventType, type MagicMaterial, type Material,
-  type LearnableTrait, type PerceptionSense, type TeachableTrait, type Tier, type Trait, type UtilityTag,
+  ALL_MATERIALS, ALL_STARTING_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense,
+  type GameEventType, type MagicMaterial, type Material, type Tier, type Trait, type UtilityTag,
 } from "./vocabulary";
 import {
-  ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type SeasonalForm, type Sickness,
+  ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type SeasonalForm,
 } from "./mimicData";
-import {
-  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
+import { AP_REWARDS, BEHAVIORS, type AdventurerTemplate, type BehaviorId, type BehaviorInfo,
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
   LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
 } from "./locationData";
-import { HOLIDAYS, isInSeason, seasonStart, type HolidayId } from "./holidays";
+import { HOLIDAYS, isInSeason, seasonStart, today } from "./holidays";
+import { answersDoor, claimStar, nextHouse, rivalInRoom, type RivalMimic } from "./events";
 
 export * from "./vocabulary";
 export * from "./mimicData";
@@ -32,6 +36,11 @@ export * from "./locationData";
 export * from "./roomLayouts";
 export * from "./huntReportData";
 export * from "./holidays";
+export * from "./events";
+export * from "./stats";
+export * from "./codex";
+export * from "./mealPrep";
+export * from "./strike";
 
 // ============================================================
 // ROOM HELPERS
@@ -72,12 +81,42 @@ export function getAdjacentRooms(location: HuntLocation, room: RoomName): readon
 }
 
 // ============================================================
+// SMALL CREATURES WANDERING
+// Each turn a creature may wander to an adjacent room. Honeyamber (a magic material) makes
+// them wander more often, and half of those moves step toward the mimic's room.
+// ============================================================
+export const CREATURE_WANDER_CHANCE = 0.4;
+export const HONEYAMBER_WANDER_CHANCE = 0.5;
+/** Of the moves a creature makes under Honeyamber, how many head toward the mimic. */
+export const HONEYAMBER_LURE_CHANCE = 0.5;
+
+/**
+ * Where a small creature ends up this turn. Under Honeyamber, a move that heads for the mimic
+ * steps one room closer, or stays put if it's already in the mimic's room; any other move is
+ * to a random adjacent room (so a creature can still wander away from the mimic).
+ */
+export function wanderCreature(
+  location: HuntLocation, from: RoomName, mimicRoom: RoomName | null, honeyamber: boolean, rand: () => number = Math.random,
+): RoomName {
+  if (rand() >= (honeyamber ? HONEYAMBER_WANDER_CHANCE : CREATURE_WANDER_CHANCE)) return from;
+  const adjacent = getAdjacentRooms(location, from);
+  const candidates = adjacent.length > 0 ? adjacent : location.rooms;
+  if (honeyamber && mimicRoom && rand() < HONEYAMBER_LURE_CHANCE) {
+    if (from === mimicRoom) return from;
+    const here = getRoomDistance(location, from, mimicRoom);
+    const closer = candidates.filter(r => getRoomDistance(location, r, mimicRoom) < here);
+    if (closer.length) return closer[Math.floor(rand() * closer.length)];
+  }
+  return candidates[Math.floor(rand() * candidates.length)];
+}
+
+// ============================================================
 // DICE ENGINE
 // ============================================================
-export function rollDice(numDice: number): number {
+export function rollDice(numDice: number, random: () => number = Math.random): number {
   let total = 0;
   for (let i = 0; i < numDice; i++) {
-    total += Math.floor(Math.random() * 6) + 1;
+    total += Math.floor(random() * 6) + 1;
   }
   return total;
 }
@@ -329,55 +368,14 @@ export function getFormTierPenalties(formTier: Tier, mimicTier: Tier): { plausib
   };
 }
 
-// ============================================================
-// COMPANIONS
-// ============================================================
-const COMPANION_PERCEPTION: Readonly<Record<PerceptionSense, number>> = {
-  material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0,
-};
-
-/** Picks one companion option, honoring each option's `weight`. */
-export function pickCompanionOption(options: readonly CompanionOption[]): CompanionOption {
-  const total = options.reduce((sum, o) => sum + (o.weight ?? 1), 0);
-  let r = Math.random() * total;
-  for (const o of options) {
-    r -= o.weight ?? 1;
-    if (r < 0) return o;
-  }
-  return options[options.length - 1];
+/** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
+export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
+  return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);
 }
 
-/** Builds the party member for an adventurer's companion. */
-export function createCompanion(
-  owner: Pick<AdventurerTemplate, "name">, option: CompanionOption, id: string, room: RoomName,
-): PartyMember {
-  return {
-    name: owner.name + option.nameSuffix,
-    type: option.type,
-    group: option.group,
-    discipline: option.discipline,
-    baseSuspicion: 1,
-    suspicion: 1,
-    constitution: option.constitution,
-    interactionStyle: option.interactionStyle ?? "touch",
-    quirks: [option.description],
-    alluringQualities: { materials: [], traits: [], tags: [] },
-    perceptionAffinity: option.perceptionAffinity ?? COMPANION_PERCEPTION,
-    lootMaterials: option.lootMaterials ?? [],
-    lootTraits: option.lootTraits ?? [],
-    partialLoot: option.partialLoot ?? ["scruff of fur", "a claw", "patch of hide"],
-    wholeMealMass: option.wholeMealMass,
-    behavior: option.behavior && Math.random() < (option.behaviorChance ?? 1) ? option.behavior : undefined,
-    apReward: option.ap,
-    id,
-    isAlive: true,
-    isConsumed: false,
-    isAttracted: false,
-    isCompanion: true,
-    location: room,
-  };
-}
-
+// ============================================================
+// COMBAT ENGINE
+// ============================================================
 /** The result of a contested roll (stealth, allure or adhesion). */
 export interface CheckResult {
   success: boolean;
@@ -397,9 +395,6 @@ export interface AllureResult extends CheckResult {
   disliked: Quality[];
 }
 
-// ============================================================
-// COMBAT ENGINE
-// ============================================================
 // Hunt Action Timeframe
 export const ACTION_LIMIT = 50;
 export const ACTION_WARNING = 20;
@@ -561,9 +556,9 @@ export function escapeRoom(
   return options.length > 0 ? options[Math.floor(random() * options.length)] : fromRoom;
 }
 
-export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember): CheckResult {
-  const mimicRoll = rollDice(adhesion);
-  const advRoll = rollDice(strikeResistDice(adventurer));
+export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember, random: () => number = Math.random): CheckResult {
+  const mimicRoll = rollDice(adhesion, random);
+  const advRoll = rollDice(strikeResistDice(adventurer), random);
   const success = mimicRoll >= advRoll;
   return {
     success, mimicRoll, advRoll, suspicionChange: 0, detectedFlaws: [],
@@ -596,59 +591,15 @@ export function needsPartialBites(
 }
 
 /** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
-export function getBiteAp(target: Pick<PartyMember, "group">): number {
-  return target.group === "giantKin" ? 2 + Math.floor(Math.random() * 2) : 1;
+export function getBiteAp(target: Pick<PartyMember, "group">, random: () => number = Math.random): number {
+  return target.group === "giantKin" ? 2 + Math.floor(random() * 2) : 1;
 }
 
 /** Maybe learn a real material from a bite. Returns a material name or null. */
-export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">): Material | null {
+export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">, random: () => number = Math.random): Material | null {
   const mats = target.lootMaterials || [];
-  if (mats.length === 0 || Math.random() >= BITE_MATERIAL_CHANCE) return null;
-  return mats[Math.floor(Math.random() * mats.length)];
-}
-
-// ============================================================
-// CODEX DISCOVERY
-// The Codex only describes adventurers you've met, and only reveals what they like and
-// dislike once you've eaten one. Discoveries are pooled across all of your mimics.
-// ============================================================
-export type DiscoveryLevel = "unknown" | "met" | "eaten";
-
-export interface Discoveries {
-  met: ReadonlySet<string>;
-  eaten: ReadonlySet<string>;
-}
-
-/** Everything any of these mimics has met or eaten (eating counts as meeting). */
-export function pooledDiscoveries(
-  characters: readonly Pick<MimicCharacter, "adventurersMet" | "adventurersEaten">[],
-): Discoveries {
-  const eaten = new Set(characters.flatMap(c => c.adventurersEaten));
-  const met = new Set([...characters.flatMap(c => c.adventurersMet), ...eaten]);
-  return { met, eaten };
-}
-
-export function discoveryLevel(discoveries: Discoveries, name: string): DiscoveryLevel {
-  if (discoveries.eaten.has(name)) return "eaten";
-  if (discoveries.met.has(name)) return "met";
-  return "unknown";
-}
-
-/** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
-export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
-  return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);
-}
-
-/** Adds a form to the list of forms a mimic has hunted in. */
-export function withFormUsed(list: readonly FormId[], formId: FormId | null | undefined): FormId[] {
-  return formId && !list.includes(formId) ? [...list, formId] : [...list];
-}
-
-/** Adds template names to a discovery list (ignoring companions and anything that isn't a template). */
-export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion">[]): string[] {
-  const templateNames = new Set(ADVENTURER_TEMPLATES.map(t => t.name));
-  const added = members.filter(m => !m.isCompanion && templateNames.has(m.name)).map(m => m.name);
-  return [...new Set([...list, ...added])];
+  if (mats.length === 0 || random() >= BITE_MATERIAL_CHANCE) return null;
+  return mats[Math.floor(random() * mats.length)];
 }
 
 // ============================================================
@@ -722,10 +673,12 @@ export function meetsLocationRequirements(location: HuntLocation, tier: Tier, ma
   return true;
 }
 
-/** Whether a location appears on the hunting-ground screen right now. */
+/** Whether a location appears on the hunting-ground screen right now. Seasonal ones are open to every tier, in season. */
 export function isLocationAvailable(
   location: HuntLocation, tier: Tier, mass: number, rareLocation: RareLocationState | null | undefined,
+  date: Date = today(),
 ): boolean {
+  if (location.holiday) return isInSeason(location.holiday, date);
   if (location.rare && rareLocation?.id !== location.id) return false;
   return meetsLocationRequirements(location, tier, mass);
 }
@@ -752,347 +705,130 @@ export function advanceRareLocation(
 }
 
 // ============================================================
-// DEVOTION (The Hollow Reliquary)
-// A devoted adventurer left as the last one standing converts: it brings the mimic
-// OFFERING_COUNT small creatures from the location and leaves, ending the hunt.
+// PARTY MOVEMENT
+// Where everyone goes when the mimic Waits. Each adventurer still in the hunt usually wanders
+// to a neighboring room (half the time they stay put), unless the location says otherwise: a
+// fallen star draws everyone toward it, and a door-to-door procession walks the loop. Walking
+// into a hidden rival's room is the end of them. Pure: Game logs and applies the result.
 // ============================================================
-export const OFFERING_COUNT: readonly [number, number] = [4, 5];
+/** Chance an adventurer stays where it is on a Wait (when nothing is drawing it anywhere). */
+export const STAY_CHANCE = 0.5;
 
-const isStillHunting = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted;
-
-/** The devoted adventurer ready to convert: the only party member left, or null. */
-export function findDevotee(party: readonly PartyMember[]): PartyMember | null {
-  const remaining = party.filter(isStillHunting);
-  if (party.length < 2 || remaining.length !== 1) return null;
-  return remaining[0].behavior === "devotion" ? remaining[0] : null;
+/** What happened to one adventurer this turn: a step from one room to another, or into a rival. */
+export interface PartyStep {
+  member: PartyMember;
+  from: RoomName;
+  to: RoomName;
+  /** Walked into a hidden rival mimic's room and vanished (that rival's id). */
+  vanishedInto?: string;
 }
 
-/** The small creatures a convert brings as offerings. */
-export function rollOfferings(location: HuntLocation, random: () => number = Math.random): LocationCreature[] {
-  const pool = location.locationCreatures;
-  if (pool.length === 0) return [];
-  const [min, max] = OFFERING_COUNT;
-  const count = min + Math.floor(random() * (max - min + 1));
-  return Array.from({ length: count }, () => pool[Math.floor(random() * pool.length)]);
+export interface MoveResult {
+  party: PartyMember[];
+  /** Everyone who moved this turn, in party order. */
+  steps: PartyStep[];
+  /** Who walked into the mimic's room (they need stealth checks). */
+  arrivals: PartyMember[];
+  /** Picked up the star fragment this turn (it's gone from the room). */
+  claimedStar: PartyMember | null;
+  /** Door to door: whoever reached the mimic's house knocked. Answered = the mimic's shape had sweets. */
+  knock: { callers: PartyMember[]; answered: boolean } | null;
 }
 
-// ============================================================
-// RIVAL MIMICS
-// A lone rival can lurk in an ordinary hunt; the Mimic Nest holds several, one of
-// them the Elder. Rivals hide in separate rooms, eat adventurers who wander in, and
-// are exposed when the mimic moves into their room.
-// ============================================================
-export type RivalKind = "lone" | "nest" | "elder";
-
-export interface RivalMimic {
-  id: string;
-  kind: RivalKind;
-  room: RoomName;
-  revealed: boolean;
-  consumed: boolean;
-  /** It has eaten someone, so the player knows it's out there. */
-  clueGiven: boolean;
+export interface MoveContext {
+  mimicRoom: RoomName | null;
+  rivals: readonly RivalMimic[];
+  /** Where a fallen star fragment lies (Stargazers' Hill), if anywhere. */
+  starFragment?: RoomName | null;
+  /** The mimic's shape, for answering the door. */
+  form?: Pick<Form, "id" | "variantOf"> | null;
 }
 
-/** Dice a rival resists a Strike with, the AP it's worth, and what the log calls it. */
-export const RIVAL_STATS: Record<RivalKind, { dice: number; ap: number; name: string }> = {
-  lone:  { dice: 3, ap: 12, name: "rival mimic" },
-  nest:  { dice: 3, ap: 6,  name: "nest mimic" },
-  elder: { dice: 5, ap: 18, name: "Elder Mimic" },
-};
-
-/** The kinds of rival in a nest: the Elder plus 2–3 younger mimics (per the location's range). */
-export function rollNestKinds(location: HuntLocation, random: () => number = Math.random): RivalKind[] {
-  if (!location.rivalNest) return [];
-  const [min, max] = location.rivalNest;
-  const count = min + Math.floor(random() * (max - min + 1));
-  return ["elder", ...Array.from({ length: count - 1 }, (): RivalKind => "nest")];
+/** Where one adventurer heads this turn (or null to stay put without taking a step). */
+function destination(
+  adv: PartyMember, location: HuntLocation, star: RoomName | null, random: () => number,
+): RoomName | null {
+  if (!adv.isAlive || adv.isConsumed || isStationary(adv)) return null;
+  if (star) return adv.location === star ? null : stepToward(location, adv.location, star);
+  if (location.procession) return nextHouse(location, adv.location, random);
+  if (random() < STAY_CHANCE) return null;
+  const next = getAdjacentRooms(location, adv.location);
+  const options = next.length > 0 ? next : location.rooms;
+  return options[Math.floor(random() * options.length)];
 }
 
-/** Hides rivals in separate rooms, never the mimic's starting room. */
-export function placeRivals(
-  location: HuntLocation, startRoom: RoomName, kinds: readonly RivalKind[], random: () => number = Math.random,
-): RivalMimic[] {
-  const rooms = location.rooms.filter(r => r !== startRoom);
-  for (let i = rooms.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [rooms[i], rooms[j]] = [rooms[j], rooms[i]];
-  }
-  return kinds.slice(0, rooms.length).map((kind, i) => ({
-    id: `rival_${i}`, kind, room: rooms[i], revealed: false, consumed: false, clueGiven: false,
-  }));
-}
+/** Everyone takes their turn: wanders, heads for the star, or walks to the next house. */
+export function moveParty(
+  party: readonly PartyMember[], location: HuntLocation, ctx: MoveContext, random: () => number = Math.random,
+): MoveResult {
+  const star = location.starfall ? ctx.starFragment ?? null : null;
+  const steps: PartyStep[] = [];
+  const arrivals: PartyMember[] = [];
+  const moved = party.map(adv => {
+    const to = destination(adv, location, star, random);
+    if (to === null) return adv;
+    if (to !== adv.location) {
+      const lurker = rivalInRoom(ctx.rivals, to);
+      if (lurker) {
+        const gone = { ...adv, isAlive: false, isConsumed: false, isDisappeared: true, location: to };
+        steps.push({ member: gone, from: adv.location, to, vanishedInto: lurker.id });
+        return gone;
+      }
+    }
+    // Taking a step (even back to the same room) breaks whatever had them attracted
+    const next = { ...adv, location: to, isAttracted: false };
+    if (to !== adv.location) {
+      steps.push({ member: next, from: adv.location, to });
+      if (to === ctx.mimicRoom) arrivals.push(next);
+    }
+    return next;
+  });
 
-/** Where a rival that slipped a Strike hides next: away from the mimic and the other rivals. */
-export function rivalEscapeRoom(
-  location: HuntLocation, rivals: readonly RivalMimic[], escapee: RivalMimic, mimicRoom: RoomName,
-  random: () => number = Math.random,
-): RoomName {
-  const taken = new Set(rivals.filter(r => r.id !== escapee.id && !r.consumed).map(r => r.room));
-  const free = location.rooms.filter(r => r !== mimicRoom && !taken.has(r));
-  const options = free.length > 0 ? free : location.rooms.filter(r => r !== mimicRoom);
-  return options.length > 0 ? options[Math.floor(random() * options.length)] : escapee.room;
-}
+  // Whoever reaches the fragment first pockets it
+  const claimed = star ? claimStar(moved, star) : { party: moved, claimedBy: null };
 
-/** The uneaten rival hiding in a room, if any. */
-export function rivalInRoom(rivals: readonly RivalMimic[], room: RoomName | null | undefined): RivalMimic | undefined {
-  return rivals.find(r => !r.consumed && r.room === room);
-}
-
-/** Whether a nest hunt has been won (its Elder devoured). */
-export function isNestCleared(rivals: readonly RivalMimic[]): boolean {
-  return rivals.some(r => r.kind === "elder" && r.consumed);
-}
-
-// ============================================================
-// TREASURE
-// ============================================================
-export type TreasurePrize = { kind: "material"; name: Material } | { kind: "trait"; name: TeachableTrait };
-
-/** One random prize from the treasure that the mimic doesn't already know, or null if it knows them all. */
-export function pickTreasurePrize(
-  treasure: Pick<Treasure, "materials" | "traits">, knownMaterials: readonly Material[], knownTraits: readonly Trait[],
-  random: () => number = Math.random,
-): TreasurePrize | null {
-  const options: TreasurePrize[] = [
-    ...treasure.materials.filter(name => !knownMaterials.includes(name)).map(name => ({ kind: "material" as const, name })),
-    ...treasure.traits.filter(name => !knownTraits.includes(name)).map(name => ({ kind: "trait" as const, name })),
-  ];
-  return options.length > 0 ? options[Math.floor(random() * options.length)] : null;
-}
-
-// ============================================================
-// SINKING (The Sinking Ship)
-// Each turn (Wait, Lure, Relocate, Strike) brings the ship closer to going under. At
-// sinkingTurns the hunt ends: survivors take to the lifeboats and the mimic drifts ashore.
-// ============================================================
-/** The log warning for a sinking turn, if this turn has one. */
-export function sinkingWarning(totalTurns: number, turn: number): string | null {
-  const left = totalTurns - turn;
-  if (left <= 0) return null;
-  if (turn === Math.floor(totalTurns / 3)) return "🌊 Water sloshes across the lower decks. The hull groans under the strain.";
-  if (turn === Math.floor((totalTurns * 2) / 3)) return "🌊 The ship lists hard. Loose cargo slides, and the hold is half underwater.";
-  if (left <= 2) return `🌊 The deck is awash. ${left === 1 ? "One more turn" : "Two more turns"} before she goes under!`;
-  return null;
-}
-
-// ============================================================
-// PARTY ELIGIBILITY
-// Whether a template may appear in a party at this location for this mimic.
-// ============================================================
-export function isTemplateEligible(
-  template: AdventurerTemplate, location: HuntLocation, mimicTier: Tier | undefined, mimicMass: number | undefined,
-): boolean {
-  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
-  if (template.minTier && TIER_ORDER.indexOf(template.minTier) > tierIdx) return false;
-  if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
-  if (template.locations && !template.locations.includes(location.id)) return false;
-  if (location.exclusiveRoster && !template.locations?.includes(location.id)) return false;
-  // Giant-kin only appear in giant-realm locations
-  if (template.group === "giantKin" && !location.isGiantRealm) return false;
-  return true;
-}
-
-// ============================================================
-// ACHIEVEMENTS
-// The single list the Home badges, in-game banners and Codex all read from.
-// Each is earned from the saved character, so nothing else needs to track it.
-// ============================================================
-export const CULT_CONVERSIONS = 3;
-export const CANNIBAL_MIMICS = 10;
-
-export type AchievementId =
-  "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
-  "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons";
-
-type AchievementProgress = Pick<MimicCharacter,
-  "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
-  "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed">;
-
-/**
- * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
- * Disguise needs ALL_MATERIALS and LEARNABLE_TRAITS, so anything missing from these lists is a
- * content bug: it can never be learned (tests/achievements.test.mjs checks this).
- */
-export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<LearnableTrait> } {
-  const materials = new Set<Material>();
-  const traits = new Set<LearnableTrait>();
-  for (const t of ADVENTURER_TEMPLATES) {
-    t.lootMaterials.forEach(x => materials.add(x));
-    t.lootTraits.forEach(x => traits.add(x));
-    t.treasure?.materials.forEach(x => materials.add(x));
-    t.treasure?.traits.forEach(x => traits.add(x));
-    for (const o of t.companion?.options ?? []) {
-      o.lootMaterials?.forEach(x => materials.add(x));
-      o.lootTraits?.forEach(x => traits.add(x));
+  // Knock knock: only houses on the loop get knocked on (not the village green)
+  const onLoop = !!ctx.mimicRoom && !!(location.procession?.order as readonly string[] | undefined)?.includes(ctx.mimicRoom);
+  let result = claimed.party;
+  let knock: MoveResult["knock"] = null;
+  if (onLoop && arrivals.length > 0) {
+    const answered = answersDoor(location, ctx.form);
+    knock = { callers: arrivals, answered };
+    if (answered) {
+      const callers = new Set(arrivals.map(a => a.id));
+      result = result.map(a => callers.has(a.id) && a.isAlive ? { ...a, isAttracted: true } : a);
     }
   }
-  return { materials, traits };
+  return { party: result, steps, arrivals, claimedStar: claimed.claimedBy, knock };
 }
 
-export interface Achievement {
-  id: AchievementId;
-  name: string;
-  icon: string;
-  /** How to earn it (Codex). */
-  description: string;
-  /** Banner flavor text for a mimic that has earned it. */
-  flavor: (mimicName: string) => string;
-  isEarned: (character: AchievementProgress) => boolean;
-  /**
-   * Where its banner appears during a hunt (only while hunting there). Achievements without
-   * one have no in-game banner; every earned achievement is listed on the character sheet.
-   */
-  bannerLocation?: LocationId;
-}
-
-export const ACHIEVEMENTS: readonly Achievement[] = [
-  {
-    id: "hatboxToLegend", name: "From Hatbox to Legend", icon: "📦",
-    description: "Begin as a Minor mimic and evolve all the way to the Apex tier. Mimics that started at Lesser don't qualify.",
-    // A mimic named Hatbox was promised this at creation ("You'll be a legend in no time")
-    flavor: (n) => n.trim().toLowerCase() === "hatbox"
-      ? "Told you. Hatbox, the legend."
-      : `${n} was once small enough to overlook. No one makes that mistake anymore.`,
-    isEarned: (c) => c.hatboxToLegendReached,
-  },
-  {
-    id: "apexPeak", name: "Peak of the Apex", icon: "🏆",
-    description: "Reach mass 40 at the Apex tier.",
-    flavor: (n) => `${n} has consumed entire roads. Cartographers have stopped trying.`,
-    isEarned: (c) => c.apexPeakReached,
-  },
-  {
-    id: "titanicFeast", name: "Titanic Feast", icon: "🍖",
-    description: "Consume all five Cloud Kingdom giants whole — finishing one off with bites doesn't count.",
-    flavor: () => "The Cloud Kingdom's halls stand empty. Its lords, smiths and riders went in whole, and nothing came back out.",
-    isEarned: (c) => c.titanicFeastReached,
-    bannerLocation: "cloud_kingdom",
-  },
-  {
-    id: "downWithTheShip", name: "Down With the Ship", icon: "⚓",
-    description: "Swallow the Ship's Captain whole, strongbox and all, aboard The Sinking Ship.",
-    flavor: (n) => `The captain never did abandon ship. ${n} made sure of it.`,
-    isEarned: (c) => c.downWithTheShipReached,
-    bannerLocation: "sinking_ship",
-  },
-  {
-    id: "cultOfPersonality", name: "Cult of Personality", icon: "🕯️",
-    description: `Convert ${CULT_CONVERSIONS} devotees to your worship at The Hollow Reliquary.`,
-    flavor: (n) => `Candles burn for ${n} in three different hands now. The faithful are learning the hymns.`,
-    isEarned: (c) => c.conversions >= CULT_CONVERSIONS,
-    bannerLocation: "hollow_reliquary",
-  },
-  {
-    id: "cannibal", name: "Cannibal", icon: "🦷",
-    description: `Devour ${CANNIBAL_MIMICS} other mimics — nest mimics, Elders and lone rivals all count.`,
-    flavor: (n) => `${n} has eaten its own kind ${CANNIBAL_MIMICS} times over. The others have learned to hide from it.`,
-    isEarned: (c) => c.mimicsConsumed >= CANNIBAL_MIMICS,
-    bannerLocation: "mimic_nest",
-  },
-  {
-    id: "connoisseur", name: "Connoisseur", icon: "🍽️",
-    description: "Eat at least one of every kind of adventurer (companions don't count). The Codex tracks your progress.",
-    flavor: (n) => `There is no one left that ${n} hasn't tasted. It has opinions about all of them.`,
-    isEarned: (c) => ADVENTURER_TEMPLATES.every(t => c.adventurersEaten.includes(t.name)),
-  },
-  {
-    id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
-    description: "Learn every material and every learnable trait (surface, symbolic, condition, and scent) in the game.",
-    flavor: (n) => `${n} can be anything, made of anything. Nobody will ever be sure of a chair again.`,
-    isEarned: (c) => ALL_MATERIALS.every(x => c.learnedMaterials.includes(x)) &&
-      LEARNABLE_TRAITS.every(x => knowsTrait(c, x)),
-  },
-  {
-    id: "curiosityCabinet", name: "Curiosity Cabinet", icon: "🗝️",
-    description: "Hunt in every variant form at least once — the shapes you can only take after learning something new.",
-    flavor: (n) => `${n} has been a whispering grimoire, a weeping portrait and a grinning gargoyle. Collectors would pay a fortune — if they knew.`,
-    isEarned: (c) => VARIANT_FORMS.every(f => c.formsUsed.includes(f.id as FormId)),
-  },
-  {
-    id: "festive", name: "Festive", icon: "🎊",
-    description: "Hunt in a seasonal form: one of the shapes that only appear around a holiday.",
-    flavor: (n) => `${n} spent the holiday as part of the decorations. Nobody noticed. Nobody ever does.`,
-    isEarned: (c) => SEASONAL_FORMS.some(f => c.formsUsed.includes(f.id)),
-  },
-  {
-    id: "forAllSeasons", name: "A Mimic for All Seasons", icon: "🗓️",
-    description: "Hunt in at least one seasonal form from every holiday season of the year.",
-    flavor: (n) => `${n} has been a lantern, an egg, a bonfire and a gift. The calendar has learned to fear it.`,
-    isEarned: (c) => (Object.keys(HOLIDAYS) as HolidayId[]).every(h =>
-      SEASONAL_FORMS.some(f => f.holiday === h && c.formsUsed.includes(f.id))),
-  },
+/** The log line when someone walks into a hidden rival's room and doesn't come out. */
+export const VANISHING_LINES: readonly ((name: string, room: RoomName) => string)[] = [
+  (n, r) => `${n} heads toward the ${r}... and does not emerge.`,
+  (n, r) => `A muffled sound comes from the ${r}. ${n} never reappears.`,
+  (n, r) => `${n} rounds the corner into the ${r}. Silence follows.`,
+  (n, r) => `You hear ${n}'s footsteps enter the ${r} — then stop abruptly.`,
+  (n, r) => `Something in the ${r} has ${n}'s attention. They do not return.`,
 ];
 
-// ============================================================
-// LIFETIME STATS (character sheet)
-// ============================================================
-export interface LifetimeStats {
-  huntsSurvived: number;
-  huntsFailed: number;
-  huntsTotal: number;
-  /** Adventurers, companions and rival mimics eaten. */
-  entitiesEaten: number;
-  formsUsed: number;
-  closestCall: number;
-  biggestMeal: { name: string; ap: number } | null;
-  lifetimeApEarned: number;
-  favoriteForm: { name: string; hunts: number } | null;
-  favoriteHuntingGround: { name: string; hunts: number } | null;
-}
-
-/** The key with the highest count (first one wins a tie), or null if nothing has been counted. */
-export function mostCounted<K extends string>(counts: Partial<Record<K, number>>): { key: K; count: number } | null {
-  let best: { key: K; count: number } | null = null;
-  for (const [key, count] of Object.entries(counts) as [K, number][]) {
-    if (count > 0 && (!best || count > best.count)) best = { key, count };
-  }
-  return best;
-}
-
-/** Adds one to a key's count. */
-export function withCount<K extends string>(counts: Partial<Record<K, number>>, key: K | null | undefined): Partial<Record<K, number>> {
-  if (!key) return { ...counts };
-  return { ...counts, [key]: (counts[key] ?? 0) + 1 };
-}
-
-/** The bigger of the current biggest meal and this one. */
-export function withBiggestMeal(
-  current: { name: string; ap: number } | null, name: string, ap: number,
-): { name: string; ap: number } | null {
-  return !current || ap > current.ap ? { name, ap } : current;
-}
-
-export function lifetimeStats(c: Pick<MimicCharacter,
-  "huntsSurvived" | "huntsFailed" | "partyMembersEaten" | "mimicsConsumed" | "formsUsed" | "closestCall" |
-  "biggestMeal" | "lifetimeApEarned" | "formHuntCounts" | "locationHuntCounts">): LifetimeStats {
-  const form = mostCounted(c.formHuntCounts);
-  const place = mostCounted(c.locationHuntCounts);
-  return {
-    huntsSurvived: c.huntsSurvived,
-    huntsFailed: c.huntsFailed,
-    huntsTotal: c.huntsSurvived + c.huntsFailed,
-    entitiesEaten: c.partyMembersEaten + c.mimicsConsumed,
-    formsUsed: c.formsUsed.length,
-    closestCall: c.closestCall,
-    biggestMeal: c.biggestMeal,
-    lifetimeApEarned: c.lifetimeApEarned,
-    favoriteForm: form ? { name: ALL_FORMS.find(f => f.id === form.key)?.name ?? form.key, hunts: form.count } : null,
-    favoriteHuntingGround: place ? { name: LOCATIONS.find(l => l.id === place.key)?.name ?? place.key, hunts: place.count } : null,
-  };
-}
-
-// ============================================================
-// FROM HATBOX TO LEGEND
-// Achievement for a mimic that began as a Minor and evolved all the way to Apex.
-// Starting at Lesser doesn't count, and reaching Apex is enough (Peak of the Apex
-// separately rewards reaching mass 40).
-// ============================================================
-export function earnsHatboxToLegend(
-  character: Pick<MimicCharacter, "startingType" | "hatboxToLegendReached">, newTier: Tier,
-): boolean {
-  return newTier === "Apex" && character.startingType === "Minor" && !character.hatboxToLegendReached;
+/**
+ * The small creatures' turn: each may wander (toward the mimic, sometimes, with Honeyamber; see
+ * wanderCreature), but never out of the rooms it keeps to. Returns them, and which ones just
+ * crept into the mimic's room.
+ */
+export function moveCreatures<C extends Pick<LocationCreature, "rooms"> & { location: RoomName; isConsumed: boolean }>(
+  creatures: readonly C[], location: HuntLocation, mimicRoom: RoomName | null, honeyamber: boolean, random: () => number = Math.random,
+): { creatures: C[]; arrivals: C[] } {
+  const arrivals: C[] = [];
+  const moved = creatures.map(c => {
+    if (c.isConsumed) return c;
+    const room = wanderCreature(location, c.location, mimicRoom, honeyamber, random);
+    if (room === c.location || (c.rooms && !c.rooms.includes(room))) return c;
+    const next = { ...c, location: room };
+    if (room === mimicRoom) arrivals.push(next);
+    return next;
+  });
+  return { creatures: moved, arrivals };
 }
 
 // ============================================================
@@ -1185,9 +921,17 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bBoar\b/, "🐗"],
   [/\bFox\b/, "🦊"],
   [/\bFrog\b/, "🐸"],
-  [/\bRabbit\b/, "🐇"],
+  [/\b(Rabbit|Hare)\b/, "🐇"],
+  [/\bReindeer\b/, "🦌"],
+  [/\bOwl\b/, "🦉"],
+  [/\bHedgehog\b/, "🦔"],
+  [/\bGoose\b/, "🪿"],
+  [/\bToad\b/, "🐸"],
+  [/\bPig\b/, "🐖"],
+  [/\bSquirrel\b/, "🐿️"],
+  [/\bMoth\b/, "🦋"],
   [/\bOtter\b/, "🦦"],
-  [/\bWeasel\b/, "🦡"], // no weasel emoji; the badger is family
+  [/\b(Weasel|Ermine)\b/, "🦡"], // no weasel emoji; the badger is family
   [/\bCrab\b/, "🦀"],
   [/\bLamb\b/, "🐑"],
   [/\bWarhorse\b/, "🐎"],
@@ -1217,19 +961,6 @@ export function quirkLine(
 ): string | null {
   if (!adventurer.appliedQuirk || random() >= QUIRK_LINE_CHANCE) return null;
   return adventurer.appliedQuirk.replaceAll("{name}", adventurer.name).replaceAll("{form}", formName);
-}
-
-// ============================================================
-// TITANIC FEAST
-// Achievement for consuming every giant of the Cloud Kingdom Outpost whole
-// (finishing one off with bites doesn't count).
-// ============================================================
-export const TITANIC_FEAST_GIANTS: readonly string[] = ADVENTURER_TEMPLATES
-  .filter(t => t.group === "giantKin" && t.locations?.includes("cloud_kingdom"))
-  .map(t => t.name);
-
-export function isTitanicFeastComplete(consumedWhole: readonly string[]): boolean {
-  return TITANIC_FEAST_GIANTS.every(name => consumedWhole.includes(name));
 }
 
 // ============================================================
@@ -1289,7 +1020,7 @@ export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean
 const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
 
 /** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
-function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
+export function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
   if (fromRoom === targetRoom) return fromRoom;
   const options = getAdjacentRooms(location, fromRoom);
   if (options.length === 0) return fromRoom;
@@ -1385,48 +1116,4 @@ export function getBehaviorReactions(
   });
 
   return result;
-}
-
-// ============================================================
-// LEGENDARY REPUTATION
-// Returns true if the current hunt should be a Bounty Hunt (mimic hunters specifically targeting the mimic)
-// Chance scales with mass. At mass 30+ it becomes possible; at 36+ it is more common.
-// ============================================================
-export function shouldTriggerBountyHunt(mass: number): boolean {
-  if (mass < 30) return false;
-  if (mass >= 36) return Math.random() < 0.50; // 50% chance at mass 36+
-  return Math.random() < 0.25; // 25% chance at mass 30-35
-}
-
-// Build a Bounty Hunt party — all members are mimic hunter variants
-export function generateBountyParty(location: HuntLocation, mimicMass: number): PartyMember[] {
-  const hunterTemplates = ADVENTURER_TEMPLATES.filter(t => t.isMimicHunter);
-  const size = mimicMass >= 36 ? 4 : 3;
-  const shuffled = [...hunterTemplates].sort(() => Math.random() - 0.5);
-  const members: PartyMember[] = [];
-  for (let i = 0; i < size; i++) {
-    const t = shuffled[i % shuffled.length];
-    const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-    members.push({
-      ...t,
-      id: `bounty_${Date.now()}_${i}`,
-      suspicion: t.baseSuspicion,
-      isAlive: true,
-      isConsumed: false,
-      isAttracted: false,
-      location: room,
-    });
-  }
-  return members;
-}
-
-// Returns a sickness if all stats are capped and the random roll hits (20% chance)
-export function rollForSickness(character: Pick<MimicCharacter, CombatStat>): Sickness | null {
-  const STAT_CAP = 6;
-  const allCapped = character.plausibility >= STAT_CAP &&
-                    character.adhesion >= STAT_CAP &&
-                    character.patience >= STAT_CAP;
-  if (!allCapped) return null;
-  if (Math.random() > 0.20) return null;
-  return SICKNESSES[Math.floor(Math.random() * SICKNESSES.length)];
 }

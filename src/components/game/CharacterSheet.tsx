@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "./gameData";
+import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
 import HolidayBadge from "./HolidayBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

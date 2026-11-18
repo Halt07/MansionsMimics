@@ -8,7 +8,7 @@ import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
   canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, effectiveFormTier, getSeasonalForms, today,
   type Form, type Material, type StartingType,
-} from "../components/game/gameData";
+} from "@/data/gameData";
 import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

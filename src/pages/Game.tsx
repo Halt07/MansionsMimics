@@ -4,61 +4,61 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
-  rollDice, rollDiceVerbose, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
-  ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
-  shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
-  isTemplateEligible, getBehaviorReactions, isStationary,
-  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
-  TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
-  isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
+  ALL_FORMS, TIER_CONFIG, TIER_ORDER,
+  rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
+  shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions,
+  needsPartialBites, hasMagic,
+  TITANIC_FEAST_GIANTS, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  ALL_MATERIALS, LEARNABLE_TRAITS, type Material,
+  withWarmth, chillParty, frozenMealAp, uneatenFrozen,
+  starfallDue, STAR_FRAGMENT,
+  fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
+  dressParty, unmask, placeProcession, PRANKS, addRealMonster, isTheRealThing,
+  generateParty, spawnSmallCreatures, type SmallCreature,
+  moveParty, moveCreatures, VANISHING_LINES,
+  strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
+  COLLAPSE_BONUS_AP, type Witnesses,
+  STAT_CAP, getActiveForm, effectiveStats, lureRange,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
-  isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
+  isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, dropExpiredSeasonalForms, SEASONAL_FORMS,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
-  placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
-  type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
-  type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
+  placeRivals, rollNestKinds, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
+  type BehaviorContext, type BehaviorTrigger, type CombatStat,
+  type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness, type Tier,
   ACTION_LIMIT,
-  ACTION_WARNING,
-} from "../components/game/gameData";
+  // DEV ONLY (achievement-preview branch): the dev buttons below
+  rollDiceVerbose, ADVENTURER_TEMPLATES, ALL_MATERIALS, LEARNABLE_TRAITS, LOCATIONS, SEASONAL_FORMS, HOLIDAYS, type Material, type HolidayId,
+} from "@/data/gameData";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import DiceRollDisplay from "../components/game/DiceRollDisplay";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Eye, Zap, RefreshCw, Shield, Home, BookOpen, Layers, Palette, MoveRight
-} from "lucide-react";
-import StatBar from "../components/game/StatBar";
-import SuspicionMeter from "../components/game/SuspicionMeter";
+import { Eye, Home, BookOpen } from "lucide-react";
 import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
-import DiceRollDisplay from "../components/game/DiceRollDisplay";
-import BurnBadge from "../components/game/BurnBadge";
-import RoomMap from "../components/game/RoomMap";
-import HuntReport from "../components/game/HuntReport";
-import HolidayBadge from "../components/game/HolidayBadge";
-import { buildHuntReport } from "../components/game/huntReportData";
+import { buildHuntReport } from "@/data/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
+import { HuntContext, type HuntState } from "../components/game/hunt/HuntContext";
+import StatusPanel from "../components/game/hunt/StatusPanel";
+import LocationBanners from "../components/game/hunt/LocationBanners";
+import PartyCard from "../components/game/hunt/PartyCard";
+import { LocationSelect, RoomSelect } from "../components/game/hunt/LocationSelect";
+import HuntHeader from "../components/game/hunt/HuntHeader";
+import ActionBar from "../components/game/hunt/ActionBar";
+import { FormSwitcher, MealsHere, RelocatePanel } from "../components/game/hunt/HuntPanels";
+import { EvolveScreen, GameOverScreen, HuntOverPanel, type UpgradeChoice } from "../components/game/hunt/EndScreens";
 
 // ── Game-screen state types ──
 type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
 type GameoverReason = "discovered" | "abandoned";
-type UpgradeChoice = "mass" | CombatStat;
-
-/** A small creature (rat, crow…) wandering the location during a hunt. */
-interface SmallCreature extends LocationCreature {
-  uid: string;
-  isConsumed: boolean;
-  location: RoomName;
-}
 
 /** TEMPORARY: a sample Strike for the dev dice preview (your Adhesion vs. the Elusive Captain's 5 dice). */
 interface DicePreview {
@@ -70,98 +70,16 @@ const rollDicePreview = (adhesion: number): DicePreview => ({
   target: rollDiceVerbose(5),
 });
 
+/** DEV ONLY: the debug date (localStorage "mm.debugDate", month-day) that today() pretends it is. */
+const DEBUG_DATE_KEY = "mm.debugDate";
+const readDebugDate = (): string => { try { return localStorage.getItem(DEBUG_DATE_KEY) ?? ""; } catch { return ""; } };
+
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
 /** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
 const CEREMONY_STEP_MS = 2000;
 /** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
 const WAIT_MIN_CHANCE = 0.4;
-const STAT_CAP = 6;
-
-// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
-// Everyone else — including tier-gated monsters — fills the common slots.
-const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
-
-function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: number): PartyMember[] {
-  const [min, max] = location.partySize;
-  const size = min + Math.floor(Math.random() * (max - min + 1));
-  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
-
-  const eligible = ADVENTURER_TEMPLATES.filter(t => isTemplateEligible(t, location, mimicTier, mimicMass));
-  // Some locations guarantee certain adventurers a place (e.g. the Reliquary's pilgrim)
-  const required = eligible.filter(t => location.alwaysIncludes?.includes(t.name));
-  const pool = eligible.filter(t => !required.includes(t));
-  const common = pool.filter(t => !ELITE_GROUPS.includes(t.group));
-  const elite = pool.filter(t => ELITE_GROUPS.includes(t.group));
-
-  // Exclusive-roster locations draw only from their own adventurers, with no elite/common split
-  if (location.exclusiveRoster) {
-    common.push(...elite);
-    elite.length = 0;
-  }
-  const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
-  const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
-  const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
-
-  const baseParty: AdventurerTemplate[] = [...required];
-  for (let i = 0; i < eliteCount && baseParty.length < size; i++) {
-    if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
-  }
-  let ci = 0;
-  while (baseParty.length < size && ci < shuffledCommon.length) {
-    baseParty.push(shuffledCommon[ci++]);
-  }
-
-  const members: PartyMember[] = [];
-  baseParty.forEach((t, i) => {
-    const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-    members.push({
-      ...t,
-      id: `adv_${Date.now()}_${i}`,
-      suspicion: t.baseSuspicion,
-      isAlive: true,
-      isConsumed: false,
-      isAttracted: false,
-      location: room,
-    });
-    // Companion/familiar injection
-    if (t.companion && Math.random() < t.companion.chance) {
-      const opts = t.companion.options;
-      const chosen = pickCompanionOption(opts);
-      const companionRoom = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom));
-    }
-  });
-
-  return members;
-}
-
-function getActiveForm(character: MimicCharacter | null): Form | null {
-  const formRef = character?.forms[character.activeFormIndex];
-  if (!formRef) return null;
-  return ALL_FORMS.find(f => f.id === formRef.formId) ?? null;
-}
-
-const FALLBACK_CREATURES: readonly LocationCreature[] = [
-  { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
-  { id: "cat", name: "Cat", ap: 2, discipline: 2, description: "A wary housecat." },
-  { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "A rooftop crow, curious and bold." },
-  { id: "spider", name: "Giant Spider", ap: 2, discipline: 2, description: "A palm-sized cellar spider." },
-  { id: "weasel", name: "Weasel", ap: 1, discipline: 2, description: "Fast and wiry." },
-  { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat and oblivious." },
-];
-
-function spawnSmallCreatures(loc: HuntLocation): SmallCreature[] {
-  const pool = loc.locationCreatures.length ? loc.locationCreatures : FALLBACK_CREATURES;
-  const count = 3 + Math.floor(Math.random() * 3);
-  const creatures: SmallCreature[] = [];
-  for (let i = 0; i < count; i++) {
-    const template = pool[Math.floor(Math.random() * pool.length)];
-    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
-    creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
-  }
-  return creatures;
-}
 
 export default function Game() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -197,8 +115,13 @@ export default function Game() {
   // TEMPORARY dev preview: show banners and the sheet as if every achievement were earned.
   // Only affects what's displayed (displayCharacter); the real character is never changed.
   const [previewAchievements, setPreviewAchievements] = useState(false);
-  // The Sinking Ship: turns taken so far this hunt (see advanceShip)
-  const [shipTurn, setShipTurn] = useState(0);
+  // Full turns taken this hunt (Relocate, Lure, Strike or Wait; see endTurn). The location's
+  // twist runs off it: when the ship sinks, when stars fall, when fireworks go up, the cold, etc.
+  const [huntTurn, setHuntTurn] = useState(0);
+  // Starfall: the room a fallen star fragment is lying in, if any
+  const [starFragment, setStarFragment] = useState<RoomName | null>(null);
+  // Fireworks: the room the last volley went up over (for the turn after it)
+  const [fireworksRoom, setFireworksRoom] = useState<RoomName | null>(null);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
   const [currentSickness, setCurrentSickness] = useState<Sickness | null>(null); // cleared each hunt
@@ -211,18 +134,16 @@ export default function Game() {
     db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
       if (res[0]) {
         const char = res[0];
-        // Mass decay check: 1 mass per 3 days since last fed
+        // Mass decay: 1 mass per 3 days since last fed. lastFedAt moves forward by the days
+        // charged, so reloading doesn't take the same mass again.
         let decayMessage: string | null = null;
-        if (char.lastFedAt && char.mass > 1) {
-          const daysSinceFed = (Date.now() - new Date(char.lastFedAt).getTime()) / (1000 * 60 * 60 * 24);
-          const massLost = Math.min(Math.floor(daysSinceFed / 3), char.mass - 1);
-          if (massLost > 0) {
-            const newMass = char.mass - massLost;
-            char.mass = newMass;
-            db.entities.MimicCharacter.update(char.id, { mass: newMass })
-              .catch(err => console.error("Failed to save mass decay:", err));
-            decayMessage = `You have been away for ${Math.floor(daysSinceFed)} days without feeding. Your mass has diminished by ${massLost} (now ${newMass}). Hunger gnaws at your form.`;
-          }
+        const decay = massDecay(char.mass, char.lastFedAt);
+        if (decay) {
+          char.mass = decay.mass;
+          char.lastFedAt = decay.lastFedAt;
+          db.entities.MimicCharacter.update(char.id, { mass: decay.mass, lastFedAt: decay.lastFedAt })
+            .catch(err => console.error("Failed to save mass decay:", err));
+          decayMessage = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
         }
         // Seasonal forms whose season has ended slip away
         const dropped = dropExpiredSeasonalForms(char.forms, char.activeFormIndex, today());
@@ -264,6 +185,30 @@ export default function Game() {
     });
   };
 
+  /** Raises suspicion (capped at 10). Reaching 10 ends the hunt: you've been found out. */
+  const raiseSuspicion = (amount: number) => {
+    setSuspicion(s => {
+      const next = Math.min(s + amount, 10);
+      if (next >= 10) triggerHuntEnd();
+      return next;
+    });
+  };
+
+  /**
+   * A meal: adds `ap` and any other changes to the character, saves them (and that it just fed),
+   * and opens the upgrade screen once there's enough AP to evolve. Returns the updated character.
+   */
+  const feed = (base: MimicCharacter, ap: number, changes: Partial<MimicCharacter> = {}): MimicCharacter => {
+    const updated = { ...base, ...changes, assimilationPoints: (base.assimilationPoints || 0) + ap };
+    setCharacter(updated);
+    persist({ ...changes, assimilationPoints: updated.assimilationPoints, lastFedAt: new Date().toISOString() });
+    if (updated.assimilationPoints >= TIER_CONFIG[base.tier].apToEvolve) {
+      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
+      setPhase("evolve");
+    }
+    return updated;
+  };
+
   const chooseLocation = (loc: HuntLocation) => {
     // A season can end while the game is open: check again before every hunt
     const dropped = character && dropExpiredSeasonalForms(character.forms, character.activeFormIndex, today());
@@ -282,7 +227,9 @@ export default function Game() {
     setMimicRoom(null);
     setIsBountyHunt(false);
     setRivals([]);
-    setShipTurn(0);
+    setHuntTurn(0);
+    setStarFragment(null);
+    setFireworksRoom(null);
     setActionCount(0);
     setGameoverReason("discovered");
     setCurrentSickness(null);
@@ -302,9 +249,14 @@ export default function Game() {
       ? placeRivals(loc, room, rollNestKinds(loc))
       : hasRival ? placeRivals(loc, room, ["lone"]) : [];
 
-    const newParty = bounty
+    const generated = withWarmth(bounty
       ? generateBountyParty(loc, character?.mass ?? 26)
-      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0);
+      : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0), loc);
+    // Spell or Sweet Street: maybe a real monster among them, everyone in costume, a few walking
+    // together and the rest spread out
+    const withMonster = bounty ? generated : addRealMonster(generated, loc, character?.tier ?? "Minor", character?.mass ?? 0);
+    const dressed = loc.costumes ? dressParty(withMonster) : withMonster;
+    const newParty = loc.procession ? placeProcession(dressed, loc, room) : dressed;
     const creatures = spawnSmallCreatures(loc);
     setMimicRoom(room);
     setParty(newParty);
@@ -350,7 +302,9 @@ export default function Game() {
       addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
-    newParty.forEach(a => addEvent("info", `${a.name} (${a.type}) — currently in the ${a.location}.`));
+    newParty.forEach(a => addEvent("info", a.costume
+      ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
+      : `${a.name} (${a.type}) — currently in the ${a.location}.`));
 
     // Rare locations: visiting closes the open one, hunting elsewhere uses up one of its hunts,
     // and if none was open there's a chance one opens for the next hunts
@@ -426,23 +380,97 @@ export default function Game() {
   });
   useEffect(() => trackLifetimeAp(), [character?.assimilationPoints]);
 
+  /**
+   * The end of a full turn (Relocate, Lure, Strike or Wait): the hunt clock ticks, and the
+   * location's twist, if it has one, takes its turn. (The cold waits until the turn's moves have
+   * landed; see applyFrost.)
+   */
+  const endTurn = () => {
+    if (!location) return;
+    const turn = huntTurn + 1;
+    setHuntTurn(turn);
+    if (location.fireworks) fireworksTurn(location, turn);
+    if (location.starfall) starfallTurn(location, turn);
+    if (location.sinkingTurns) sinkingTurn(location.sinkingTurns, turn);
+  };
+
+  // The Founders' Fair: a volley over a random room every few turns, distracting it and the rooms
+  // next to it for a turn. The crew comes looking for rockets: a crate-shaped mimic gets thrown out.
+  const fireworksTurn = (loc: HuntLocation, turn: number) => {
+    if (!fireworksDue(loc, turn)) {
+      setFireworksRoom(null);
+      return;
+    }
+    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    setFireworksRoom(room);
+    addEvent("alert", `🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
+    const rummage = room === mimicRoom ? fireworksRummage(loc, getActiveForm(character)) : null;
+    if (rummage === null || !mimicRoom) return;
+    const occupied = [
+      ...activeAdventurers.map(a => a.location),
+      ...rivals.filter(r => !r.consumed).map(r => r.room),
+    ];
+    const to = tossRoom(loc, mimicRoom, occupied);
+    addEvent("alert", `The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
+    setMimicRoom(to);
+    stillTurnsRef.current = 0;
+    setShowMovePanel(false);
+    raiseSuspicion(rummage);
+  };
+
+  // Stargazers' Hill: every few turns a star fragment lands somewhere (unless one is still lying about)
+  const starfallTurn = (loc: HuntLocation, turn: number) => {
+    if (!loc.starfall || !starfallDue(loc, turn) || starFragment) return;
+    const room = loc.rooms[Math.floor(Math.random() * loc.rooms.length)];
+    setStarFragment(room);
+    const landing = loc.starfall.landings[room] ?? `comes down in the ${room}`;
+    addEvent("alert", room === mimicRoom
+      ? `🌠 The sky splits open, and a fragment of star ${landing}, right beside you. Every head on the hill turns your way.`
+      : `🌠 The sky splits open, and a fragment of star ${landing}! Every head turns.`);
+  };
+
   // The Sinking Ship: each turn brings it closer to going under. When it sinks, anyone
   // still aboard takes to the lifeboats (counted as fled) and the hunt ends.
-  const advanceShip = () => {
-    const total = location?.sinkingTurns;
-    if (!total || shipTurn >= total) return;
-    const turn = shipTurn + 1;
-    setShipTurn(turn);
+  const sinkingTurn = (total: number, turn: number) => {
+    if (turn > total) return;
     const warning = sinkingWarning(total, turn);
     if (warning) addEvent("alert", warning);
-    if (turn >= total) {
-      setParty(prev => prev.map(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared
-        ? { ...a, isAlive: false, isAttracted: false, fled: true }
-        : a));
-      addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
-      addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
+    if (turn < total) return;
+    setParty(prev => prev.map(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared
+      ? { ...a, isAlive: false, isAttracted: false, fled: true }
+      : a));
+    addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
+    addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
+  };
+
+  // Spell or Sweet Street: eating someone shows who was under the costume
+  const revealCostume = (member: PartyMember) => {
+    if (isTheRealThing(member)) {
+      addEvent("evolve", `😱 That wasn't a costume. It was a real ${member.trueName?.toLowerCase() ?? "monster"}!`);
+    } else if (member.costume && member.trueName) {
+      addEvent("evolve", `🎭 Under the ${member.costume} costume: ${/^The /.test(member.trueName) ? member.trueName.replace(/^The /, "the ") : `a ${member.trueName}`}!`);
     }
   };
+
+  // The Founders' Fair: whether everyone in `room` is watching the fireworks right now
+  const watchingSky = (room: RoomName | null): boolean =>
+    !!location?.fireworks && !!fireworksRoom && !!room && distractedRooms(location, fireworksRoom).includes(room);
+
+  // The Snowbound Lodge: after each turn, the cold takes its toll (see chillParty)
+  const applyFrost = useEffectEvent(() => {
+    if (!location?.snowbound || huntTurn === 0) return;
+    const { party: chilled, frozen, numb } = chillParty(party, location);
+    setParty(chilled);
+    numb.forEach(a => addEvent("info", `❄️ ${a.name}'s teeth are chattering. They won't last much longer in this cold.`));
+    frozen.forEach(a => addEvent("alert", `🧊 ${a.name} stops moving. Frozen solid, in the ${a.location}.`));
+    if (frozen.length > 0 && !chilled.some(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared)) {
+      addEvent("system", `The lodge falls silent. Nothing moves but you, and whatever the ice has left for you.`);
+    }
+  });
+  // Intentional: every kind of turn moves the party in its own way (wandering, lures, bolting),
+  // so the cold is applied once that turn's moves have landed rather than inside each action.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => applyFrost(), [huntTurn]);
 
   // Called whenever suspicion hits 10 — ends hunt immediately
   const triggerHuntEnd = () => {
@@ -472,7 +500,6 @@ export default function Game() {
         `Room context: ${roomMod.note} (Plausibility ${roomMod.plausibility > 0 ? "+" : ""}${roomMod.plausibility})`);
     }
 
-    const effectivePlausibility = Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty);
     let totalSuspicionChange = 0;
     advs.forEach(adv => {
       // Now and then, the newcomer acts out one of its quirks on your form
@@ -525,15 +552,10 @@ export default function Game() {
     let suspDelta = reactions.suspicion;
     if (reactions.arrivals.length > 0) suspDelta += runStealthChecks(reactions.arrivals, roomNow);
     if (suspDelta > 0) {
-      setSuspicion(s => {
-        const next = Math.min(s + suspDelta, 10);
-        if (next >= 10) triggerHuntEnd();
-        return next;
-      });
+      raiseSuspicion(suspDelta);
     }
   };
 
-  // Relocate to an adjacent empty room (+1 suspicion cost)
   // DEV ONLY (achievement-preview branch): learn or unlearn a material for testing (saved).
   // Used by the appearance editor's Thimblewood button.
   const devToggleLearnedMaterial = (material: Material) => {
@@ -595,19 +617,14 @@ export default function Game() {
     const inTargetRoom = party.filter(a => a.isAlive && !a.isConsumed && !a.fled && a.location === targetRoom);
     const stealthSusp = runStealthChecks(inTargetRoom, targetRoom);
     const totalSusp = 1 + stealthSusp;
-    setSuspicion(s => {
-      const next = Math.min(s + totalSusp, 10);
-      if (next >= 10) triggerHuntEnd();
-      return next;
-    });
+    raiseSuspicion(totalSusp);
     applyBehaviorReactions("relocate", { mimicRoom: targetRoom, fromRoom: mimicRoom });
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
   };
 
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
-  const getAllureRange = () =>
-    ((character?.baseAllure ?? 2) >= 5 ? 2 : 1) + (hasMagic(character?.currentAppearance, "Aether Crystal") ? 1 : 0);
+  const getAllureRange = () => lureRange(character);
 
   const doAllureTurn = () => {
     if (!character || !location || !mimicRoom) return;
@@ -633,7 +650,7 @@ export default function Game() {
       if (dist > range) return adv;
       anyInRange = true;
       const result = allureCheck(
-        character.baseAllure, Math.max(1, character.plausibility - massPenalty - sickPlausibilityPenalty), form,
+        character.baseAllure, effectivePlausibility, form,
         character.currentAppearance || {}, adv, roomMod
       );
       addEvent(result.success ? "allure" : "info", result.narrative);
@@ -641,11 +658,7 @@ export default function Game() {
         addEvent("info", `${adv.name} is put off by the ${result.disliked.join(", ")}. (−${result.aversion} allure)`);
       }
       if (result.suspicionChange > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + result.suspicionChange, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+        raiseSuspicion(result.suspicionChange);
         addEvent("alert", `${adv.name} grows suspicious of the excessive allure!`);
       }
       if (result.success) {
@@ -678,15 +691,11 @@ export default function Game() {
     if (newlyAttracted.length > 0) {
       const suspDelta = runStealthChecks(newlyAttracted, mimicRoom);
       if (suspDelta > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + suspDelta, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+        raiseSuspicion(suspDelta);
       }
     }
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
     setActing(false);
   };
 
@@ -701,347 +710,239 @@ export default function Game() {
       : a));
   };
 
-  // Resolves a Strike. Returns whether it took a turn (false if there was nothing to strike).
+  // Resolves a Strike (see strike.ts for what happens; this writes it up and applies it).
+  // Returns whether it took a turn (false if there was nothing to strike).
   const resolveStrike = (): boolean => {
     if (!character || !location) return false;
     stillTurnsRef.current = 0;
-    // Bonesteel: +1 die on strike rolls
-    const strikeAdhesion = effectiveAdhesion + (hasMagic(character.currentAppearance, "Bonesteel") ? 1 : 0);
+    const dice = strikeDice(effectiveAdhesion, character.currentAppearance);
 
-    // Check if a rival mimic can be struck (revealed + in same room)
-    const rivalTarget = rivalInRoom(rivals, mimicRoom);
-    if (rivalTarget?.revealed && mimicRoom) {
+    // A revealed rival mimic in the room comes first
+    const rival = rivalInRoom(rivals, mimicRoom);
+    if (rival?.revealed && mimicRoom) {
       setActing(true);
-      setActionCount(0); // Strike resets action counter
-      const stats = RIVAL_STATS[rivalTarget.kind];
-      const roll = rollDice(strikeAdhesion);
-      const rivalRoll = rollDice(stats.dice);
-      if (roll >= rivalRoll) {
-        const apGained = stats.ap;
-        const updatedRivals = rivals.map(r => r.id === rivalTarget.id ? { ...r, consumed: true } : r);
-        if (rivalTarget.kind === "elder") {
-          addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${apGained} AP.`);
-          addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
-          // Easter egg: the porter she was searching for
-          if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
-        } else {
-          addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${apGained} AP — and its stolen prey.`);
-        }
-        setRivals(updatedRivals);
-        noteMeal(RIVAL_MEAL_NAMES[rivalTarget.kind], apGained);
-        const updatedChar = {
-          ...character,
-          assimilationPoints: (character.assimilationPoints || 0) + apGained,
-          mimicsConsumed: character.mimicsConsumed + 1,
-          biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rivalTarget.kind], apGained),
-        };
-        setCharacter(updatedChar);
-        persist({
-          assimilationPoints: updatedChar.assimilationPoints,
-          mimicsConsumed: updatedChar.mimicsConsumed,
-          biggestMeal: updatedChar.biggestMeal,
-          lastFedAt: new Date().toISOString(),
-        });
-        if (updatedChar.mimicsConsumed === CANNIBAL_MIMICS) {
-          addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
-        }
-        const cfg2 = TIER_CONFIG[character.tier];
-        if (updatedChar.assimilationPoints >= cfg2.apToEvolve) {
-          addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-          setPhase("evolve");
-        }
-      } else {
-        addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
-        // The rival escapes to a room away from you and the other rivals
-        const newRoom = rivalEscapeRoom(location, rivals, rivalTarget, mimicRoom);
-        setRivals(prev => prev.map(r => r.id === rivalTarget.id ? { ...r, revealed: false, room: newRoom } : r));
-        addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
-        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
-      }
+      setActionCount(0); // Strike resets the action counter
+      strikeRival(rival, dice, mimicRoom);
       setActing(false);
       return true;
     }
 
-    const attracted = party.filter(a => a.isAlive && !a.isConsumed && a.isAttracted);
-    if (attracted.length === 0) {
+    // Under the fireworks, anyone in your room is staring at the sky: no need to lure them first
+    const skyward = watchingSky(mimicRoom);
+    const candidates = strikeCandidates(party, mimicRoom, skyward);
+    if (candidates.length === 0) {
       addEvent("info", "No adventurers are close enough to strike. Use Allure first.");
       return false;
     }
     const form = getActiveForm(character);
     if (!form) { addEvent("alert", "No active form!"); return false; }
+    const target = pickStrikeTarget(candidates, location, mimicRoom, form, character.currentAppearance);
+    if (!target) return false;
     setActing(true);
     setActionCount(0); // Strike resets the action counter
-
-    // Pick target: closest to mimic, break ties by highest allure interest score
-    const scored = attracted.map(a => ({
-      adv: a,
-      dist: mimicRoom ? getRoomDistance(location, mimicRoom, a.location) : 0,
-      interest: calcAllureInterest(form, character.currentAppearance || {}, a),
-    }));
-    scored.sort((a, b) => a.dist - b.dist || b.interest - a.interest);
-    const target = scored[0].adv;
-    // Killing the last adventurer ends the hunt in success, so it never adds suspicion
-    const othersRemain = party.some(a =>
-      a.id !== target.id && a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared);
-    // Other party members in the mimic's room who could notice the attack
-    const witnessCount = party.filter(a =>
-      a.id !== target.id && a.location === mimicRoom &&
-      a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared).length;
+    if (!target.isAttracted) addEvent("info", `🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+    const seen = strikeWitnesses(party, target, mimicRoom, skyward);
     applyBehaviorReactions("strike", { excludeIds: [target.id] });
 
-    // Partial bites: Minor mimics always; larger mimics against giants they can't yet swallow whole
-    if (needsPartialBites(character, target)) {
-      const isGiantTarget = target.group === "giantKin";
-      if (isGiantTarget && character.tier !== "Minor") {
-        addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
-      }
-      const biteResult = adhesionCheck(strikeAdhesion, form, target);
-      const bodyParts = isGiantTarget
-        ? ["ankle", "bootlace, thick as rope", "cloak hem", "calloused toe", "belt edge", "trailing sleeve"]
-        : ["hand", "forearm", "boot", "calf", "pant leg", "cloak edge", "shirt sleeve"];
-      const part = bodyParts[Math.floor(Math.random() * bodyParts.length)];
-      if (biteResult.success) {
-        addEvent("attack", `You latch onto ${target.name}'s ${part}!`);
-        const escapeRoll = rollDice(effectivePatience);
-        const pursuitRoll = rollDice(target.discipline + 1);
-        const held = escapeRoll >= pursuitRoll;
-        const hitsSoFar = (target.hitsTaken || 0) + 1;
-        const maxHits = target.constitution || 3;
-
-        if (held) {
-          // The scrap is flavor; sometimes the bite also teaches one of the target's real materials
-          const partialLoot = target.partialLoot || ["scrap of cloth"];
-          const scrap = partialLoot[Math.floor(Math.random() * partialLoot.length)];
-          const apGained = getBiteAp(target);
-          addEvent("consume", `You tear free with a ${scrap}! +${apGained} AP. ${target.name} staggers back. (${hitsSoFar}/${maxHits} hits taken)`);
-          const biteMaterial = rollBiteMaterial(target);
-          const newMaterial = biteMaterial && !character.learnedMaterials.includes(biteMaterial) ? biteMaterial : null;
-          if (newMaterial) addEvent("evolve", `New material absorbed from the bite: ${newMaterial}!`);
-          applyBehaviorReactions("feed", { excludeIds: [target.id] });
-          // A bite that wears the target down may make them collapse (killed) or flee
-          const finishing = hitsSoFar >= maxHits;
-          const flees = finishing && target.discipline >= 3 && Math.random() < 0.5;
-          const finalKill = finishing && !flees && !othersRemain;
-          if (!finalKill) {
-            // A bite is always noticed (+2); a crowd of 3+ others in the room raises it to +3
-            const gain = Math.max(2, consumeSuspicion(witnessCount));
-            setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
-            if (gain > 2) {
-              addEvent("alert", `${target.name}'s cry turns every head in the room. (+${gain} suspicion)`);
-            }
-          }
-          const learnedMaterials = newMaterial
-            ? [...character.learnedMaterials, newMaterial]
-            : character.learnedMaterials;
-          const updatedChar = {
-            ...character,
-            assimilationPoints: (character.assimilationPoints || 0) + apGained,
-            learnedMaterials,
-          };
-          setCharacter(updatedChar);
-          persist({
-            assimilationPoints: updatedChar.assimilationPoints,
-            learnedMaterials: updatedChar.learnedMaterials,
-            lastFedAt: new Date().toISOString(),
-          });
-
-          if (finishing) {
-            // Dead or fled
-            if (flees && target.behavior === "elusive") {
-              boltAway(target, 2, hitsSoFar);
-            } else if (flees) {
-              addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
-              setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, isConsumed: false, fled: true } : a));
-              setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
-            } else {
-              addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
-              const finalChar = {
-                ...updatedChar,
-                assimilationPoints: updatedChar.assimilationPoints + 2,
-                adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
-                partyMembersEaten: character.partyMembersEaten + 1,
-              };
-              setCharacter(finalChar);
-              persist({
-                assimilationPoints: finalChar.assimilationPoints,
-                adventurersEaten: finalChar.adventurersEaten,
-                partyMembersEaten: finalChar.partyMembersEaten,
-              });
-              setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
-            }
-          } else {
-            setParty(prev => prev.map(a => a.id === target.id
-              ? { ...a, isAttracted: false, suspicion: a.suspicion + 2, hitsTaken: hitsSoFar }
-              : a));
-          }
-
-          const cfg = TIER_CONFIG[character.tier];
-          const checkChar = { ...character, assimilationPoints: (character.assimilationPoints || 0) + apGained };
-          if (checkChar.assimilationPoints >= cfg.apToEvolve) {
-            addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-            setPhase("evolve");
-          }
-        } else {
-          const hitsSoFarMissed = (target.hitsTaken || 0);
-          addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
-          setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
-          if (hitsSoFarMissed + 1 >= (target.constitution || 3) && target.behavior === "elusive") {
-            boltAway(target, 4, hitsSoFarMissed + 1);
-          } else if (hitsSoFarMissed + 1 >= (target.constitution || 3) && Math.random() < 0.6) {
-            addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
-            setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAlive: false, fled: true } : a));
-          } else {
-            setParty(prev => prev.map(a => a.id === target.id
-              ? { ...a, isAttracted: false, suspicion: a.suspicion + 4, hitsTaken: (a.hitsTaken || 0) + 1 }
-              : a));
-          }
-        }
-      } else {
-        addEvent("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
-        setSuspicion(s => { const n = Math.min(s + 2, 10); if (n >= 10) triggerHuntEnd(); return n; });
-        setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 2 } : a));
-      }
-      setActing(false);
-      return true;
-    }
-
-    // Full-size mimics: full consumption
-    const result = adhesionCheck(strikeAdhesion, form, target);
-    addEvent(result.success ? "attack" : "escape", result.narrative);
-
-    if (result.success) {
-      // Treasure carried by the target (e.g. the Captain's strongbox) goes down with them
-      const apGained = getApReward(target) + (target.treasure?.ap ?? 0);
-      const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
-      const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
-      // Variable learning: learn 1–all materials randomly (at least 1 if any exist)
-      const shuffledMats = [...allMaterials].sort(() => Math.random() - 0.5);
-      const shuffledTraits = [...allTraits].sort(() => Math.random() - 0.5);
-      const matsToLearn = shuffledMats.slice(0, Math.max(1, Math.floor(Math.random() * (shuffledMats.length + 1))));
-      const traitsToLearn = shuffledTraits.length > 0
-        ? shuffledTraits.slice(0, Math.random() < 0.6 ? 1 : shuffledTraits.length)
-        : [];
-      const learnedNewMats = matsToLearn.filter(m => !(character.learnedMaterials || []).includes(m));
-      const learnedNewTraits = traitsToLearn.filter(t => !(character.learnedTraits || []).includes(t));
-      // Treasure guarantees one prize the mimic doesn't know yet (counting this meal's learning)
-      const prize = target.treasure
-        ? pickTreasurePrize(target.treasure, [...character.learnedMaterials, ...matsToLearn], [...character.learnedTraits, ...traitsToLearn])
-        : null;
-      if (prize?.kind === "material") matsToLearn.push(prize.name);
-      if (prize?.kind === "trait") traitsToLearn.push(prize.name);
-      const sankWithShip = target.name === "Ship's Captain" && !character.downWithTheShipReached;
-
-      setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
-      addEvent("consume", `${target.name} has been consumed! +${apGained - (target.treasure?.ap ?? 0)} Assimilation Points.`);
-      if (target.treasure) {
-        addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
-        if (prize) {
-          addEvent("evolve", `The strongbox cracks open inside you: ${prize.name}! New ${prize.kind} learned.`);
-        } else {
-          const shrugs = [
-            "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
-            "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
-            "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
-          ];
-          addEvent("info", shrugs[Math.floor(Math.random() * shrugs.length)]);
-        }
-      }
-      if (sankWithShip) {
-        addEvent("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
-      }
-      if (othersRemain) {
-        // A party member vanished; anyone still in the room watched it happen
-        const gain = consumeSuspicion(witnessCount);
-        setSuspicion(s => { const n = Math.min(s + gain, 10); if (n >= 10) triggerHuntEnd(); return n; });
-        if (witnessCount === 0) {
-          addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
-        } else {
-          // Witnesses catch only a glimpse: they know something happened here, not what or who
-          const glimpses = witnessCount === 1
-            ? [
-                `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
-                `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
-                `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
-              ]
-            : [
-                `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
-                `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
-                `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
-              ];
-          addEvent("alert", glimpses[Math.floor(Math.random() * glimpses.length)]);
-        }
-      } else {
-        addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
-      }
-      applyBehaviorReactions("feed", { excludeIds: [target.id] });
-      if (learnedNewMats.length > 0) addEvent("evolve", `New materials absorbed: ${learnedNewMats.join(", ")}!`);
-      if (learnedNewTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learnedNewTraits.join(", ")}!`);
-      if (learnedNewMats.length === 0 && learnedNewTraits.length === 0 && (matsToLearn.length > 0 || traitsToLearn.length > 0)) {
-        addEvent("info", `The prey yields nothing new — you already know these materials.`);
-      }
-
-      // Titanic Feast: track Cloud Kingdom giants consumed whole
-      const isFeastGiant = !target.isCompanion && TITANIC_FEAST_GIANTS.includes(target.name);
-      const giantsConsumedWhole = isFeastGiant && !character.giantsConsumedWhole.includes(target.name)
-        ? [...character.giantsConsumedWhole, target.name]
-        : character.giantsConsumedWhole;
-      const feastNowComplete = !character.titanicFeastReached && isTitanicFeastComplete(giantsConsumedWhole);
-      if (isFeastGiant && giantsConsumedWhole !== character.giantsConsumedWhole && !feastNowComplete) {
-        addEvent("evolve", `Giant consumed whole: ${giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
-      }
-      if (feastNowComplete) {
-        addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
-      }
-
-      const updatedChar = {
-        ...character,
-        assimilationPoints: (character.assimilationPoints || 0) + apGained,
-        learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...matsToLearn])],
-        learnedTraits: [...new Set([...(character.learnedTraits || []), ...traitsToLearn])],
-        giantsConsumedWhole,
-        titanicFeastReached: character.titanicFeastReached || feastNowComplete,
-        downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
-        adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
-        partyMembersEaten: character.partyMembersEaten + 1,
-        biggestMeal: withBiggestMeal(character.biggestMeal, target.name, apGained),
-      };
-      noteMeal(target.name, apGained);
-      setCharacter(updatedChar);
-      persist({
-        assimilationPoints: updatedChar.assimilationPoints,
-        learnedMaterials: updatedChar.learnedMaterials,
-        learnedTraits: updatedChar.learnedTraits,
-        giantsConsumedWhole: updatedChar.giantsConsumedWhole,
-        titanicFeastReached: updatedChar.titanicFeastReached,
-        downWithTheShipReached: updatedChar.downWithTheShipReached,
-        adventurersEaten: updatedChar.adventurersEaten,
-        partyMembersEaten: updatedChar.partyMembersEaten,
-        biggestMeal: updatedChar.biggestMeal,
-        lastFedAt: new Date().toISOString(),
-      });
-
-      const cfg = TIER_CONFIG[character.tier];
-      if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
-        addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-        setPhase("evolve");
-      }
-    } else {
-      const lungePenalty = hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4;
-      setSuspicion(s => { const n = Math.min(s + lungePenalty, 10); if (n >= 10) triggerHuntEnd(); return n; });
-      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${lungePenalty} suspicion${lungePenalty < 4 ? ", softened by your Dragonhide" : ""})`);
-      if (target.behavior === "elusive") {
-        boltAway(target, 3);
-      } else {
-        setParty(prev => prev.map(a => a.id === target.id ? { ...a, isAttracted: false, suspicion: a.suspicion + 3 } : a));
-      }
-    }
+    // Minor mimics always bite; so does anyone facing a giant too big to swallow yet
+    if (needsPartialBites(character, target)) strikeBite(target, form, dice, seen);
+    else strikeSwallow(target, form, dice, seen, skyward);
     setActing(false);
     return true;
   };
 
+  /** Strike a revealed rival mimic: devour it, or it slips away and hides again. */
+  const strikeRival = (rival: RivalMimic, dice: number, room: RoomName) => {
+    if (!character || !location) return;
+    const stats = RIVAL_STATS[rival.kind];
+    const outcome = resolveRivalStrike(rival, dice, location, rivals, room);
+    if (!outcome.devoured) {
+      addEvent("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
+      setRivals(prev => prev.map(r => r.id === rival.id ? { ...r, revealed: false, room: outcome.hidesIn } : r));
+      addEvent("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
+      raiseSuspicion(1);
+      return;
+    }
+    if (rival.kind === "elder") {
+      addEvent("consume", `You tear into the Elder Mimic. It fights like a cornered god, then folds into you, century by century. +${outcome.ap} AP.`);
+      addEvent("system", `🕸 The nest falls silent. Whatever else hides here will scatter without its Elder. The hunt is over.`);
+      // Easter egg: the porter she was searching for
+      if (party.some(a => a.name === PORTER_SISTER)) addEvent("info", PORTER_TOKEN_LINE);
+    } else {
+      addEvent("consume", `You overwhelm the ${stats.name}! It writhes, loses cohesion, and is absorbed into your mass. +${outcome.ap} AP — and its stolen prey.`);
+    }
+    setRivals(prev => prev.map(r => r.id === rival.id ? { ...r, consumed: true } : r));
+    noteMeal(RIVAL_MEAL_NAMES[rival.kind], outcome.ap);
+    const mimicsConsumed = character.mimicsConsumed + 1;
+    if (mimicsConsumed === CANNIBAL_MIMICS) {
+      addEvent("evolve", `🦷 Cannibal! You have devoured ${CANNIBAL_MIMICS} of your own kind.`);
+    }
+    feed(character, outcome.ap, {
+      mimicsConsumed,
+      biggestMeal: withBiggestMeal(character.biggestMeal, RIVAL_MEAL_NAMES[rival.kind], outcome.ap),
+    });
+  };
+
+  /** Update one party member. */
+  const patchMember = (id: string, patch: (a: PartyMember) => Partial<PartyMember>) =>
+    setParty(prev => prev.map(a => a.id === id ? { ...a, ...patch(a) } : a));
+
+  /** A partial bite: tear a piece off, and maybe wear them down until they collapse (or run). */
+  const strikeBite = (target: PartyMember, form: Form, dice: number, seen: Witnesses) => {
+    if (!character || !location) return;
+    if (target.group === "giantKin" && character.tier !== "Minor") {
+      addEvent("info", `${target.name} is far too large to swallow whole — you'll have to take it in bites. (Whole at mass ${target.wholeMealMass}+)`);
+    }
+    const bite = resolveBite(target, {
+      dice, patience: effectivePatience, form, knownMaterials: character.learnedMaterials, snowbound: !!location.snowbound, witnesses: seen,
+    });
+    if (!bite.latched) {
+      addEvent("escape", `${target.name} sidesteps your lunge — your jaws snap shut on nothing!`);
+      raiseSuspicion(bite.suspicion);
+      patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion }));
+      return;
+    }
+    addEvent("attack", `You latch onto ${target.name}'s ${bite.part}!`);
+
+    if (!bite.held) {
+      addEvent("escape", `${target.name} wrenches free before you can tear anything loose!`);
+      raiseSuspicion(bite.suspicion);
+      if (bite.ending === "bolts") boltAway(target, bite.targetSuspicion, bite.hits);
+      else if (bite.ending === "trapped") {
+        addEvent("escape", `Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
+        boltAway(target, bite.targetSuspicion, bite.hits);
+      } else if (bite.ending === "flees") {
+        addEvent("escape", `Badly shaken, ${target.name} turns and flees the building!`);
+        patchMember(target.id, () => ({ isAlive: false, fled: true }));
+      } else {
+        patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+      }
+      return;
+    }
+
+    const biteAp = bite.ending === "collapses" ? bite.ap - COLLAPSE_BONUS_AP : bite.ap;
+    addEvent("consume", `You tear free with a ${bite.scrap}! +${biteAp} AP. ${target.name} staggers back. (${bite.hits}/${bite.maxHits} hits taken)`);
+    if (bite.material) addEvent("evolve", `New material absorbed from the bite: ${bite.material}!`);
+    applyBehaviorReactions("feed", { excludeIds: [target.id] });
+    if (bite.loudCry) addEvent("alert", `${target.name}'s cry turns every head in the room. (+${bite.crySuspicion} suspicion)`);
+
+    // The bite (and, if it finishes them off, the rest of the meal) is fed in one go below
+    let changes: Partial<MimicCharacter> = {
+      learnedMaterials: bite.material ? [...character.learnedMaterials, bite.material] : character.learnedMaterials,
+    };
+    if (bite.ending === "bolts") {
+      boltAway(target, bite.targetSuspicion, bite.hits);
+    } else if (bite.ending === "trapped") {
+      addEvent("escape", `${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
+      boltAway(target, bite.targetSuspicion, bite.hits);
+    } else if (bite.ending === "flees") {
+      addEvent("escape", `${target.name} has had enough — they flee the building entirely!`);
+      patchMember(target.id, () => ({ isAlive: false, isConsumed: false, fled: true }));
+    } else if (bite.ending === "collapses") {
+      addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
+      revealCostume(target);
+      changes = {
+        ...changes,
+        adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+        partyMembersEaten: character.partyMembersEaten + 1,
+      };
+      patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+    } else {
+      patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
+    }
+    raiseSuspicion(bite.suspicion);
+    feed(character, bite.ap, changes);
+  };
+
+  /** Swallow them whole, treasure and all (or lunge, miss, and be seen). */
+  const strikeSwallow = (target: PartyMember, form: Form, dice: number, seen: Witnesses, skyward: boolean) => {
+    if (!character) return;
+    const meal = resolveSwallow(target, character, { dice, form, witnesses: seen });
+    addEvent(meal.swallowed ? "attack" : "escape", meal.narrative);
+
+    if (!meal.swallowed) {
+      raiseSuspicion(meal.suspicion);
+      addEvent("alert", `${target.name} saw you lunge — they've seen your true nature! (+${meal.suspicion} suspicion${meal.suspicion < 4 ? ", softened by your Dragonhide" : ""})`);
+      if (meal.bolts) boltAway(target, 3);
+      else patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + 3 }));
+      return;
+    }
+
+    const { learning } = meal;
+    const total = meal.ap + meal.treasureAp;
+    patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
+    addEvent("consume", `${target.name} has been consumed! +${meal.ap} Assimilation Points.`);
+    revealCostume(target);
+    if (target.treasure) {
+      addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
+      if (learning.prize) {
+        addEvent("evolve", `The ${target.treasure.noun ?? "strongbox"} ${target.treasure.noun ? "flares" : "cracks open"} inside you: ${learning.prize.name}! New ${learning.prize.kind} learned.`);
+      } else if (target.treasure.noun) {
+        addEvent("info", `The ${target.treasure.noun} glows a moment inside you, then fades. Nothing you haven't tasted before.`);
+      } else {
+        const shrugs = [
+          "The strongbox holds nothing you haven't tasted before. You keep it anyway. It's a nice box.",
+          "Coins, a silver comb, a crystal stopper — all old flavors to you now. The box itself is the best part.",
+          "You rattle the strongbox around inside you. Nothing new. The captain was clearly overpaying for security.",
+        ];
+        addEvent("info", shrugs[Math.floor(Math.random() * shrugs.length)]);
+      }
+    }
+    if (meal.sankWithShip) addEvent("evolve", `⚓ Down With the Ship! The captain never did abandon ship.`);
+
+    if (seen.othersRemain) {
+      // A party member vanished; anyone still in the room watched it happen
+      const gain = meal.suspicion;
+      raiseSuspicion(gain);
+      if (seen.witnesses === 0 && skyward && seen.inRoom > 0) {
+        addEvent("alert", `🎆 Right beside you, every face is turned to the sky. Nobody sees ${target.name} go. (+${gain} suspicion, once they're missed)`);
+      } else if (seen.witnesses === 0) {
+        addEvent("alert", `One of the party has vanished — the others grow uneasy. (+${gain} suspicion)`);
+      } else {
+        // Witnesses catch only a glimpse: they know something happened here, not what or who
+        const glimpses = seen.witnesses === 1
+          ? [
+              `Someone in the room spins around — ${target.name} was right there a moment ago. (+${gain} suspicion)`,
+              `A companion catches a flicker of movement where ${target.name} stood. Now there's no one. (+${gain} suspicion)`,
+              `"${target.name}?" A voice in the room trails off, uncertain. (+${gain} suspicion)`,
+            ]
+          : [
+              `Heads turn across the room — ${target.name} was just here. Weapons are drawn. (+${gain} suspicion)`,
+              `The others glimpse something wrong where ${target.name} stood. Nobody saw exactly what. (+${gain} suspicion)`,
+              `The room goes quiet. ${target.name} is gone, and every shadow now feels like it's watching. (+${gain} suspicion)`,
+            ];
+        addEvent("alert", glimpses[Math.floor(Math.random() * glimpses.length)]);
+      }
+    } else {
+      addEvent("consume", `The last of the party is gone. No one remains to grow suspicious.`);
+    }
+    applyBehaviorReactions("feed", { excludeIds: [target.id] });
+    if (learning.newMaterials.length > 0) addEvent("evolve", `New materials absorbed: ${learning.newMaterials.join(", ")}!`);
+    if (learning.newTraits.length > 0) addEvent("evolve", `New traits assimilated: ${learning.newTraits.join(", ")}!`);
+    if (learning.newMaterials.length === 0 && learning.newTraits.length === 0 && (learning.materials.length > 0 || learning.traits.length > 0)) {
+      addEvent("info", `The prey yields nothing new — you already know these materials.`);
+    }
+    if (meal.feastProgress) {
+      addEvent("evolve", `Giant consumed whole: ${meal.giantsConsumedWhole.length}/${TITANIC_FEAST_GIANTS.length} toward the Titanic Feast.`);
+    }
+    if (meal.feastComplete) addEvent("evolve", `🍖 Titanic Feast! You have swallowed every giant of the Cloud Kingdom whole.`);
+
+    noteMeal(target.name, total);
+    feed(character, total, {
+      learnedMaterials: [...new Set([...(character.learnedMaterials || []), ...learning.materials])],
+      learnedTraits: [...new Set([...(character.learnedTraits || []), ...learning.traits])],
+      giantsConsumedWhole: meal.giantsConsumedWhole,
+      titanicFeastReached: character.titanicFeastReached || meal.feastComplete,
+      downWithTheShipReached: character.downWithTheShipReached || meal.sankWithShip,
+      adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
+      partyMembersEaten: character.partyMembersEaten + 1,
+      biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, total),
+    });
+  };
+
   const doStrikeTurn = () => {
     beginTurn();
-    if (resolveStrike()) advanceShip();
+    if (resolveStrike()) endTurn();
   };
 
   const doConsumeCreature = (creature: SmallCreature) => {
@@ -1051,17 +952,52 @@ export default function Game() {
     setSmallCreatures(prev => prev.map(c => c.uid === creature.uid ? { ...c, isConsumed: true } : c));
     noteMeal(creature.name, creature.ap);
     setActionCount(0); // Eating resets the stagnation counter
-    const updatedChar = {
-      ...character,
-      assimilationPoints: (character.assimilationPoints || 0) + creature.ap,
-    };
-    setCharacter(updatedChar);
-    persist({ assimilationPoints: updatedChar.assimilationPoints, lastFedAt: new Date().toISOString() });
-    const cfg = TIER_CONFIG[character.tier];
-    if (updatedChar.assimilationPoints >= cfg.apToEvolve) {
-      addEvent("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-      setPhase("evolve");
+    feed(character, creature.ap);
+  };
+
+  // Stargazers' Hill: a star fragment in your room can be swallowed before anyone else gets to
+  // it. It's worth a little AP and may teach something; anyone watching sees it vanish.
+  const doEatStar = () => {
+    if (!character || !starFragment || starFragment !== mimicRoom) return;
+    beginTurn();
+    setStarFragment(null);
+    const prize = pickTreasurePrize(STAR_FRAGMENT, character.learnedMaterials, character.learnedTraits);
+    addEvent("consume", `You swallow the star fragment whole. It's warm all the way down. +${STAR_FRAGMENT.ap} AP.`);
+    if (prize) addEvent("evolve", `The star fragment flares inside you: ${prize.name}! New ${prize.kind} learned.`);
+    const witnesses = activeAdventurers.filter(a => a.location === mimicRoom).length;
+    if (witnesses > 0) {
+      const gain = consumeSuspicion(witnesses);
+      addEvent("alert", `Someone was reaching for the fragment when its glow simply went out. (+${gain} suspicion)`);
+      raiseSuspicion(gain);
     }
+    noteMeal("Star Fragment", STAR_FRAGMENT.ap);
+    feed(character, STAR_FRAGMENT.ap, {
+      learnedMaterials: prize?.kind === "material" ? [...character.learnedMaterials, prize.name] : character.learnedMaterials,
+      learnedTraits: prize?.kind === "trait" ? [...character.learnedTraits, prize.name] : character.learnedTraits,
+    });
+  };
+
+  // The Snowbound Lodge: a frozen adventurer in your room is a cheap meal. Easy to take (no
+  // roll, any size of mimic), but worth less, and it teaches nothing: the flavor is locked in the ice.
+  const doEatFrozen = (body: PartyMember) => {
+    if (!character || !body.isFrozen || body.isConsumed) return;
+    beginTurn();
+    const ap = frozenMealAp(body);
+    addEvent("consume", `You crack ${body.name} free of the ice and swallow them, stiff and cold. +${ap} AP.`);
+    const witnesses = activeAdventurers.filter(a => a.location === mimicRoom).length;
+    if (witnesses > 0) {
+      const gain = consumeSuspicion(witnesses);
+      addEvent("alert", `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
+      raiseSuspicion(gain);
+    }
+    setParty(prev => prev.map(a => a.id === body.id ? { ...a, isConsumed: true } : a));
+    noteMeal(body.name, ap);
+    setActionCount(0);
+    feed(character, ap, {
+      adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(body)]),
+      partyMembersEaten: character.partyMembersEaten + 1,
+      biggestMeal: withBiggestMeal(character.biggestMeal, unmask(body).name, ap),
+    });
   };
 
   // Devotion (The Hollow Reliquary): once a devoted pilgrim is the last one left, it
@@ -1157,11 +1093,7 @@ export default function Game() {
     } else {
       addEvent("info", `You shift into the form of a ${newForm?.name || "new shape"}. (Takes 1 turn — stealth suspended.)`);
       // Shifting takes time, slight suspicion risk
-      setSuspicion(s => {
-        const next = Math.min(s + 1, 10);
-        if (next >= 10) triggerHuntEnd();
-        return next;
-      });
+      raiseSuspicion(1);
     }
     applyBehaviorReactions("formChange");
     setShowFormPanel(false);
@@ -1207,7 +1139,8 @@ export default function Game() {
   };
 
   const checkActionLimit = (newCount: number) => {
-    if (newCount >= ACTION_LIMIT) {
+    // Snowed in, the party can't wander off: the cold is the only clock
+    if (newCount >= ACTION_LIMIT && !location?.snowbound) {
       addEvent("info", `After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
       addEvent("system", `The party leaves the ${location?.name} of their own accord. Find new prey.`);
       setGameoverReason("abandoned");
@@ -1237,71 +1170,51 @@ export default function Game() {
       addEvent("info", `You wait. The adventurers continue their search.`);
     }
 
-    // Compute adventurer movement SYNCHRONOUSLY before any setState
-    const currentParty = party;
-    const currentMimicRoom = mimicRoom;
-    const currentRivals = rivals;
-
-    const newlyArrived: PartyMember[] = [];
-    const updatedParty = currentParty.map(adv => {
-      if (!adv.isAlive || adv.isConsumed) return adv;
-      if (isStationary(adv)) return adv;
-      if (Math.random() < 0.5) return adv;
-      const adjacent = getAdjacentRooms(location, adv.location);
-      const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = candidates[Math.floor(Math.random() * candidates.length)];
-      if (newRoom !== adv.location) {
-        // Rival mimic: silently consume this adventurer if they move into the rival's room
-        const lurker = rivalInRoom(currentRivals, newRoom);
-        if (lurker) {
-          // The rival eats them — adventurer silently vanishes with a cryptic message
-          const crypticMessages = [
-            `${adv.name} heads toward the ${newRoom}... and does not emerge.`,
-            `A muffled sound comes from the ${newRoom}. ${adv.name} never reappears.`,
-            `${adv.name} rounds the corner into the ${newRoom}. Silence follows.`,
-            `You hear ${adv.name}'s footsteps enter the ${newRoom} — then stop abruptly.`,
-            `Something in the ${newRoom} has ${adv.name}'s attention. They do not return.`,
-          ];
-          addEvent("alert", crypticMessages[Math.floor(Math.random() * crypticMessages.length)]);
-          setRivals(prev => prev.map(r => r.id === lurker.id ? { ...r, clueGiven: true } : r));
-          return { ...adv, isAlive: false, isConsumed: false, isDisappeared: true, location: newRoom };
-        }
-        addEvent("info", `${adv.name} moves from the ${adv.location} to the ${newRoom}.`);
-        if (newRoom === currentMimicRoom) {
-          newlyArrived.push({ ...adv, location: newRoom });
-        }
-      }
-      return { ...adv, location: newRoom, isAttracted: false };
-    });
-
-    setParty(updatedParty);
-
-    countStillTurn(newlyArrived.length > 0);
-
-    // Auto stealth check for adventurers who just wandered into the mimic's room
-    if (newlyArrived.length > 0) {
-      const suspDelta = runStealthChecks(newlyArrived, currentMimicRoom);
-      if (suspDelta > 0) {
-        setSuspicion(s => {
-          const next = Math.min(s + suspDelta, 10);
-          if (next >= 10) triggerHuntEnd();
-          return next;
-        });
+    // Everyone takes their turn (see moveParty): wandering, heading for a star, or door to door
+    const form = getActiveForm(character);
+    const moves = moveParty(party, location, { mimicRoom, rivals, starFragment, form });
+    for (const step of moves.steps) {
+      if (step.vanishedInto) {
+        // Walked into a hidden rival: it eats them, and all you hear is the silence
+        const line = VANISHING_LINES[Math.floor(Math.random() * VANISHING_LINES.length)];
+        addEvent("alert", line(step.member.name, step.to));
+        setRivals(prev => prev.map(r => r.id === step.vanishedInto ? { ...r, clueGiven: true } : r));
+      } else {
+        addEvent("info", `${step.member.name} moves from the ${step.from} to the ${step.to}.`);
       }
     }
+    // Knock knock: the right shape hands out sweets and they come right up; any other gets pranked
+    if (moves.knock?.answered) {
+      moves.knock.callers.forEach(a => addEvent("info", `🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
+    } else if (moves.knock) {
+      const callers = moves.knock.callers;
+      addEvent("alert", `🪄 ${callers.map(a => a.name).join(" and ")} ${callers.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${mimicRoom}. ${PRANKS[Math.floor(Math.random() * PRANKS.length)]} (+1 suspicion)`);
+      raiseSuspicion(1);
+    }
+    if (moves.claimedStar) {
+      setStarFragment(null);
+      addEvent("info", `🌠 ${moves.claimedStar.name} scoops up the star fragment and pockets it, still glowing.`);
+    }
+    setParty(moves.party);
 
-    // Small creatures also wander
-    setSmallCreatures(prev => prev.map(c => {
-      if (c.isConsumed) return c;
-      if (Math.random() < 0.6) return c;
-      const adjacent = getAdjacentRooms(location, c.location);
-      const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = candidates[Math.floor(Math.random() * candidates.length)];
-      return { ...c, location: newRoom };
-    }));
+    countStillTurn(moves.arrivals.length > 0);
+
+    // Auto stealth check for adventurers who just wandered into the mimic's room
+    if (moves.arrivals.length > 0) {
+      const suspDelta = runStealthChecks(moves.arrivals, mimicRoom);
+      if (suspDelta > 0) raiseSuspicion(suspDelta);
+    }
+
+    // Small creatures also wander (toward you, sometimes, if you wear Honeyamber)
+    const honeyamber = hasMagic(character.currentAppearance, "Honeyamber");
+    const critters = moveCreatures(smallCreatures, location, mimicRoom, honeyamber);
+    setSmallCreatures(critters.creatures);
+    if (honeyamber) {
+      critters.arrivals.forEach(c => addEvent("info", `🍯 A ${c.name} creeps into the ${mimicRoom}, following a sweet smell only it can catch.`));
+    }
 
     checkActionLimit(newCount);
-    advanceShip();
+    endTurn();
   };
 
   // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
@@ -1400,6 +1313,11 @@ export default function Game() {
           ...VARIANT_FORMS.map(f => f.id),   // Curiosity Cabinet
           ...SEASONAL_FORMS.map(f => f.id),  // Festive, A Mimic for All Seasons
         ])],
+        // Seasonal Traveler: a hunt at every seasonal location
+        locationHuntCounts: {
+          ...character.locationHuntCounts,
+          ...Object.fromEntries(LOCATIONS.filter(l => l.holiday).map(l => [l.id, Math.max(character.locationHuntCounts[l.id] ?? 0, 1)])),
+        },
       }
     : character;
   // If a new achievement is added and the preview above doesn't earn it, say so
@@ -1412,7 +1330,7 @@ export default function Game() {
   // any other hunt ends when no adventurers remain. Either way, wait for a ceremony to finish.
   const isNest = !!location?.rivalNest;
   const huntOver = phase === "hunt" && party.length > 0 && !ceremonyRunning &&
-    (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0);
+    (isNest ? isNestCleared(rivals) : activeAdventurers.length === 0 && uneatenFrozen(party).length === 0);
   const recordSurvivedHunt = useEffectEvent(() => recordHunt("survived"));
   useEffect(() => {
     if (huntOver) recordSurvivedHunt();
@@ -1451,7 +1369,7 @@ export default function Game() {
     const earned = new Set(ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => a.id));
     if (earnedRef.current) {
       for (const a of ACHIEVEMENTS) {
-        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons"];
+        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons", "seasonedTraveler"];
         if (announced.includes(a.id) && earned.has(a.id) && !earnedRef.current.has(a.id)) {
           addEvent("evolve", `${a.icon} ${a.name}! ${a.flavor(character.name)}`);
         }
@@ -1459,40 +1377,13 @@ export default function Game() {
     }
     earnedRef.current = earned;
   }, [character, addEvent]);
-  const consumedCount = party.filter(a => a.isConsumed).length;
 
-  // Mass-below-tier plausibility penalty
-  const getMassPenalty = () => {
-    if (!character) return 0;
-    const tierIdx = TIER_ORDER.indexOf(character.tier);
-    const tierMin = TIER_CONFIG[character.tier]?.massRange[0] ?? 0;
-    const oneTierBelowMin = tierIdx > 0 ? (TIER_CONFIG[TIER_ORDER[tierIdx - 1]]?.massRange[0] ?? 0) : 0;
-    if (character.mass < oneTierBelowMin) return 2;
-    if (character.mass < tierMin) return 1;
-    return 0;
-  };
-  const massPenalty = getMassPenalty();
-  const sickPlausibilityPenalty = (currentSickness?.penalties?.plausibility ?? 0);
-  const sickAdhesionPenalty = (currentSickness?.penalties?.adhesion ?? 0);
-  const sickPatiencePenalty = (currentSickness?.penalties?.patience ?? 0);
-  const activeForm = character ? getActiveForm(character) : null;
-  // Forms from an adjacent tier: –2 Plausibility (tier above, applied in stealthCheck) or –1 Patience (tier below)
-  const formTierPenalties = activeForm && character ? getFormTierPenalties(effectiveFormTier(activeForm, formTier(character)), formTier(character)) : { plausibility: 0, patience: 0 };
-  const effectiveAdhesion = Math.max(1, (character?.adhesion ?? 1) - sickAdhesionPenalty);
-  const effectivePatience = Math.max(1, (character?.patience ?? 1) - sickPatiencePenalty - formTierPenalties.patience);
-  const cfg = character ? TIER_CONFIG[character.tier] : null;
-  const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
-
-  // Seasonal forms in season for this mimic that it isn't carrying yet (nudged on the setup screen)
-  const seasonalHint = (() => {
-    if (!character) return null;
-    const carried = new Set<string>(character.forms.map(f => f.formId));
-    const fresh = getSeasonalForms(formTier(character), today()).filter(f => !carried.has(f.id));
-    const holiday = fresh[0]?.holiday;
-    if (!holiday) return null;
-    const names = fresh.map(f => `a ${f.name}`);
-    return { holiday: HOLIDAYS[holiday], names: names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : names[0] };
-  })();
+  // Stats after mass, sickness and form-tier penalties (see effectiveStats)
+  const activeForm = getActiveForm(character);
+  const stats = character ? effectiveStats(character, currentSickness, activeForm) : null;
+  const effectivePlausibility = stats?.plausibility ?? 1;
+  const effectiveAdhesion = stats?.adhesion ?? 1;
+  const effectivePatience = stats?.patience ?? 1;
 
   // What the world says about the hunt once it's over (all inputs are final by then)
   const endReport = character && location && (huntOver || phase === "gameover") ? buildHuntReport({
@@ -1508,7 +1399,8 @@ export default function Game() {
     biggestMeal: huntMealRef.current,
     party,
     mimicsDevoured: rivals.filter(r => r.consumed).length,
-    sank: !!location.sinkingTurns && shipTurn >= location.sinkingTurns,
+    sank: !!location.sinkingTurns && huntTurn >= location.sinkingTurns,
+    locationId: location.id,
   }) : null;
 
   // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):
@@ -1520,10 +1412,53 @@ export default function Game() {
     : latestTypes.has("escape") ? "shake"
     : null;
 
-  // Filter locations by minTier and minMass
-  const availableLocations = character
-    ? LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation))
+
+  // What the four hunt actions can do right now (shared by the buttons and the keyboard)
+  const someoneInMyRoom = activeAdventurers.some(a => a.location === mimicRoom);
+  const canRelocate = !acting && !huntOver && !someoneInMyRoom;
+  const canLure = !acting && !huntOver && activeAdventurers.length > 0;
+  const canStrike = !acting && !huntOver &&
+    (party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) || !!rivalInRoom(rivals, mimicRoom)?.revealed ||
+      (watchingSky(mimicRoom) && someoneInMyRoom));
+  const canWait = !acting && !huntOver;
+  // Empty rooms next door, in the order the Relocate panel lists (and numbers) them
+  const relocateRooms = location && mimicRoom
+    ? getAdjacentRooms(location, mimicRoom).filter(room => !activeAdventurers.some(a => a.location === room))
     : [];
+  const toggleMovePanel = () => {
+    if (!canRelocate) return;
+    setShowMovePanel(prev => !prev);
+    setShowFormPanel(false);
+    setShowAppearancePanel(false);
+  };
+
+  // Keyboard shortcuts during a hunt: R / L / S / W, and 1–9 to pick a room while relocating
+  const onHuntKey = useEffectEvent((e: KeyboardEvent) => {
+    if (phase !== "hunt" || showSheet || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable='true']")) return;
+    const key = e.key.toLowerCase();
+    if (showMovePanel && /^[1-9]$/.test(key)) {
+      const room = relocateRooms[Number(key) - 1];
+      if (room && canRelocate) { e.preventDefault(); doRelocate(room); }
+      return;
+    }
+    if (key === "escape" && showMovePanel) { setShowMovePanel(false); return; }
+    const actions: Record<string, [boolean, () => void]> = {
+      r: [canRelocate, toggleMovePanel],
+      l: [canLure, doAllureTurn],
+      s: [canStrike, doStrikeTurn],
+      w: [canWait, doWaitTurn],
+    };
+    const action = actions[key];
+    if (!action) return;
+    e.preventDefault();
+    if (action[0]) action[1]();
+  });
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => onHuntKey(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
 
   if (loading) {
     return (
@@ -1574,7 +1509,16 @@ export default function Game() {
     </div>
   ) : null;
 
+  // What the screen's pieces read (see HuntContext); actions are passed to them as props
+  const hunt: HuntState = {
+    character, activeForm, stats: effectiveStats(character, currentSickness, activeForm), sickness: currentSickness,
+    suspicion, lureRange: lureRange(character),
+    location, mimicRoom, party, activeAdventurers, creatures: smallCreatures, rivals, isBountyHunt, huntOver, actionCount, acting,
+    huntTurn, fireworksRoom, starFragment, skyward: watchingSky(mimicRoom),
+  };
+
   return (
+    <HuntContext.Provider value={hunt}>
     <div
       className={`hunt-stage min-h-screen bg-background ${phase === "hunt" ? "pb-28 lg:pb-0" : ""}`}
       style={{ "--suspicion": suspicion } as CSSProperties}
@@ -1585,8 +1529,6 @@ export default function Game() {
       {phase === "hunt" && <div className="suspicion-vignette" aria-hidden />}
       {/* Remounted for each turn with an effect, which replays its animation */}
       {fx && fx !== "shake" && <div key={`${latestTurn}-${fx}`} className="fx-layer" data-fx={fx} aria-hidden />}
-      {MassDecayBanner}
-      {SeasonBanner}
       {/* Top bar */}
       <div className="border-b border-border bg-card/50 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1607,6 +1549,10 @@ export default function Game() {
         </div>
       </div>
 
+      {/* Notices that need dismissing sit under the top bar, not above it */}
+      {MassDecayBanner}
+      {SeasonBanner}
+
       {showSheet && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSheet(false)}>
           <div onClick={e => e.stopPropagation()} className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -1619,87 +1565,11 @@ export default function Game() {
 
         {/* Left: Status */}
         <div className="space-y-4">
-          <Card className="bg-card border-border">
-            <CardContent className="fx-shake p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-cinzel text-xs text-muted-foreground uppercase tracking-wide">Active Form</span>
-                {activeForm ? (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 border text-[11px]">{activeForm.name}</Badge>
-                ) : (
-                  <span className="text-xs text-destructive">None</span>
-                )}
-              </div>
-              {activeForm && (
-                <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
-              )}
-              {activeForm && activeForm.builtInTraits.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mb-1">
-                  Built-in: <span className="text-primary">{activeForm.builtInTraits.join(", ")}</span>
-                </p>
-              )}
-              {/* Current appearance summary */}
-              {character.currentAppearance && (() => {
-                const app = character.currentAppearance;
-                const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || [])];
-                const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || []), ...(app.scentTraits || [])];
-                if (mats.length === 0 && traits.length === 0) return null;
-                return (
-                  <div className="space-y-1 pt-1 border-t border-border/50">
-                    {mats.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {mats.map(m => (
-                          <span key={m} className="text-[10px] bg-accent/20 text-accent-foreground rounded px-1.5 py-0.5 border border-accent/20">{m}</span>
-                        ))}{traits.length > 0 && (<>{traits.map(t => (
-                          <span key={t} className="text-[10px] bg-primary/10 text-primary/80 rounded px-1.5 py-0.5 border border-primary/20">{t}</span>
-                        ))}</>)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-              <div className="space-y-2 pt-1 border-t border-border">
-                <StatBar label="Plausibility" value={character.plausibility} max={6} color="bg-green-500"
-                  penalty={massPenalty + (currentSickness?.penalties?.plausibility ?? 0) + formTierPenalties.plausibility}
-                  penaltyLabel={currentSickness?.penalties?.plausibility ? `–${currentSickness.penalties.plausibility} ${currentSickness.name}` : null}
-                  massPenalty={massPenalty}
-                  formPenalty={formTierPenalties.plausibility}
-                  formPenaltyNote="Your form is from the tier above — you can't quite match its appearance (stealth checks)."
-                />
-                <StatBar label="Adhesion" value={character.adhesion} max={6} color="bg-primary"
-                  penalty={currentSickness?.penalties?.adhesion ?? 0}
-                  penaltyLabel={currentSickness?.penalties?.adhesion ? `–${currentSickness.penalties.adhesion} ${currentSickness.name}` : null}
-                />
-                <StatBar label="Patience" value={character.patience} max={6} color="bg-purple-500"
-                  penalty={(currentSickness?.penalties?.patience ?? 0) + formTierPenalties.patience}
-                  penaltyLabel={currentSickness?.penalties?.patience ? `–${currentSickness.penalties.patience} ${currentSickness.name}` : null}
-                  formPenalty={formTierPenalties.patience}
-                  formPenaltyNote="Your form is from the tier below — too much mass in a small space makes you restless."
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="fx-shake bg-card border-border">
-            <CardContent className="p-4 space-y-3">
-              <SuspicionMeter value={suspicion} max={10} />
-              <div className="border-t border-border pt-3">
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-muted-foreground font-cinzel uppercase tracking-wide text-[11px]">Assimilation</span>
-                  <span className="text-foreground font-bold">{character.assimilationPoints} AP</span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-accent rounded-full transition-all duration-700" style={{ width: `${apProgress}%` }} />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1 text-right">
-                  {`${character.assimilationPoints} / ${cfg?.apToEvolve} AP`}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <StatusPanel />
 
           {/* TEMPORARY (dev builds only): preview every achievement's banner and sheet entry.
               Display only — nothing is saved. Remove once the banners have been reviewed. */}
-          {import.meta.env.DEV && phase === "hunt" && character && (
+          {import.meta.env.DEV && phase === "hunt" && (
             <Button
               variant="outline"
               size="sm"
@@ -1717,7 +1587,7 @@ export default function Game() {
                 variant="outline"
                 size="sm"
                 className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
-                onClick={() => setDicePreview(p => p ? null : rollDicePreview(character?.adhesion ?? 4))}
+                onClick={() => setDicePreview(p => p ? null : rollDicePreview(character.adhesion))}
               >
                 🛠 Dev: {dicePreview ? "hide dice preview" : "preview dice"}
               </Button>
@@ -1730,7 +1600,7 @@ export default function Game() {
                       {dicePreview.mimic.total >= dicePreview.target.total ? "✓ The Strike lands." : "✗ The Captain slips free."}
                     </p>
                     <Button variant="outline" size="sm" className="w-full text-[10px]"
-                      onClick={() => setDicePreview(rollDicePreview(character?.adhesion ?? 4))}>
+                      onClick={() => setDicePreview(rollDicePreview(character.adhesion))}>
                       Re-roll
                     </Button>
                   </CardContent>
@@ -1739,327 +1609,54 @@ export default function Game() {
             </div>
           )}
 
-          {/* Rival mimic / nest status */}
-          {phase === "hunt" && !huntOver && rivals.some(r => !r.consumed) && (() => {
-            const remaining = rivals.filter(r => !r.consumed);
-            const exposed = remaining.filter(r => r.revealed);
-            const tracked = remaining.some(r => r.clueGiven && !r.revealed);
-            const devoured = rivals.filter(r => r.consumed).length;
-            const elder = remaining.find(r => r.kind === "elder");
-            return (
-              <Card className={`border ${exposed.length > 0 ? "border-orange-400/50 bg-orange-400/5" : "border-purple-400/20 bg-card"}`}>
-                <CardContent className="p-3 space-y-1">
-                  <p className="font-cinzel text-xs text-orange-400/90">{isNest ? "🕸 The Nest" : "⚠ Rival Mimic"}</p>
-                  {isNest && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Mimics devoured: {devoured}{elder && !elder.revealed ? " · The Elder still hides." : ""}
-                    </p>
-                  )}
-                  {exposed.map(r => (
-                    <p key={r.id} className="text-[11px] text-orange-400/80">
-                      {r.kind === "elder" ? "The Elder Mimic" : `A ${RIVAL_STATS[r.kind].name}`} is exposed in the <span className="font-bold">{r.room}</span>. Strike to devour it!
-                    </p>
-                  ))}
-                  {tracked && (
-                    <p className="text-[11px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to where they vanished.</p>
-                  )}
-                  {!tracked && exposed.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Sinking ship status */}
-          {phase === "hunt" && !huntOver && location?.sinkingTurns && (() => {
-            const left = location.sinkingTurns - shipTurn;
-            const urgent = left <= 3;
-            return (
-              <div className={`px-3 py-2 rounded border text-xs ${urgent ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-sky-400/30 bg-sky-400/5 text-sky-400/80"}`}>
-                <span className="font-cinzel">🌊 {left} {left === 1 ? "turn" : "turns"} until she goes under</span>
-                <div className="h-1 mt-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${urgent ? "bg-destructive/70" : "bg-sky-400/60"} transition-all duration-500`} style={{ width: `${(shipTurn / location.sinkingTurns) * 100}%` }} />
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Action counter warning */}
-          {phase === "hunt" && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
-            <div className={`px-3 py-2 rounded border text-xs ${ACTION_LIMIT - actionCount <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
-              <span className="font-cinzel">⏳ {ACTION_LIMIT - actionCount} actions remaining</span>
-              <p className="text-[11px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
-            </div>
-          )}
+          {phase === "hunt" && <LocationBanners />}
 
           {/* Party list or room map: one card, click it to switch (remembered per mimic) */}
-          {phase !== "setup" && location && mimicRoom && party.length > 0 && (() => {
-            const showMap = character.sidebarView === "map";
-            const counts = `(${activeAdventurers.length} active / ${consumedCount} consumed)`;
-            return (
-              <Card
-                role="button"
-                tabIndex={0}
-                aria-label={showMap ? "Show the party list" : "Show the room map"}
-                onClick={toggleSidebarView}
-                onKeyDown={e => {
-                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSidebarView(); }
-                }}
-                className={"sidebar-view-card bg-card border-border fx-shake"}
-              >
-                <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
-                      {showMap ? <>{location.name} <span className="normal-case tracking-normal">{counts}</span></> : <>Party {counts}</>}
-                    </CardTitle>
-                    {showMap
-                      ? <span className="view-toggle-icon" aria-hidden>Aa</span>
-                      : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
-                  </div>
-                </CardHeader>
-                {showMap ? (
-                  <CardContent className="px-4 pb-4">
-                    <RoomMap
-                      location={location}
-                      mimicRoom={mimicRoom}
-                      lureRange={getAllureRange()}
-                      adventurers={activeAdventurers}
-                      creatures={smallCreatures.filter(c => !c.isConsumed)}
-                      rivals={rivals}
-                      formName={activeForm?.name}
-                    />
-                  </CardContent>
-                ) : (
-                  <CardContent className="px-4 pb-3 space-y-2">
-                    {party.map(adv => {
-                      const dist = mimicRoom && location && adv.isAlive && !adv.isConsumed
-                        ? getRoomDistance(location, mimicRoom, adv.location) : null;
-                      const inRange = dist !== null && dist <= getAllureRange();
-                      const fled = adv.fled && !adv.isConsumed;
-                      const disappeared = adv.isDisappeared && !adv.isConsumed;
-                      const maxHits = adv.constitution || 3;
-                      return (
-                        <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared ? "opacity-40" : ""}`}>
-                          <span className={
-                            adv.isConsumed ? "line-through text-muted-foreground" :
-                            fled ? "text-muted-foreground italic" :
-                            disappeared ? "text-purple-400/60 italic" :
-                            adv.isAttracted ? "text-yellow-400" : "text-foreground"
-                          }>
-                            {adv.name}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
-                            {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
-                            {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
-                            {adv.isAttracted && !adv.isConsumed && (
-                              <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
-                            )}
-                            {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
-                              <span className="text-[10px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
-                            )}
-                            {dist !== null && (
-                              <span title={adv.location} className={`text-[10px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
-                                <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })()}
-
+          {phase !== "setup" && party.length > 0 && <PartyCard onToggle={toggleSidebarView} />}
         </div>
 
         {/* Center: Main action area */}
         <div className="lg:col-span-2 space-y-4">
-
-          {/* SETUP phase */}
-          {phase === "setup" && !roomSelecting && (
-            <div>
-              <h2 className="font-cinzel text-xl text-foreground mb-1">Choose Your Hunting Ground</h2>
-              <p className="text-muted-foreground text-sm mb-1 flavor-text italic">Where will you lie in wait?</p>
-              {character && TIER_ORDER.indexOf(character.tier) < TIER_ORDER.indexOf("Grand") && (
-                <p className="text-[11px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
-              )}
-              {seasonalHint && (
-                <button
-                  onClick={() => startFormSelection("setup")}
-                  data-holiday={seasonalHint.holiday.id}
-                  className="holiday-card w-full text-left mb-4 px-3 py-2 rounded-lg border bg-card text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="holiday-badge text-xs font-cinzel">{seasonalHint.holiday.icon} {seasonalHint.holiday.name}</span>
-                  {" "}· Something in the air: you could take the shape of {seasonalHint.names}. <span className="text-primary">Choose forms →</span>
-                </button>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[...availableLocations].sort((a, b) => Number(!!b.rare) - Number(!!a.rare)).map(loc => (
-                  <Card
-                    key={loc.id}
-                    onClick={() => chooseLocation(loc)}
-                    className={`cursor-pointer bg-card transition-all group ${loc.rare
-                      ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
-                      : "border-border hover:border-primary/40"}`}
-                  >
-                    <CardContent className="p-4">
-                      {character && <BurnBadge huntsLeft={locationBurn(character, loc.id)} />}
-                      {loc.rare && character?.rareLocation && (
-                        <p className="text-[11px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
-                          ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
-                        </p>
-                      )}
-                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{loc.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2">{loc.description}</p>
-                      <p className="flavor-text text-[11px] text-muted-foreground/70 italic mb-3 line-clamp-2">{loc.flavorText}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                          {loc.partySize[0]}–{loc.partySize[1]} adventurers
-                        </span>
-                        {loc.advantageTags.slice(0, 2).map(t => (
-                          <span key={t} className="text-[11px] text-primary border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5">{t}</span>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ROOM SELECTION phase */}
-          {roomSelecting && location && (
-            <div>
-              <h2 className="font-cinzel text-xl text-foreground mb-1">{location.name}</h2>
-              <p className="text-muted-foreground text-sm mb-1 flavor-text italic">{location.flavorText}</p>
-              <p className="text-xs text-muted-foreground mb-4">Choose the room where you will take your form and wait.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {location.rooms.map(room => {
-                  const adjacent = getAdjacentRooms(location, room);
-                  return (
-                    <Card
-                      key={room}
-                      onClick={() => confirmRoom(room, location)}
-                      className="cursor-pointer border-border hover:border-primary/40 bg-card transition-all group"
-                    >
-                      <CardContent className="p-4">
-                        <h3 className="font-cinzel text-sm text-foreground group-hover:text-primary transition-colors mb-1">{room}</h3>
-                        <p className="text-[11px] text-muted-foreground">
-                          Adjacent: {adjacent.join(", ")}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => { setRoomSelecting(false); setLocation(null); }}
-                className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
+          {/* DEV ONLY (achievement-preview branch): pretend it's a holiday, to try seasonal forms and
+              locations out of season. Sets localStorage "mm.debugDate" (see today()) and reloads. */}
+          {import.meta.env.DEV && phase === "setup" && !roomSelecting && (
+            <label className="flex items-center gap-2 text-[10px] px-3 py-1.5 rounded border border-dashed border-amber-400/40 text-amber-400/80">
+              🛠 Dev: pretend it's
+              <select
+                value={readDebugDate()}
+                onChange={(e) => {
+                  try {
+                    if (e.target.value) localStorage.setItem(DEBUG_DATE_KEY, e.target.value);
+                    else localStorage.removeItem(DEBUG_DATE_KEY);
+                  } catch { /* storage unavailable */ }
+                  window.location.reload();
+                }}
+                className="bg-transparent border border-amber-400/30 rounded px-1 py-0.5 text-amber-400"
               >
-                ← Back to location select
-              </button>
-            </div>
+                <option value="">today (real date)</option>
+                {(Object.keys(HOLIDAYS) as HolidayId[]).map(h => {
+                  const { start, name, icon } = HOLIDAYS[h];
+                  const value = `${start[0]}-${start[1]}`;
+                  return <option key={h} value={value}>{icon} {name} ({value})</option>;
+                })}
+              </select>
+            </label>
+          )}
+          {phase === "setup" && !roomSelecting && (
+            <LocationSelect onChoose={chooseLocation} onChooseForms={() => startFormSelection("setup")} />
           )}
 
-          {/* HUNT phase */}
+          {roomSelecting && <RoomSelect onConfirm={confirmRoom} onBack={() => { setRoomSelecting(false); setLocation(null); }} />}
+
           {phase === "hunt" && (
             <div className="space-y-4">
-              {isBountyHunt && (
-                <div className="p-3 bg-destructive/10 border border-destructive/40 rounded-lg">
-                  <p className="font-cinzel text-destructive text-sm font-bold mb-0.5">⚠ Bounty Hunt</p>
-                  <p className="text-xs text-destructive/80">
-                    A bounty has been placed on <span className="font-bold">{character?.name}</span>. These hunters know your kind intimately — they will be extremely difficult to deceive.
-                  </p>
-                </div>
-              )}
-              {currentSickness && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-lg">
-                  <p className="font-cinzel text-amber-400 text-sm font-bold mb-0.5">☠ {currentSickness.name}</p>
-                  <p className="text-xs text-amber-400/80 flavor-text italic mb-1">{currentSickness.flavorText}</p>
-                  <p className="text-xs text-amber-400/70">
-                    {Object.entries(currentSickness.penalties).map(([k, v]) => `–${v} ${k}`).join(" · ")} — this hunt only.
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-cinzel text-xl text-foreground">{location?.name}</h2>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-xs text-muted-foreground">{activeAdventurers.length} adventurers remain</p>
-                    {mimicRoom && (
-                      <>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-primary/80 font-cinzel">You: {mimicRoom}</span>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-yellow-400/70">Lure range: {getAllureRange()} rooms</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setPhase("setup")} disabled={ceremonyRunning} className="text-xs border-border gap-1">
-                  <RefreshCw className="w-3 h-3" /> New Hunt
-                </Button>
-              </div>
-
-              {/* Form & Appearance quick-change */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setShowFormPanel(!showFormPanel); setShowAppearancePanel(false); setShowMovePanel(false); }}
-                  className="text-xs border-border gap-1 flex-1"
-                >
-                  <Layers className="w-3 h-3" /> Change Form
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setShowAppearancePanel(!showAppearancePanel); setShowFormPanel(false); setShowMovePanel(false); }}
-                  className="text-xs border-border gap-1 flex-1"
-                >
-                  <Palette className="w-3 h-3" /> Appearance
-                </Button>
-              </div>
-
-              {/* Form switcher panel */}
-              {showFormPanel && character.forms.length > 0 && (
-                <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-2">
-                  <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest">Select Active Form (costs 1 suspicion)</p>
-                  {character.forms.map((ref, i) => {
-                    const form = ALL_FORMS.find(f => f.id === ref.formId);
-                    if (!form) return null;
-                    const isActive = i === (character.activeFormIndex ?? 0);
-                    return (
-                      <button
-                        key={ref.formId}
-                        onClick={() => !isActive && doChangeForm(i)}
-                        data-holiday={form.holiday}
-                        className={`${form.holiday ? "holiday-card" : ""} w-full text-left px-3 py-2 rounded border text-xs transition-all ${
-                          isActive ? "border-primary bg-primary/10 text-primary cursor-default" :
-                          "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-cinzel">{form.name}</span>
-                          <div className="flex gap-1">
-                            <span className="text-[10px] border border-border rounded px-1">{effectiveFormTier(form, formTier(character))}</span>
-                            {isActive && <span className="text-[10px] text-primary">Active</span>}
-                          </div>
-                        </div>
-                        <HolidayBadge form={form} />
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
-                        <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Appearance panel */}
+              <HuntHeader
+                canLeave={!ceremonyRunning}
+                onNewHunt={() => setPhase("setup")}
+                onToggleForms={() => { setShowFormPanel(!showFormPanel); setShowAppearancePanel(false); setShowMovePanel(false); }}
+                onToggleAppearance={() => { setShowAppearancePanel(!showAppearancePanel); setShowFormPanel(false); setShowMovePanel(false); }}
+              />
+              {showFormPanel && <FormSwitcher onChange={doChangeForm} />}
               {showAppearancePanel && (
                 <AppearanceEditor
                   character={character}
@@ -2068,127 +1665,24 @@ export default function Game() {
                   onDevToggleLearnedMaterial={import.meta.env.DEV ? devToggleLearnedMaterial : undefined}
                 />
               )}
-
-              {/* Relocate panel */}
-              {showMovePanel && (() => {
-                if (!location || !mimicRoom) return null;
-                const adjacentRooms = getAdjacentRooms(location, mimicRoom);
-                const openRooms = adjacentRooms.filter(room =>
-                  !activeAdventurers.some(a => a.location === room)
-                );
-                return (
-                  <div className="bg-muted/20 border border-blue-400/20 rounded-lg p-3 space-y-2">
-                    <p className="text-[11px] text-blue-400/70 font-cinzel uppercase tracking-widest">Relocate — Choose Destination</p>
-                    {openRooms.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">There are too many people nearby — moving now would be too risky.</p>
-                    ) : (
-                      openRooms.map(room => (
-                        <button
-                          key={room}
-                          onClick={() => doRelocate(room)}
-                          className="w-full text-left px-3 py-2 rounded border border-border text-xs text-muted-foreground hover:border-blue-400/40 hover:text-foreground transition-all"
-                        >
-                          <span className="font-cinzel">{room}</span>
-                          <span className="text-[10px] text-muted-foreground ml-2">(+1 suspicion)</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Action buttons: a bar fixed to the bottom of the screen below lg, a 2×2 grid above */}
-              <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 backdrop-blur lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
-              <div className="h-1 bg-muted lg:hidden" aria-hidden><div className="action-bar-suspicion h-full" /></div>
-              <div className="grid grid-cols-4 gap-2 p-2 lg:grid-cols-2 lg:gap-3 lg:p-0">
-                <Button
-                  onClick={() => {
-                    const inMyRoom = activeAdventurers.filter(a => a.location === mimicRoom);
-                    if (inMyRoom.length > 0) return; // disabled
-                    setShowMovePanel(prev => !prev);
-                    setShowFormPanel(false);
-                    setShowAppearancePanel(false);
-                  }}
-                  disabled={acting || huntOver || activeAdventurers.some(a => a.location === mimicRoom)}
-                  variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
-                >
-                  <MoveRight className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-cinzel">Relocate</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Slip to empty room</span>
-                </Button>
-                <Button
-                  onClick={doAllureTurn}
-                  disabled={acting || huntOver || activeAdventurers.length === 0}
-                  variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
-                >
-                  <Zap className="w-5 h-5 text-yellow-400/70" />
-                  <span className="text-xs font-cinzel">Lure</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Attract adventurers</span>
-                </Button>
-                <Button
-                  onClick={doStrikeTurn}
-                  disabled={acting || huntOver || (!party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) && !rivalInRoom(rivals, mimicRoom)?.revealed)}
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
-                  variant="ghost"
-                >
-                  <Shield className="w-5 h-5" />
-                  <span className="text-xs font-cinzel">Strike!</span>
-                  <span className="hidden lg:inline text-[11px]">Consume attracted prey</span>
-                </Button>
-                <Button
-                  onClick={doWaitTurn}
-                  disabled={acting || huntOver}
-                  variant="outline"
-                  className="h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-purple-400/30"
-                >
-                  <RefreshCw className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-cinzel">Wait</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Rest & reduce suspicion</span>
-                </Button>
-              </div>
-              </div>
-
-              {/* Small creatures — only show those currently in mimic's room */}
-              {(() => {
-                const inRoom = smallCreatures.filter(c => !c.isConsumed && c.location === mimicRoom);
-                if (inRoom.length === 0) return null;
-                return (
-                  <div className="bg-muted/10 border border-border rounded-lg p-3">
-                    <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest mb-2">
-                      Creatures of Opportunity
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {inRoom.map(creature => (
-                        <button
-                          key={creature.uid}
-                          onClick={() => doConsumeCreature(creature)}
-                          disabled={acting}
-                          className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-border bg-card hover:border-primary/40 hover:text-primary transition-all text-muted-foreground"
-                          title={creature.description}
-                        >
-                          {creatureEmoji(creature.name)} {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
+              {showMovePanel && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
+              <ActionBar
+                canRelocate={canRelocate}
+                canLure={canLure}
+                canStrike={canStrike}
+                canWait={canWait}
+                onRelocate={toggleMovePanel}
+                onLure={doAllureTurn}
+                onStrike={doStrikeTurn}
+                onWait={doWaitTurn}
+              />
+              <MealsHere
+                onEatCreature={doConsumeCreature}
+                onEatStar={doEatStar}
+                onEatFrozen={doEatFrozen}
+              />
               {huntOver && (
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
-                  <p className="text-primary font-cinzel mb-3">The hunt is over.</p>
-                  {endReport && <div className="mb-4"><HuntReport report={endReport} /></div>}
-                  <div className="flex gap-2 justify-center">
-                    <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
-                      Choose New Forms
-                    </Button>
-                    <Button onClick={() => setPhase("setup")} variant="outline" className="border-border text-xs">
-                      Hunt Again (Keep Forms)
-                    </Button>
-                  </div>
-                </div>
+                <HuntOverPanel report={endReport} onChooseForms={() => startFormSelection("setup")} onHuntAgain={() => setPhase("setup")} />
               )}
             </div>
           )}
@@ -2204,76 +1698,17 @@ export default function Game() {
             </ScrollArea>
           )}
 
-          {/* EVOLVE phase */}
           {phase === "evolve" && (
-            <div>
-              <h2 className="font-cinzel text-2xl text-primary mb-2">Assimilation Threshold Reached</h2>
-              <p className="flavor-text text-muted-foreground mb-6 italic">
-                Your body strains with absorbed essence. Spend your assimilation — grow, or refine.
-              </p>
-              <p className="text-xs text-muted-foreground -mt-4 mb-6">
-                Choose one. To upgrade again, you&apos;ll need to reach the threshold again ({character.assimilationPoints} / {cfg?.apToEvolve} AP).
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { key: "mass", label: "Increase Mass", desc: `Grow toward the next tier. Cost: ${cfg?.apToEvolve} AP`, icon: "⬆", capped: false },
-                  { key: "plausibility", label: "+1 Plausibility", desc: `Improve deception. Cost: ${cfg?.apToUpgrade} AP (${character.plausibility}/${STAT_CAP})`, icon: "👁", capped: character.plausibility >= STAT_CAP },
-                  { key: "adhesion", label: "+1 Adhesion", desc: `Better grappling. Cost: ${cfg?.apToUpgrade} AP (${character.adhesion}/${STAT_CAP})`, icon: "🔒", capped: character.adhesion >= STAT_CAP },
-                  { key: "patience", label: "+1 Patience", desc: `Longer stillness. Cost: ${cfg?.apToUpgrade} AP (${character.patience}/${STAT_CAP})`, icon: "⌛", capped: character.patience >= STAT_CAP },
-                ] satisfies { key: UpgradeChoice; label: string; desc: string; icon: string; capped: boolean }[]).map(opt => (
-                  <Card
-                    key={opt.key}
-                    onClick={() => !opt.capped && handleEvolution(opt.key)}
-                    className={`border-border bg-card transition-all group ${opt.capped ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl mb-2">{opt.icon}</div>
-                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{opt.label}</h3>
-                      <p className="text-xs text-muted-foreground">{opt.capped ? "MAX — cannot increase further" : opt.desc}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setPhase("hunt")}
-                className="w-full mt-4 border-border text-muted-foreground hover:text-foreground text-xs"
-              >
-                Not Now — Continue Hunting
-              </Button>
-            </div>
+            <EvolveScreen onChoose={handleEvolution} onSkip={() => setPhase("hunt")} />
           )}
 
-          {/* GAME OVER */}
           {phase === "gameover" && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">{gameoverReason === "abandoned" ? "🌫️" : "🔥"}</div>
-              <h2 className={`font-cinzel text-3xl mb-2 ${gameoverReason === "abandoned" ? "text-muted-foreground" : "text-destructive"}`}>
-                {gameoverReason === "abandoned" ? "They Left" : "Discovered"}
-              </h2>
-              <p className="flavor-text text-muted-foreground mb-2 italic max-w-sm mx-auto">
-                {gameoverReason === "abandoned"
-                  ? "The adventurers found nothing of interest and moved on. Hunger remains."
-                  : "Torches are lit. Steel is drawn. You scatter into the dark — this lair is burned."}
-              </p>
-              {endReport && <div className="my-6"><HuntReport report={endReport} /></div>}
-              <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
-                {gameoverReason === "abandoned"
-                  ? "Find a new hunting ground. Better forms and higher stats will help you lure more resistant prey."
-                  : `This hunting ground and the form you were caught in are burned for ${BURN_HUNTS} hunts: using either starts you under suspicion (+${BURN_SUSPICION} each). Consider a new form.`}
-              </p>
-              <div className="flex flex-col gap-2 items-center">
-                <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 w-48">
-                  Change Forms & Hunt Again
-                </Button>
-                <Button onClick={() => setPhase("setup")} variant="outline" className="border-border w-48">
-                  Hunt Again (Keep Forms)
-                </Button>
-                <Button asChild variant="ghost" className="text-muted-foreground w-48">
-                  <Link to={createPageUrl("Home")}>Return Home</Link>
-                </Button>
-              </div>
-            </div>
+            <GameOverScreen
+              reason={gameoverReason}
+              report={endReport}
+              onChooseForms={() => startFormSelection("setup")}
+              onHuntAgain={() => setPhase("setup")}
+            />
           )}
 
           {/* Achievement banners */}
@@ -2294,5 +1729,6 @@ export default function Game() {
         </div>
       </div>
     </div>
+    </HuntContext.Provider>
   );
 }

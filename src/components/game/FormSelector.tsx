@@ -3,7 +3,7 @@ import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_ORDER, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
   MAX_FORMS_ABOVE_TIER, type Form, type Tier,
-} from "./gameData";
+} from "@/data/gameData";
 import BurnBadge from "./BurnBadge";
 import HolidayBadge, { holidayCardProps } from "./HolidayBadge";
 import { Button } from "@/components/ui/button";

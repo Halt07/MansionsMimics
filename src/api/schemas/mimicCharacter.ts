@@ -14,8 +14,8 @@
 import { z } from 'zod';
 import {
   ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
-} from '@/components/game/vocabulary';
-import { FORM_IDS, LOCATIONS, type LocationId } from '@/components/game/gameData';
+} from '@/data/vocabulary';
+import { FORM_IDS, LOCATIONS, type LocationId } from '@/data/gameData';
 
 const TierSchema = z.enum(TIER_ORDER);
 const MaterialSchema = z.enum(ALL_MATERIALS);

@@ -5,6 +5,7 @@
 // ============================================================
 import type { Tier, UtilityTag } from "./vocabulary";
 import type { FormId } from "./mimicData";
+import type { HolidayId } from "./holidays";
 
 // ============================================================
 // LOCATIONS
@@ -18,6 +19,10 @@ export interface LocationCreature {
   readonly ap: number;
   readonly discipline: number;
   readonly description: string;
+  /** The only rooms it's found in and wanders between (anywhere if omitted). */
+  readonly rooms?: readonly string[];
+  /** At most this many in one hunt (no limit if omitted). */
+  readonly max?: number;
 }
 
 interface LocationDef {
@@ -51,6 +56,47 @@ interface LocationDef {
   readonly rivalNest?: readonly [number, number];
   /** The location sinks (and the hunt ends) after this many turns. */
   readonly sinkingTurns?: number;
+  /** Seasonal locations are open only while this holiday is in season, to mimics of any tier. */
+  readonly holiday?: HolidayId;
+  /**
+   * Snowed in: nobody can leave (anyone who would flee bolts to another room instead), and the
+   * cold freezes adventurers one by one (see chillParty in ./gameData). Entering the hearth room
+   * warms them a little; entering a cold room chills them.
+   */
+  readonly snowbound?: { readonly hearth: string; readonly cold: readonly string[] };
+  /** At least this many party slots go to adventurers native here (those listing it in `locations`). */
+  readonly nativeShare?: number;
+  /**
+   * Falling stars: every `every` turns a star fragment lands in a random room, and on each Wait
+   * the party heads one room closer to it until someone picks it up (see ./gameData).
+   * `landings` says how it gets into each room ("comes down … in the Stone Circle"); every room
+   * needs one (tests/stargazersHill.test.mjs checks).
+   */
+  readonly starfall?: { readonly every: number; readonly landings: Readonly<Record<string, string>> };
+  /**
+   * Fireworks: every `every` turns a volley goes up over a random room. For the next turn,
+   * everyone in that room and the rooms next to it is watching the sky, so nobody witnesses a
+   * meal there. A mimic shaped like one of the `crates` in the launch room gets rummaged for
+   * fireworks, found empty and thrown out into a neighboring room (that much suspicion).
+   */
+  readonly fireworks?: { readonly every: number; readonly crates: Readonly<Partial<Record<FormId, number>>> };
+  /**
+   * Door to door: the houses form a loop, listed in `order` (clockwise). On each Wait the
+   * whole party moves on to the next house, a few of them together and the rest spread around
+   * the loop. A room that isn't on the loop (the village green) is only visited when someone
+   * is lured there; they rejoin the loop at a neighboring house on their next move. When they reach the mimic's house they knock: a mimic shaped like one of
+   * the `sweets` forms (a variant counts as its base) gives them a sweet and they come right
+   * up to it (attracted); any other shape doesn't answer, and they play a prank (+1 suspicion).
+   */
+  readonly procession?: { readonly order: readonly string[]; readonly sweets: readonly FormId[] };
+  /** Everyone comes in costume: shown only by their costume until the mimic eats them. */
+  readonly costumes?: boolean;
+  /**
+   * Sometimes a "costume" isn't one: each hunt has `chance` that one of these adventurers (by
+   * template name, if the mimic's tier and mass allow it) joins the party, looking like its own
+   * costume. They never turn up any other way, so they're kept out of the normal party draw.
+   */
+  readonly realMonsters?: { readonly chance: number; readonly names: readonly string[] };
 }
 
 const LOCATION_DATA = [
@@ -494,6 +540,141 @@ const LOCATION_DATA = [
     alwaysIncludes: ["Ship's Captain"],
     sinkingTurns: 15,
   },
+  // ── Seasonal ──
+  {
+    id: "snowbound_lodge", name: "Snowbound Lodge", minTier: "Minor",
+    description: "A mountain lodge buried to its eaves in snow. The pass is closed, the woodpile is shrinking, and nobody is going anywhere.",
+    flavorText: "The drifts have sealed the doors. Every guest is watching the fire, and nobody is watching the furniture.",
+    rooms: ["Great Hearth", "Bunk Loft", "Kitchen & Larder", "Boot Room", "Snowed-In Courtyard", "Woodshed"],
+    roomGraph: {
+      "Great Hearth":        ["Bunk Loft", "Boot Room"],
+      "Bunk Loft":           ["Great Hearth"],
+      "Kitchen & Larder":    ["Boot Room"],
+      "Boot Room":           ["Great Hearth", "Kitchen & Larder", "Snowed-In Courtyard"],
+      "Snowed-In Courtyard": ["Boot Room", "Woodshed"],
+      "Woodshed":            ["Snowed-In Courtyard"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Comfort", "Hospitality", "Storage", "Rural"],
+    imageHint: "snowed-in timber lodge at night, firelight through frosted windows",
+    locationCreatures: [
+      { id: "reindeer", name: "Reindeer", ap: 4, discipline: 2, description: "Sheltering among the woodpiles from the storm.", rooms: ["Woodshed", "Snowed-In Courtyard"], max: 1 },
+      { id: "snow_hare", name: "Snow Hare", ap: 1, discipline: 2, description: "White as the drifts, and only visible when it moves." },
+      { id: "ermine", name: "Ermine", ap: 1, discipline: 2, description: "Slipped in under the door after the larder mice." },
+      { id: "lodge_cat", name: "Lodge Cat", ap: 2, discipline: 2, description: "Has claimed the warmest spot by the fire and will not be moved.", rooms: ["Great Hearth", "Bunk Loft", "Kitchen & Larder"] },
+      { id: "larder_mouse", name: "Larder Mouse", ap: 1, discipline: 1, description: "Fat on the winter stores." },
+      { id: "snowy_owl", name: "Snowy Owl", ap: 2, discipline: 2, description: "Roosting under the eaves of the woodshed.", rooms: ["Woodshed", "Snowed-In Courtyard"] },
+    ],
+    holiday: "christmas",
+    alwaysIncludes: ["Lodgekeeper"],
+    nativeShare: 1,
+    snowbound: { hearth: "Great Hearth", cold: ["Snowed-In Courtyard", "Woodshed"] },
+  },
+  {
+    id: "spell_or_sweet_street", name: "Spell or Sweet Street", minTier: "Minor",
+    description: "A crooked village lane of eight houses around the green, and every All Hallows' Eve a costumed crowd going door to door.",
+    flavorText: "\"Spell or sweet!\" Answer the door with a sweet, or something strange will happen to your house. Nobody knows who's under the masks. That works both ways.",
+    // Eight houses in a ring, with the village green in the middle. The green only reaches the
+    // four houses straight across from it, not the corners.
+    rooms: ["Crooked House", "Empty Lot", "Baker's House", "Widow's Cottage", "Doctor's House", "Pumpkin Farmhouse", "Candlemaker's House", "Mayor's House", "Village Green"],
+    roomGraph: {
+      "Crooked House":       ["Mayor's House", "Empty Lot"],
+      "Empty Lot":           ["Crooked House", "Baker's House", "Village Green"],
+      "Baker's House":       ["Empty Lot", "Widow's Cottage"],
+      "Widow's Cottage":     ["Baker's House", "Doctor's House", "Village Green"],
+      "Doctor's House":      ["Widow's Cottage", "Pumpkin Farmhouse"],
+      "Pumpkin Farmhouse":   ["Doctor's House", "Candlemaker's House", "Village Green"],
+      "Candlemaker's House": ["Pumpkin Farmhouse", "Mayor's House"],
+      "Mayor's House":       ["Candlemaker's House", "Crooked House", "Village Green"],
+      "Village Green":       ["Empty Lot", "Widow's Cottage", "Pumpkin Farmhouse", "Mayor's House"],
+    },
+    partySize: [5, 6], suspicionGrowthRate: 1,
+    advantageTags: ["Decor", "Hospitality", "Storage", "Entertainment"],
+    imageHint: "crooked village lane at dusk, jack-o'-lanterns on every step, costumed figures going door to door",
+    locationCreatures: [
+      { id: "black_cat", name: "Black Cat", ap: 2, discipline: 2, description: "Sitting on every doorstep in turn, as if it lives at all of them." },
+      { id: "bat", name: "Bat", ap: 1, discipline: 1, description: "Out of the belfry and into the lanterns." },
+      { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "Waiting on the fence for dropped sweets." },
+      { id: "toad", name: "Warty Toad", ap: 1, discipline: 1, description: "Possibly someone's prank. Possibly the doctor." },
+      { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "After the same sweets as everyone else." },
+      { id: "spider", name: "Window Spider", ap: 1, discipline: 1, description: "Real, unlike the ones in the windows." },
+    ],
+    holiday: "halloween",
+    procession: {
+      order: ["Crooked House", "Empty Lot", "Baker's House", "Widow's Cottage", "Doctor's House", "Pumpkin Farmhouse", "Candlemaker's House", "Mayor's House"],
+      sweets: ["standard_door", "minor_goblet", "minor_jack_o_lantern", "lesser_chest", "greater_gargoyle", "grand_haunted_mansion"],
+    },
+    costumes: true,
+    realMonsters: { chance: 1 / 3, names: ["Werewolf", "Swamp Hag", "Mummy", "Skeleton"] },
+  },
+  {
+    id: "founders_fair", name: "The Founders' Fair", minTier: "Minor",
+    description: "The whole town turns out on the green for Founders' Day: pies, ale, a brass band, and fireworks after dark.",
+    flavorText: "Every few minutes another volley goes up and every face turns to the sky. Whatever happens on the ground in that moment, nobody sees it.",
+    rooms: ["Town Gate", "Ale Stall", "Village Green", "Bandstand", "Pie-Judging Tent", "Riverbank"],
+    roomGraph: {
+      "Town Gate":        ["Ale Stall", "Village Green"],
+      "Ale Stall":        ["Town Gate", "Bandstand"],
+      "Village Green":    ["Town Gate", "Bandstand", "Pie-Judging Tent"],
+      "Bandstand":        ["Ale Stall", "Village Green", "Riverbank"],
+      "Pie-Judging Tent": ["Village Green", "Riverbank"],
+      "Riverbank":        ["Bandstand", "Pie-Judging Tent"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Entertainment", "Dining", "Social", "Storage"],
+    imageHint: "village green fair at dusk with bunting, a bandstand and fireworks over the river",
+    locationCreatures: [
+      { id: "village_goose", name: "Village Goose", ap: 2, discipline: 2, description: "Patrols the green and fears nothing, fireworks included.", rooms: ["Village Green", "Riverbank", "Town Gate"] },
+      { id: "prize_pig", name: "Prize Pig", ap: 3, discipline: 1, description: "Escaped from the livestock pen, and heading for the pies.", rooms: ["Pie-Judging Tent", "Village Green"], max: 1 },
+      { id: "squirrel", name: "Squirrel", ap: 1, discipline: 2, description: "Raiding the dropped pie crusts." },
+      { id: "stray_dog", name: "Stray Dog", ap: 2, discipline: 2, description: "Begging at every stall, flinching at every bang." },
+      { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat on fair food." },
+      { id: "fair_cat", name: "Fair Cat", ap: 2, discipline: 2, description: "Hiding under the bandstand until the noise stops." },
+    ],
+    holiday: "independence_day",
+    alwaysIncludes: ["Town Crier"],
+    nativeShare: 1,
+    fireworks: { every: 3, crates: { lesser_firework_crate: 2, lesser_crate: 1 } },
+  },
+  {
+    id: "stargazers_hill", name: "Stargazers' Hill", minTier: "Minor",
+    description: "An old observatory on a bald hilltop, crowded every August with people waiting for the sky to fall.",
+    flavorText: "Every face is turned up. Every so often the sky splits open, and everyone runs. Nobody is looking at the furniture.",
+    rooms: ["Observatory Dome", "Star-Chart Room", "Stair Hall", "Lens Workshop", "Hilltop Lawn", "Stone Circle"],
+    roomGraph: {
+      "Observatory Dome": ["Star-Chart Room", "Stair Hall"],
+      "Star-Chart Room":  ["Observatory Dome", "Lens Workshop"],
+      "Stair Hall":       ["Observatory Dome", "Lens Workshop", "Hilltop Lawn"],
+      "Lens Workshop":    ["Star-Chart Room", "Stair Hall"],
+      "Hilltop Lawn":     ["Stair Hall", "Stone Circle"],
+      "Stone Circle":     ["Hilltop Lawn"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Knowledge", "Lighting", "Decor", "Rural"],
+    imageHint: "hilltop observatory under a sky full of meteors, stone circle on the lawn",
+    locationCreatures: [
+      { id: "barn_owl", name: "Barn Owl", ap: 2, discipline: 2, description: "Nests in the dome's rafters and hates the crowds." },
+      { id: "night_moth", name: "Night Moth", ap: 1, discipline: 1, description: "Drawn to every lamp on the hill." },
+      { id: "hedgehog", name: "Hedgehog", ap: 1, discipline: 1, description: "Snuffling through the dew.", rooms: ["Hilltop Lawn", "Stone Circle"] },
+      { id: "field_mouse", name: "Field Mouse", ap: 1, discipline: 1, description: "After the picnic crumbs." },
+      { id: "fox", name: "Hill Fox", ap: 2, discipline: 2, description: "Watching the crowd from the long grass.", rooms: ["Hilltop Lawn", "Stone Circle"] },
+      { id: "observatory_cat", name: "Observatory Cat", ap: 2, discipline: 2, description: "Sleeps on the warm telescope housing.", rooms: ["Observatory Dome", "Star-Chart Room", "Lens Workshop", "Stair Hall"] },
+    ],
+    holiday: "falling_stars",
+    alwaysIncludes: ["Astronomer"],
+    nativeShare: 1,
+    starfall: {
+      every: 4,
+      landings: {
+        "Observatory Dome": "drops straight through the telescope's open slit and clatters across the Observatory Dome floor",
+        "Star-Chart Room":  "punches through the roof slates and lands in a smoking heap of charts in the Star-Chart Room",
+        "Stair Hall":       "smashes through the tall stairwell window and rolls to a stop in the Stair Hall",
+        "Lens Workshop":    "comes through the Lens Workshop skylight in a shower of glass",
+        "Hilltop Lawn":     "thumps into the grass of the Hilltop Lawn, hissing in the dew",
+        "Stone Circle":     "comes down dead in the middle of the Stone Circle, as if the stones were waiting for it",
+      },
+    },
+  },
 ] as const satisfies readonly LocationDef[];
 
 /** Every location id, derived from the location data above. */
@@ -814,5 +995,47 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "standard_wardrobe":       { plausibility: -2, note: "A wardrobe on the open deck?" } },
     "Bilge":               { "minor_pillow":            { plausibility: -2, note: "Nothing soft survives the bilge." },
                              "minor_book":              { plausibility: -2, note: "Soaked through — no book would be left down here." } },
+  },
+  // ── Spell or Sweet Street · all mimics, All Hallows' Eve only · wearable forms: Minor–Apex ──
+  spell_or_sweet_street: {
+    // Nobody questions a house turning up on an empty lot on All Hallows' Eve
+    "Empty Lot":           { "grand_haunted_mansion":   { plausibility: 2, allure: 1, note: "A haunted house where there was none yesterday? Tonight, nobody asks." },
+                             "apex_abandoned_cottage":  { plausibility: 2, note: "An old cottage on the empty lot. Has it always been there? Probably." },
+                             "grand_small_outhouse":    { plausibility: 2, note: "Every empty lot has an outhouse at the back." } },
+    "Pumpkin Farmhouse":   { "minor_jack_o_lantern":    { plausibility: 1, allure: 1, note: "The farmhouse steps are lined with jack-o'-lanterns." } },
+    "Mayor's House":       { "greater_gargoyle":        { plausibility: 1, note: "The mayor puts the gargoyles out every year." } },
+    "Village Green":       { "lesser_haunted_tree":     { plausibility: 2, allure: 1, note: "The old tree on the green has always looked like that. Everyone says so." } },
+    "Widow's Cottage":     { "lesser_haunted_tree":     { plausibility: 1, note: "The widow's yard is unkempt, explaining the state of the tree." } },
+    "Crooked House":       { "standard_door":           { plausibility: 1, note: "A crooked door for a crooked house." } },
+    "Candlemaker's House": { "minor_candlestick":       { plausibility: 1, note: "A candlestick at a candlemaker's house." } },
+  },
+  // ── The Founders' Fair · all mimics, Founders' Day only · wearable forms: Minor–Apex ──
+  founders_fair: {
+    "Riverbank":           { "lesser_firework_crate":   { plausibility: 1, allure: 1, note: "The fireworks crew keeps its crates down by the water." } },
+    "Village Green":       { "minor_picnic_basket":     { plausibility: 1, note: "Picnics all over the green." },
+                             "grand_parade_float":      { plausibility: 1, allure: 1, note: "The parade ends on the green." } },
+    "Ale Stall":           { "lesser_barrel":           { plausibility: 1, note: "Barrels stacked behind the stall." } },
+    "Pie-Judging Tent":    { "standard_dining_table":    { plausibility: 1, note: "A long table of pies awaiting judgment." } },
+  },
+  // ── Stargazers' Hill · all mimics, Night of Falling Stars only · wearable forms: Minor–Apex ──
+  stargazers_hill: {
+    "Stone Circle":        { "minor_fallen_star":       { plausibility: 1, allure: 1, note: "A fallen star among the old stones. Who could resist?" },
+                             "greater_wishing_well":    { plausibility: 1, note: "Wishes are made at the stones all night." } },
+    "Hilltop Lawn":        { "minor_fallen_star":       { plausibility: 1, note: "Fragments land on the lawn all the time tonight." } },
+    "Star-Chart Room":     { "minor_book":              { plausibility: 1, note: "Almanacs and star charts everywhere." },
+                             "standard_bookshelf":      { plausibility: 1, note: "Shelves of star charts." } },
+    "Lens Workshop":       { "lesser_crate":            { plausibility: 1, note: "Lenses are shipped in straw-packed crates." } },
+  },
+  // ── Snowbound Lodge · all mimics, Midwinter only · wearable forms: Minor–Apex ──
+  snowbound_lodge: {
+    "Great Hearth":        { "standard_festive_tree":   { plausibility: 1, allure: 1, note: "Every lodge puts up a tree by the fire at Midwinter." },
+                             "minor_wrapped_present":   { plausibility: 1, note: "Presents pile up around the hearth." },
+                             "grand_antler_chandelier": { plausibility: 1, note: "An antler chandelier fits in nicely in a lodge." } },
+    "Bunk Loft":           { "greater_bed":             { plausibility: 1, note: "Bunks, and more bunks." } },
+    "Kitchen & Larder":    { "lesser_barrel":           { plausibility: 1, note: "Winter stores are kept in barrels." },
+                             "minor_teapot":            { plausibility: 1, note: "The kettle never really leaves the stove." } },
+    "Boot Room":           { "minor_boot":              { plausibility: 1, note: "One more boot drying by the door." } },
+    "Woodshed":            { "lesser_crate":            { plausibility: 1, note: "Kindling is stored in old crates." },
+                             "standard_festive_tree":   { plausibility: -1, note: "A decorated tree out with the firewood looks forgotten." } },
   },
 };

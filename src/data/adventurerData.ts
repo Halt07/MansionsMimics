@@ -62,6 +62,8 @@ export interface CompanionOption {
 export interface Treasure {
   readonly ap: number;
   readonly description: string;
+  /** What it's called once swallowed, in "The strongbox cracks open inside you" (default "strongbox"). */
+  readonly noun?: string;
   readonly materials: readonly Material[];
   readonly traits: readonly TeachableTrait[];
 }
@@ -301,7 +303,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     appliedQuirk: "{name} lingers near the doorway, plainly uncomfortable indoors.",
     alluringQualities: { materials: ["Oak", "Feywood"], traits: ["Rustic", "Carved", "Earthy"], tags: ["Structural"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 0, magical: 2, social: 0, spatial: 1, environmental: 3, acoustic: 1, presence: 2 },
-    lootMaterials: ["Thimblewood", "Oak", "Wool"],
+    lootMaterials: ["Thimblewood", "Oak", "Wool", "Honeyamber"],
     lootTraits: ["Earthy"],
     partialLoot: ["strip of bark-cloth robe", "a vine cord", "torn leaf-pattern cloak"],
   },
@@ -675,7 +677,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     appliedQuirk: "{name} sets a trap beside the {form}, chatting to their terrier the whole time.",
     alluringQualities: { materials: ["Burlap", "Pine"], traits: ["Worn", "Dusty", "Weathered"], tags: ["Storage", "Coastal"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
-    lootMaterials: ["Burlap", "Goatskin", "Pine"],
+    // A rat-catcher knows the best bait
+    lootMaterials: ["Burlap", "Goatskin", "Pine", "Honeyamber"],
     lootTraits: ["Mossy", "Foul"],
     partialLoot: ["a sprung rat trap", "a leather glove, bitten through", "a sack smelling of bait"],
     companion: {
@@ -889,7 +892,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater",
     group: "supernatural",
     repelledBy: { materials: ["Silver"] },
-    locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor"],
+    // On Spell or Sweet Street it only turns up as one of the street's real monsters
+    locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor", "spell_or_sweet_street"],
     behavior: "bloodScent",
     quirks: ["Follows the smell of blood through walls", "Paces restlessly between rooms", "Snarls at anything that smells wrong"],
     appliedQuirk: "{name} paces past the {form}, snarling at a smell it can't place.",
@@ -1068,6 +1072,201 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootTraits: [],
     partialLoot: ["a length of beanstalk vine", "scrap of beanstalk-leather pack", "a giant's golden coin fragment"],
   },
+
+  // ── Spell or Sweet Street (seasonal, All Hallows' Eve): the costumes that aren't ──
+  // On the street they only appear as its real monsters (see `realMonsters` on the location).
+  // The Swamp Hag also haunts the Lonely Moor, where she turns up like anyone else.
+  {
+    name: "Skeleton", type: "Undead", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "supernatural",
+    locations: ["spell_or_sweet_street"],
+    quirks: ["Rattles when it walks, which everyone agrees is a great touch", "Never eats any of the sweets", "Its mask looks remarkably like a skull"],
+    appliedQuirk: "{name} rattles up to the {form} and taps it with one long, bony finger.",
+    alluringQualities: { materials: ["Limestone", "Horn"], traits: ["Dusty", "Cracked", "Musty"], tags: ["Storage", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 2, presence: 1 },
+    lootMaterials: ["Horn", "Limestone"],
+    lootTraits: ["Musty"],
+    partialLoot: ["a loose rib", "a finger bone", "a scrap of grave-dirt cloak"],
+  },
+  {
+    name: "Mummy", type: "Undead", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    minTier: "Standard",
+    group: "supernatural",
+    repelledBy: { traits: ["Fresh"] },
+    locations: ["spell_or_sweet_street"],
+    quirks: ["Trails bandages that look centuries old", "Groans instead of saying \"spell or sweet\"", "Smells of resin and old tombs. Very committed."],
+    appliedQuirk: "{name} shuffles up to the {form} and lays a wrapped hand on it, groaning softly.",
+    alluringQualities: { materials: ["Gold", "Linen", "Limestone"], traits: ["Gilded", "Inlaid", "Musty"], tags: ["Valuable", "Religious"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 1, magical: 1, social: 0, spatial: 0, environmental: 1, acoustic: 0, presence: 2 },
+    lootMaterials: ["Linen", "Gold"],
+    lootTraits: ["Wrinkled", "Musty"],
+    partialLoot: ["a strip of ancient bandage", "a gold scarab amulet", "a handful of embalming resin"],
+  },
+  {
+    name: "Swamp Hag", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
+    minTier: "Standard",
+    group: "supernatural",
+    repelledBy: { traits: ["Polished", "Fragrant"] },
+    locations: ["spell_or_sweet_street", "lonely_moor"],
+    quirks: ["Her warts move when you aren't looking", "Asks everyone she meets for something other than coin", "The pond weed in her hair is still alive"],
+    appliedQuirk: "{name} sniffs the {form} and cackles. \"Oh, I know what YOU are, dearie.\"",
+    alluringQualities: { materials: ["Feywood", "Burlap", "Horn"], traits: ["Mossy", "Earthy", "Foul"], tags: ["Rural", "Storage"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 3, social: 1, spatial: 1, environmental: 2, acoustic: 0, presence: 2 },
+    lootMaterials: ["Feywood", "Burlap"],
+    lootTraits: ["Mossy", "Earthy"],
+    partialLoot: ["a clump of living pond weed", "a crooked nail", "a pouch of something that wriggles"],
+  },
+
+  // ── The Founders' Fair (seasonal, Founders' Day) ──
+  {
+    name: "Town Crier", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
+    group: "commoners",
+    locations: ["founders_fair"],
+    quirks: ["Announces every event twice, loudly", "Rings the bell at anything out of place", "Knows every stall and who set it up"],
+    appliedQuirk: "{name} squints at the {form}, then rings the bell once. \"Whose is THIS?\"",
+    alluringQualities: { materials: ["Brass", "Oak"], traits: ["Polished", "Heraldic Crest"], tags: ["Authority", "Social"] },
+    perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 0, social: 2, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
+    lootMaterials: ["Brass", "Wool"],
+    lootTraits: ["Heraldic Crest"],
+    partialLoot: ["a brass handbell", "a tricorn hat", "a scroll of announcements"],
+  },
+  {
+    name: "Fireworks Master", type: "Artificer", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "common",
+    locations: ["founders_fair"],
+    quirks: ["Missing two fingers and an eyebrow, and proud of both", "Always looking for the next crate of rockets", "Can't hear a thing after the first volley"],
+    appliedQuirk: "{name} pries at the {form}'s lid, looking for rockets.",
+    alluringQualities: { materials: ["Pine", "Burlap", "Iron"], traits: ["Smoky", "Reinforced", "Rustic"], tags: ["Storage", "Entertainment"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 0, presence: 0 },
+    lootMaterials: ["Pine", "Burlap"],
+    lootTraits: ["Smoky"],
+    partialLoot: ["a singed glove", "a coil of fuse", "a slow match, still smouldering"],
+  },
+  {
+    name: "Pie Judge", type: "Nobility", discipline: 2, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["founders_fair"],
+    quirks: ["Has eaten eleven pies and is still judging", "Prods anything that might have a crust", "Takes the rosettes very seriously"],
+    appliedQuirk: "{name} prods the {form} with a fork, frowns, and makes a note.",
+    alluringQualities: { materials: ["Silver", "Linen"], traits: ["Fragrant", "Ornate", "Gilded"], tags: ["Dining", "Hospitality"] },
+    perceptionAffinity: { material: 2, structure: 0, weight: 1, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
+    lootMaterials: ["Silver", "Linen"],
+    lootTraits: ["Fragrant", "Gilded"],
+    partialLoot: ["a blue rosette", "a crumb-covered napkin", "a silver pie fork"],
+  },
+  {
+    name: "Founder's Heir", type: "Nobility", discipline: 2, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "commoners",
+    locations: ["founders_fair"],
+    quirks: ["Reminds everyone whose great-great-grandfather founded the town", "Inspects the decorations as if they paid for them (they did)", "Expects a front-row seat for the fireworks"],
+    appliedQuirk: "{name} looks the {form} over. \"I don't recall approving this.\"",
+    alluringQualities: { materials: ["Gold", "Velvet"], traits: ["Heraldic Crest", "Gilded", "Polished"], tags: ["Valuable", "Authority", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 0, social: 2, spatial: 1, environmental: 0, acoustic: 0, presence: 1 },
+    lootMaterials: ["Gold", "Velvet"],
+    lootTraits: ["Heraldic Crest"],
+    partialLoot: ["a sash of office", "a gold cufflink", "a commemorative medal"],
+  },
+
+  // ── Stargazers' Hill (seasonal, Night of Falling Stars) ──
+  {
+    name: "Astronomer", type: "Wizard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "common",
+    locations: ["stargazers_hill"],
+    quirks: ["Logs every streak in a battered notebook", "Never takes their eyes off the sky for long", "Keeps muttering about the angle of descent"],
+    appliedQuirk: "{name} glances at the {form}, then back at the sky, then back at the {form}. \"That wasn't on my chart.\"",
+    alluringQualities: { materials: ["Brass", "Crystal", "Clear Glass"], traits: ["Etched", "Polished", "Runescript"], tags: ["Knowledge", "Lighting"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 1, social: 0, spatial: 2, environmental: 2, acoustic: 0, presence: 0 },
+    lootMaterials: ["Brass", "Clear Glass"],
+    lootTraits: ["Etched", "Runescript"],
+    partialLoot: ["a page of star sightings", "a brass sextant arm", "an ink-blotted cuff"],
+  },
+  {
+    name: "Meteorite Prospector", type: "Rogue", discipline: 3, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "common",
+    locations: ["stargazers_hill"],
+    quirks: ["Taps every rock with a little hammer, just in case", "Carries a sack for whatever falls", "Elbows anyone between them and a landing"],
+    appliedQuirk: "{name} taps the {form} with a little hammer and listens. \"Hm. Not from the sky.\"",
+    alluringQualities: { materials: ["Iron", "Obsidian", "Basalt"], traits: ["Pitted", "Rough-Hewn", "Faint Glow"], tags: ["Valuable", "Storage"] },
+    perceptionAffinity: { material: 3, structure: 1, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
+    lootMaterials: ["Iron", "Basalt"],
+    lootTraits: ["Pitted"],
+    partialLoot: ["a rock hammer", "a sack of ordinary stones", "a scorched glove"],
+  },
+  {
+    name: "Lens-Grinder's Apprentice", type: "Artificer", discipline: 2, baseSuspicion: 2, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["stargazers_hill"],
+    quirks: ["Polishes anything shiny on reflex", "Was told to mind the workshop and absolutely did not", "Squints through a lens at everything"],
+    appliedQuirk: "{name} squints at the {form} through a lens, then gives it a quick polish.",
+    alluringQualities: { materials: ["Clear Glass", "Crystal", "Brass"], traits: ["Smooth", "Lacquered"], tags: ["Lighting", "Knowledge"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 0, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: ["Clear Glass", "Crystal"],
+    lootTraits: ["Lacquered"],
+    partialLoot: ["a polishing cloth", "a cracked lens", "a leather apron strap"],
+  },
+  {
+    name: "Lovestruck Wisher", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["stargazers_hill"],
+    quirks: ["Makes a wish on every single streak", "Ties ribbons to anything near the stones", "Is absolutely sure this is the year"],
+    appliedQuirk: "{name} ties a ribbon to the {form} and makes a wish on it.",
+    alluringQualities: { materials: ["Silver", "Silk"], traits: ["Faint Glow", "Gilded", "Fragrant"], tags: ["Decor", "Social"] },
+    perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
+    lootMaterials: ["Silk", "Linen"],
+    lootTraits: ["Fragrant"],
+    partialLoot: ["a silk ribbon", "a folded wish", "a pressed flower"],
+  },
+
+  // ── Snowbound Lodge (seasonal, Midwinter) ──
+  {
+    name: "Lodgekeeper", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Rations the firewood and counts every log", "Knows exactly what furniture the lodge owns", "Keeps saying the pass will open tomorrow"],
+    appliedQuirk: "{name} stops in front of the {form}, frowning. \"I don't remember buying that.\"",
+    alluringQualities: { materials: ["Pine", "Wool", "Iron"], traits: ["Rustic", "Smoky", "Worn"], tags: ["Comfort", "Hospitality"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Pine", "Wool"],
+    lootTraits: ["Smoky"],
+    partialLoot: ["a ring of lodge keys", "a knitted scarf end", "a tally stick for the woodpile"],
+  },
+  {
+    name: "Gnome Courier", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Snowed in with a sack of Midwinter parcels and a schedule to keep", "Checks every package against a very long list", "Insists the sledge dogs will be back for them"],
+    appliedQuirk: "{name} checks the {form} against the list. Twice.",
+    alluringQualities: { materials: ["Burlap", "Linen", "Pine"], traits: ["Pristine", "Fragrant"], tags: ["Storage", "Transport", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 2, text: 2, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: ["Burlap", "Linen"],
+    lootTraits: ["Fragrant"],
+    partialLoot: ["a parcel tag", "a curl of red ribbon", "a pointed felt cap"],
+  },
+  {
+    name: "Gnome Lamplighter", type: "Artificer", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    repelledBy: { traits: ["Shadowed Presence"] },
+    quirks: ["Keeps every lamp in the lodge trimmed and burning", "Notices the moment a shadow falls the wrong way", "Hums to keep warm"],
+    appliedQuirk: "{name} lifts a lamp to the {form} and studies the shadow it casts.",
+    alluringQualities: { materials: ["Brass", "Clear Glass"], traits: ["Polished", "Faint Glow"], tags: ["Lighting", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 0, magical: 1, social: 0, spatial: 2, environmental: 2, acoustic: 0, presence: 1 },
+    lootMaterials: ["Brass", "Clear Glass"],
+    lootTraits: ["Faint Glow"],
+    partialLoot: ["a brass wick-trimmer", "a singed mitten", "a stub of lamp oil candle"],
+  },
+  {
+    name: "Gnome Woodcarver", type: "Artificer", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "commoners",
+    locations: ["snowbound_lodge"],
+    quirks: ["Whittles little gifts by the fire", "Runs a thumb along the grain of everything wooden", "Can't resist critiquing other people's joinery"],
+    appliedQuirk: "{name} runs a thumb along the {form}'s grain and tuts at the joinery.",
+    alluringQualities: { materials: ["Birch", "Walnut", "Pine"], traits: ["Carved", "Etched", "Smooth"], tags: ["Decor", "Entertainment"] },
+    perceptionAffinity: { material: 3, structure: 2, weight: 0, text: 0, magical: 0, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 0 },
+    lootMaterials: ["Birch", "Walnut"],
+    lootTraits: ["Etched", "Inlaid"],
+    partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
+  },
 ];
 
 // ============================================================
@@ -1142,6 +1341,19 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   isConverted?: boolean;
   /** Overrides the type/group AP reward (companions set this from their option's `ap`). */
   apReward?: number;
+  /** Snowbound locations: how much cold they can still take (0 = frozen), and the most they can have. */
+  warmth?: number;
+  maxWarmth?: number;
+  /** The room they were in when the cold last touched them (to tell when they enter a new one). */
+  warmthRoom?: RoomName;
+  /** Frozen solid: out of the hunt (isAlive is false), but still there to be eaten. */
+  isFrozen?: boolean;
+  /**
+   * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
+   * eaten. When the two are the same, it isn't a costume at all (a real werewolf).
+   */
+  costume?: string;
+  trueName?: string;
 };
 
 // ============================================================

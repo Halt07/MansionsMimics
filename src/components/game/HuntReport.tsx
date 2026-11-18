@@ -1,4 +1,4 @@
-import type { HuntReport as Report } from "./huntReportData";
+import type { HuntReport as Report } from "@/data/huntReportData";
 
 /** The end-of-hunt report: a notice, verse or bit of gossip, pinned to a plank wall. */
 export default function HuntReport({ report }: { report: Report }) {

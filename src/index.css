@@ -362,6 +362,23 @@
   background: hsl(var(--primary) / 0.12);
   box-shadow: 0 0 12px hsl(var(--primary) / 0.25);
 }
+/* Under the fireworks (the volley's room and its neighbors): a rose glow around the room, so it
+   can sit on top of the lure-range tint. It flickers like the sky is lighting up. */
+.room-cell[data-distracted] {
+  --distracted-glow: 0 0 0 2px hsl(340 85% 70% / 0.55), 0 0 14px hsl(340 85% 65% / 0.45);
+  box-shadow: var(--distracted-glow);
+  animation: distracted-flicker 1.6s ease-in-out infinite;
+}
+.room-cell[data-here][data-distracted] {
+  box-shadow: var(--distracted-glow), 0 0 12px hsl(var(--primary) / 0.25);
+}
+@keyframes distracted-flicker {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-cell[data-distracted] { animation: none; }
+}
 
 /* Doors: a short passage across the gap to the next room */
 .room-cell[data-door-right]::before,
@@ -462,10 +479,54 @@
   border: 1px solid hsl(25 90% 55% / 0.6);
   background: hsl(25 90% 55% / 0.12);
 }
+.occupant-frozen,
+.occupant-marker {
+  min-width: 0;
+  padding: 0;
+  font-size: 13px;
+}
 .occupant-creature {
   min-width: 0;
   padding: 0;
   font-size: 13px;
+}
+/* The Codex's stand-in for a location you haven't hunted in: faint, fogged, unlabelled rooms */
+.room-map-mystery {
+  position: relative;
+}
+.room-map-mystery .room-cell {
+  border-style: dashed;
+  background: hsl(var(--muted) / 0.12);
+  min-height: 3rem;
+}
+.room-map-mystery .room-cell::before,
+.room-map-mystery .room-cell::after {
+  opacity: 0.5;
+}
+.room-map-mystery .room-name {
+  text-align: center;
+  font-size: 14px;
+  color: hsl(var(--muted-foreground) / 0.35);
+}
+.room-map-mystery::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 30%, hsl(var(--card)) 85%);
+}
+.room-map-mystery-label {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
 }
 @keyframes occupant-in {
   from { opacity: 0; transform: scale(0.6); }
@@ -894,3 +955,24 @@
   font-size: 10px;
   color: var(--holiday-text);
 }
+
+/* ============================================================
+   KEYBOARD SHORTCUT HINTS (see KeyHint.tsx)
+   ============================================================ */
+.key-hint {
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border: 1px solid hsl(var(--border));
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  line-height: 1;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.4);
+  opacity: 0.8;
+}
+button:disabled .key-hint { opacity: 0.4; }
