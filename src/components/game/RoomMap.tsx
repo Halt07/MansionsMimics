@@ -66,9 +66,9 @@ export default function RoomMap({
                 <span
                   key={a.id}
                   className="occupant occupant-adventurer"
-                  data-type={a.type}
+                  data-type={a.costume ? undefined : a.type}
                   data-attracted={a.isAttracted || undefined}
-                  title={`${a.name} (${a.type})${a.isAttracted ? " — attracted" : ""}`}
+                  title={`${a.costume ? `Someone dressed as a ${a.costume}` : `${a.name} (${a.type})`}${a.isAttracted ? " — attracted" : ""}`}
                 >
                   {initials(a.name)}
                 </span>

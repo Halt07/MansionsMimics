@@ -4,12 +4,11 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_FORMS, ADVENTURER_TEMPLATES, LOCATIONS, TIER_CONFIG, TIER_ORDER,
+  ALL_FORMS, LOCATIONS, TIER_CONFIG, TIER_ORDER,
   rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, getFormTierPenalties, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, wanderCreature, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
-  shouldTriggerBountyHunt, generateBountyParty, rollForSickness,
-  isTemplateEligible, getBehaviorReactions, isStationary,
-  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic, pickCompanionOption, createCompanion,
+  shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions, isStationary,
+  needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
   TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
   isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
@@ -17,6 +16,8 @@ import {
   withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
   starfallDue, stepToward, claimStar, STAR_FRAGMENT,
   fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
+  dressParty, unmask, nextHouse, housesAway, placeProcession, answersDoor, PRANKS, addRealMonster, isTheRealThing,
+  generateParty, spawnSmallCreatures, type SmallCreature,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -24,8 +25,8 @@ import {
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
-  type AdventurerGroupId, type AdventurerTemplate, type BehaviorContext, type BehaviorTrigger, type CombatStat,
-  type Form, type GameEvent, type GameEventType, type HuntLocation, type LocationCreature, type PartyMember,
+  type BehaviorContext, type BehaviorTrigger, type CombatStat,
+  type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness, type Tier,
   ACTION_LIMIT,
   ACTION_WARNING,
@@ -55,13 +56,6 @@ type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
 type GameoverReason = "discovered" | "abandoned";
 type UpgradeChoice = "mass" | CombatStat;
 
-/** A small creature (rat, crow…) wandering the location during a hunt. */
-interface SmallCreature extends LocationCreature {
-  uid: string;
-  isConsumed: boolean;
-  location: RoomName;
-}
-
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
 /** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
@@ -70,103 +64,10 @@ const CEREMONY_STEP_MS = 2000;
 const WAIT_MIN_CHANCE = 0.4;
 const STAT_CAP = 6;
 
-// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
-// Everyone else — including tier-gated monsters — fills the common slots.
-const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
-
-function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: number): PartyMember[] {
-  const [min, max] = location.partySize;
-  const size = min + Math.floor(Math.random() * (max - min + 1));
-  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
-
-  const eligible = ADVENTURER_TEMPLATES.filter(t => isTemplateEligible(t, location, mimicTier, mimicMass));
-  // Some locations guarantee certain adventurers a place (e.g. the Reliquary's pilgrim)
-  const required = eligible.filter(t => location.alwaysIncludes?.includes(t.name));
-  const pool = eligible.filter(t => !required.includes(t));
-  const common = pool.filter(t => !ELITE_GROUPS.includes(t.group));
-  const elite = pool.filter(t => ELITE_GROUPS.includes(t.group));
-
-  // Exclusive-roster locations draw only from their own adventurers, with no elite/common split
-  if (location.exclusiveRoster) {
-    common.push(...elite);
-    elite.length = 0;
-  }
-  const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
-  const shuffledCommon = [...common].sort(() => Math.random() - 0.5);
-  const shuffledElite = [...elite].sort(() => Math.random() - 0.5);
-
-  const baseParty: AdventurerTemplate[] = [...required];
-  // Some locations save a few slots for their own locals (e.g. the Snowbound Lodge's gnomes)
-  if (location.nativeShare) {
-    const natives = shuffledCommon.filter(t => t.locations?.includes(location.id)).slice(0, location.nativeShare);
-    for (const t of natives) {
-      if (baseParty.length >= size) break;
-      baseParty.push(t);
-      shuffledCommon.splice(shuffledCommon.indexOf(t), 1);
-    }
-  }
-  for (let i = 0; i < eliteCount && baseParty.length < size; i++) {
-    if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
-  }
-  let ci = 0;
-  while (baseParty.length < size && ci < shuffledCommon.length) {
-    baseParty.push(shuffledCommon[ci++]);
-  }
-
-  const members: PartyMember[] = [];
-  baseParty.forEach((t, i) => {
-    const room = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-    members.push({
-      ...t,
-      id: `adv_${Date.now()}_${i}`,
-      suspicion: t.baseSuspicion,
-      isAlive: true,
-      isConsumed: false,
-      isAttracted: false,
-      location: room,
-    });
-    // Companion/familiar injection
-    if (t.companion && Math.random() < t.companion.chance) {
-      const opts = t.companion.options;
-      const chosen = pickCompanionOption(opts);
-      const companionRoom = location.rooms[Math.floor(Math.random() * location.rooms.length)];
-      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom));
-    }
-  });
-
-  return members;
-}
-
 function getActiveForm(character: MimicCharacter | null): Form | null {
   const formRef = character?.forms[character.activeFormIndex];
   if (!formRef) return null;
   return ALL_FORMS.find(f => f.id === formRef.formId) ?? null;
-}
-
-const FALLBACK_CREATURES: readonly LocationCreature[] = [
-  { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
-  { id: "cat", name: "Cat", ap: 2, discipline: 2, description: "A wary housecat." },
-  { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "A rooftop crow, curious and bold." },
-  { id: "spider", name: "Giant Spider", ap: 2, discipline: 2, description: "A palm-sized cellar spider." },
-  { id: "weasel", name: "Weasel", ap: 1, discipline: 2, description: "Fast and wiry." },
-  { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat and oblivious." },
-];
-
-function spawnSmallCreatures(loc: HuntLocation): SmallCreature[] {
-  const pool = loc.locationCreatures.length ? loc.locationCreatures : FALLBACK_CREATURES;
-  const count = 3 + Math.floor(Math.random() * 3);
-  const creatures: SmallCreature[] = [];
-  for (let i = 0; i < count; i++) {
-    // Skip any creature that has already reached its limit for the hunt (e.g. one reindeer)
-    const open = pool.filter(t => !t.max || creatures.filter(c => c.id === t.id).length < t.max);
-    if (open.length === 0) break;
-    const template = open[Math.floor(Math.random() * open.length)];
-    // Some creatures keep to certain rooms (the Lodge's reindeer stays out by the woodpile)
-    const rooms = template.rooms ? loc.rooms.filter(r => template.rooms?.includes(r)) : loc.rooms;
-    const room = rooms[Math.floor(Math.random() * rooms.length)];
-    creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
-  }
-  return creatures;
 }
 
 export default function Game() {
@@ -317,9 +218,14 @@ export default function Game() {
       ? placeRivals(loc, room, rollNestKinds(loc))
       : hasRival ? placeRivals(loc, room, ["lone"]) : [];
 
-    const newParty = withWarmth(bounty
+    const generated = withWarmth(bounty
       ? generateBountyParty(loc, character?.mass ?? 26)
       : generateParty(loc, character?.tier ?? "Minor", character?.mass ?? 0), loc);
+    // Spell or Sweet Street: maybe a real monster among them, everyone in costume, a few walking
+    // together and the rest spread out
+    const withMonster = bounty ? generated : addRealMonster(generated, loc, character?.tier ?? "Minor", character?.mass ?? 0);
+    const dressed = loc.costumes ? dressParty(withMonster) : withMonster;
+    const newParty = loc.procession ? placeProcession(dressed, loc, room) : dressed;
     const creatures = spawnSmallCreatures(loc);
     setMimicRoom(room);
     setParty(newParty);
@@ -365,7 +271,9 @@ export default function Game() {
       addEvent("alert", `Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
     }
     addEvent("info", `Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
-    newParty.forEach(a => addEvent("info", `${a.name} (${a.type}) — currently in the ${a.location}.`));
+    newParty.forEach(a => addEvent("info", a.costume
+      ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
+      : `${a.name} (${a.type}) — currently in the ${a.location}.`));
 
     // Rare locations: visiting closes the open one, hunting elsewhere uses up one of its hunts,
     // and if none was open there's a chance one opens for the next hunts
@@ -495,6 +403,15 @@ export default function Game() {
         : a));
       addEvent("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
       addEvent("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
+    }
+  };
+
+  // Spell or Sweet Street: eating someone shows who was under the costume
+  const revealCostume = (member: PartyMember) => {
+    if (isTheRealThing(member)) {
+      addEvent("evolve", `😱 That wasn't a costume. It was a real ${member.trueName?.toLowerCase() ?? "monster"}!`);
+    } else if (member.costume && member.trueName) {
+      addEvent("evolve", `🎭 Under the ${member.costume} costume: ${/^The /.test(member.trueName) ? member.trueName.replace(/^The /, "the ") : `a ${member.trueName}`}!`);
     }
   };
 
@@ -923,10 +840,11 @@ export default function Game() {
               setSuspicion(s => { const n = Math.min(s + 3, 10); if (n >= 10) triggerHuntEnd(); return n; });
             } else {
               addEvent("consume", `${target.name} collapses from their wounds. You finish the meal. +2 AP bonus.`);
+              revealCostume(target);
               const finalChar = {
                 ...updatedChar,
                 assimilationPoints: updatedChar.assimilationPoints + 2,
-                adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
+                adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
                 partyMembersEaten: character.partyMembersEaten + 1,
               };
               setCharacter(finalChar);
@@ -1004,6 +922,7 @@ export default function Game() {
 
       setParty(prev => prev.map(a => a.id === target.id ? { ...a, isConsumed: true, isAlive: false } : a));
       addEvent("consume", `${target.name} has been consumed! +${apGained - (target.treasure?.ap ?? 0)} Assimilation Points.`);
+      revealCostume(target);
       if (target.treasure) {
         addEvent("consume", `You swallow ${target.treasure.description} along with them. +${target.treasure.ap} AP.`);
         if (prize) {
@@ -1076,9 +995,9 @@ export default function Game() {
         giantsConsumedWhole,
         titanicFeastReached: character.titanicFeastReached || feastNowComplete,
         downWithTheShipReached: character.downWithTheShipReached || sankWithShip,
-        adventurersEaten: withDiscovered(character.adventurersEaten, [target]),
+        adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
         partyMembersEaten: character.partyMembersEaten + 1,
-        biggestMeal: withBiggestMeal(character.biggestMeal, target.name, apGained),
+        biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, apGained),
       };
       noteMeal(target.name, apGained);
       setCharacter(updatedChar);
@@ -1193,7 +1112,7 @@ export default function Game() {
     const updatedChar = {
       ...character,
       assimilationPoints: (character.assimilationPoints || 0) + ap,
-      adventurersEaten: withDiscovered(character.adventurersEaten, [body]),
+      adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(body)]),
       partyMembersEaten: character.partyMembersEaten + 1,
       biggestMeal: withBiggestMeal(character.biggestMeal, body.name, ap),
     };
@@ -1393,14 +1312,18 @@ export default function Game() {
     const newlyArrived: PartyMember[] = [];
     // A fallen star: everyone heads for it instead of wandering (Stargazers' Hill)
     const star = location.starfall ? starFragment : null;
+    // Door to door: everyone moves on to the next house (Spell or Sweet Street)
+    const doorToDoor = !!location.procession;
     const movedParty = currentParty.map(adv => {
       if (!adv.isAlive || adv.isConsumed) return adv;
       if (isStationary(adv)) return adv;
       if (star && adv.location === star) return adv;
-      if (!star && Math.random() < 0.5) return adv;
+      if (!star && !doorToDoor && Math.random() < 0.5) return adv;
       const adjacent = getAdjacentRooms(location, adv.location);
       const candidates = adjacent.length > 0 ? adjacent : location.rooms;
-      const newRoom = star ? stepToward(location, adv.location, star) : candidates[Math.floor(Math.random() * candidates.length)];
+      const newRoom = star ? stepToward(location, adv.location, star)
+        : doorToDoor ? nextHouse(location, adv.location)
+        : candidates[Math.floor(Math.random() * candidates.length)];
       if (newRoom !== adv.location) {
         // Rival mimic: silently consume this adventurer if they move into the rival's room
         const lurker = rivalInRoom(currentRivals, newRoom);
@@ -1426,7 +1349,24 @@ export default function Game() {
     });
 
     // Whoever reaches the fragment first pockets it
-    const { party: updatedParty, claimedBy } = star ? claimStar(movedParty, star) : { party: movedParty, claimedBy: null };
+    const { party: claimedParty, claimedBy } = star ? claimStar(movedParty, star) : { party: movedParty, claimedBy: null };
+    // Knock knock: whoever reaches your house wants a sweet. The right shape hands one over and
+    // they come right up to you; any other shape doesn't answer, and gets pranked.
+    let updatedParty = claimedParty;
+    // (Only houses get knocked on: nobody knocks on the village green)
+    const onLoop = !!currentMimicRoom && (location.procession?.order as readonly string[] | undefined)?.includes(currentMimicRoom);
+    if (doorToDoor && onLoop && newlyArrived.length > 0 && currentMimicRoom) {
+      const form = getActiveForm(character);
+      if (answersDoor(location, form)) {
+        const callers = new Set(newlyArrived.map(a => a.id));
+        updatedParty = claimedParty.map(a => callers.has(a.id) && a.isAlive ? { ...a, isAttracted: true } : a);
+        newlyArrived.forEach(a => addEvent("info", `🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
+      } else {
+        const who = newlyArrived.map(a => a.name).join(" and ");
+        addEvent("alert", `🪄 ${who} ${newlyArrived.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${currentMimicRoom}. ${PRANKS[Math.floor(Math.random() * PRANKS.length)]} (+1 suspicion)`);
+        setSuspicion(s => { const n = Math.min(s + 1, 10); if (n >= 10) triggerHuntEnd(); return n; });
+      }
+    }
     if (claimedBy) {
       setStarFragment(null);
       addEvent("info", `🌠 ${claimedBy.name} scoops up the star fragment and pockets it, still glowing.`);
@@ -1935,6 +1875,29 @@ export default function Game() {
             );
           })()}
 
+          {phase === "hunt" && !huntOver && location?.procession && mimicRoom && (() => {
+            const sweet = answersDoor(location, activeForm);
+            const onGreen = !(location.procession.order as readonly string[]).includes(mimicRoom);
+            const coming = activeAdventurers
+              .map(a => ({ a, away: housesAway(location, a.location, mimicRoom) }))
+              .filter(x => x.away > 0)
+              .sort((x, y) => x.away - y.away);
+            const nextUp = coming.length ? coming.filter(x => x.away === coming[0].away) : [];
+            return (
+              <div className="px-3 py-2 rounded border text-xs border-orange-400/30 bg-orange-400/5 text-orange-200/90">
+                <span className="font-cinzel">🎃 Spell or sweet! The costumed crowd goes door to door, one house each time you wait.</span>
+                <p className="text-[11px] mt-0.5 opacity-80">
+                  {onGreen
+                    ? `You're out on the ${mimicRoom}: nobody knocks here, so lure them over.`
+                    : sweet
+                    ? `As a ${activeForm?.name}, you've got sweets: whoever knocks comes right up to you.`
+                    : "Nobody's answering at your house: whoever knocks will prank it (+1 suspicion). A Door, Chest, Jack-o'-Lantern, Gargoyle or Haunted Mansion hands out sweets."}
+                  {nextUp.length > 0 && ` Next at your door: ${nextUp.map(x => x.a.name).join(" and ")}, ${nextUp[0].away === 1 ? "next turn" : `in ${nextUp[0].away} houses`}.`}
+                </p>
+              </div>
+            );
+          })()}
+
           {phase === "hunt" && !huntOver && location?.fireworks && (() => {
             const every = location.fireworks.every;
             const next = every - (fairTurn % every);
@@ -2048,7 +2011,8 @@ export default function Game() {
                             frozen ? "text-sky-300/80 italic" :
                             adv.isAttracted ? "text-yellow-400" : "text-foreground"
                           }>
-                            {adv.name}
+                            {adv.isConsumed && isTheRealThing(adv) ? `${adv.name} (a real one!)`
+                              : adv.isConsumed && adv.trueName ? `${adv.trueName} (the ${adv.costume})` : adv.name}
                           </span>
                           <div className="flex items-center gap-1">
                             {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}

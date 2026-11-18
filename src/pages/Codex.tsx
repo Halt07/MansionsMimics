@@ -123,6 +123,12 @@ function LocationCard({ location: loc, knowledge, hunts }: LocationCardProps) {
               {visited && loc.snowbound && (
                 <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Snowbound:</span> <span className="text-foreground text-right">Nobody can leave, and the cold freezes them one by one</span></div>
               )}
+              {visited && loc.procession && (
+                <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Door to door:</span> <span className="text-foreground text-right">The crowd walks the loop of houses, knocking; answer with a sweet, or get pranked</span></div>
+              )}
+              {visited && loc.costumes && (
+                <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Costumes:</span> <span className="text-foreground text-right">Nobody knows who's under the mask until you eat them</span></div>
+              )}
               {visited && loc.fireworks && (
                 <div className="flex justify-between gap-3"><span className="text-muted-foreground shrink-0">Fireworks:</span> <span className="text-foreground text-right">Every {loc.fireworks.every} turns: anyone below can be struck unseen, but crates get opened</span></div>
               )}

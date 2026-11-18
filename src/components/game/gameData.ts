@@ -16,7 +16,7 @@ import {
   ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, SICKNESSES, TIER_CONFIG, type Form, type FormId, type SeasonalForm, type Sickness,
 } from "./mimicData";
 import {
-  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
+  ADVENTURER_TEMPLATES, AP_REWARDS, BEHAVIORS, type Treasure, type AdventurerGroupId, type AdventurerTemplate, type BehaviorId, type BehaviorInfo, type CompanionOption,
   type PartyMember, type QualityList,
 } from "./adventurerData";
 import {
@@ -675,9 +675,11 @@ export function withFormUsed(list: readonly FormId[], formId: FormId | null | un
 }
 
 /** Adds template names to a discovery list (ignoring companions and anything that isn't a template). */
-export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion">[]): string[] {
+/** Costumed members count under their costume name, which isn't a template: pass `unmask(member)` to record who they really are. */
+export function withDiscovered(list: readonly string[], members: readonly Pick<PartyMember, "name" | "isCompanion" | "costume">[]): string[] {
   const templateNames = new Set(ADVENTURER_TEMPLATES.map(t => t.name));
-  const added = members.filter(m => !m.isCompanion && templateNames.has(m.name)).map(m => m.name);
+  // Someone still in costume tells you nothing (a "Werewolf" costume isn't necessarily a Werewolf)
+  const added = members.filter(m => !m.isCompanion && !m.costume && templateNames.has(m.name)).map(m => m.name);
   return [...new Set([...list, ...added])];
 }
 
@@ -838,6 +840,115 @@ export function locationKnowledge(
   if (group === "rare") return "unknown";
   return characters.some(c => meetsLocationRequirements(location, c.tier, c.mass)) ? "known" : "unknown";
 }
+
+// ============================================================
+// DOOR TO DOOR (Spell or Sweet Street)
+// The party goes around the loop of houses, one house per Wait, in costume. See `procession`
+// and `costumes` on the location.
+// ============================================================
+export const COSTUMES = [
+  "Dracula", "Bugbear", "Bedsheet Ghost", "Pumpkin-Head", "Witch", "Mummy", "Skeleton", "Werewolf",
+  "Headless Horseman", "Goblin King", "Black Cat", "Lich", "Banshee", "Swamp Hag", "Plague Doctor", "Gorgon",
+] as const;
+
+/**
+ * The party in costume: each one gets a different costume, which becomes the only name anyone
+ * sees. Anyone whose name is already a costume (a real Werewolf) wears that, which is to say
+ * nothing at all, and nobody else wears that costume.
+ */
+export function dressParty(party: readonly PartyMember[], random: () => number = Math.random): PartyMember[] {
+  const isCostume = (name: string) => (COSTUMES as readonly string[]).includes(name);
+  const taken = new Set(party.map(a => a.name).filter(isCostume));
+  const pool = [...COSTUMES].filter(c => !taken.has(c)).sort(() => random() - 0.5);
+  let next = 0;
+  return party.map(a => {
+    if (isCostume(a.name)) return { ...a, costume: a.name, trueName: a.name };
+    const i = next++;
+    const costume = pool[i % pool.length] + (i >= pool.length ? ` ${Math.floor(i / pool.length) + 1}` : "");
+    return { ...a, name: costume, costume, trueName: a.name };
+  });
+}
+
+/** No costume at all: the real thing (its costume and its true name are the same). */
+export function isTheRealThing(member: Pick<PartyMember, "costume" | "trueName">): boolean {
+  return !!member.costume && member.costume === member.trueName;
+}
+
+/**
+ * Maybe add a real monster to the party (with the location's `realMonsters.chance`): one the
+ * mimic's tier and mass allow, at a random house. Returns the party unchanged otherwise.
+ */
+export function addRealMonster(
+  party: readonly PartyMember[], location: HuntLocation, tier: Tier, mass: number, random: () => number = Math.random,
+): PartyMember[] {
+  const real = location.realMonsters;
+  if (!real || random() >= real.chance) return [...party];
+  const tierIdx = TIER_ORDER.indexOf(tier);
+  const options = ADVENTURER_TEMPLATES.filter(t => real.names.includes(t.name) &&
+    (!t.minTier || TIER_ORDER.indexOf(t.minTier) <= tierIdx) && (!t.minMass || mass >= t.minMass));
+  if (options.length === 0) return [...party];
+  const t = options[Math.floor(random() * options.length)];
+  const room = location.rooms[Math.floor(random() * location.rooms.length)];
+  return [...party, {
+    ...t, id: `real_${t.name.replace(/\W+/g, "_")}_${party.length}`, suspicion: t.baseSuspicion,
+    isAlive: true, isConsumed: false, isAttracted: false, location: room,
+  }];
+}
+
+/** Who they really are (for the Codex and the reveal), costume or not. */
+export function unmask<T extends Pick<PartyMember, "name" | "trueName" | "costume">>(member: T): T {
+  return member.trueName ? { ...member, name: member.trueName, costume: undefined } : member;
+}
+
+/** The house after `room` in the loop. Off the loop (on the green), a neighboring house to rejoin it at. */
+export function nextHouse(location: HuntLocation, room: RoomName, random: () => number = Math.random): RoomName {
+  const order = location.procession?.order as readonly RoomName[] | undefined;
+  if (!order) return room;
+  const i = order.indexOf(room);
+  if (i >= 0) return order[(i + 1) % order.length];
+  const back = getAdjacentRooms(location, room).filter(r => order.includes(r));
+  return back.length > 0 ? back[Math.floor(random() * back.length)] : room;
+}
+
+/** How many houses until someone at `from` reaches `to`, going around the loop. */
+export function housesAway(location: HuntLocation, from: RoomName, to: RoomName): number {
+  const order = location.procession?.order as readonly RoomName[] | undefined;
+  if (!order) return getRoomDistance(location, from, to);
+  const a = order.indexOf(from), b = order.indexOf(to);
+  return a < 0 || b < 0 ? Infinity : (b - a + order.length) % order.length;
+}
+
+/** Starting houses: two or three of the party together, the rest spread around the loop, nobody at `avoid`. */
+export function placeProcession(
+  party: readonly PartyMember[], location: HuntLocation, avoid: RoomName | null, random: () => number = Math.random,
+): PartyMember[] {
+  const order = (location.procession?.order ?? location.rooms) as readonly RoomName[];
+  const free = [...order.filter(r => r !== avoid)].sort(() => random() - 0.5);
+  const groupSize = Math.min(party.length, random() < 0.5 ? 2 : 3);
+  const [groupHouse, ...others] = free;
+  return party.map((a, i) => ({
+    ...a,
+    location: i < groupSize ? groupHouse : others.length > 0 ? others[(i - groupSize) % others.length] : groupHouse,
+  }));
+}
+
+/** Whether the mimic's shape answers the door with a sweet (a variant counts as its base form). */
+export function answersDoor(location: HuntLocation, form: Pick<Form, "id" | "variantOf"> | null | undefined): boolean {
+  const sweets = location.procession?.sweets as readonly string[] | undefined;
+  if (!sweets || !form) return false;
+  return sweets.includes(form.id) || (!!form.variantOf && sweets.includes(form.variantOf));
+}
+
+export const PRANKS = [
+  "Eggs appear out of thin air and splatter against the shutters.",
+  "A roll of paper floats up off the porch and wraps the house like a mummy.",
+  "Every candle in the window flares green, then goes out.",
+  "The doorknob turns into a toad, croaks once, and turns back.",
+  "The shutters start flapping like wings and won't stop.",
+  "The garden gnomes all turn to face the door.",
+  "The chimney coughs out a cloud of purple smoke shaped like a skull.",
+  "The house's shadow detaches and wanders off down the lane.",
+] as const;
 
 // ============================================================
 // MASS DECAY
@@ -1436,6 +1547,7 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bOwl\b/, "🦉"],
   [/\bHedgehog\b/, "🦔"],
   [/\bGoose\b/, "🪿"],
+  [/\bToad\b/, "🐸"],
   [/\bPig\b/, "🐖"],
   [/\bSquirrel\b/, "🐿️"],
   [/\bMoth\b/, "🦋"],
@@ -1649,6 +1761,118 @@ export function shouldTriggerBountyHunt(mass: number): boolean {
   if (mass < 30) return false;
   if (mass >= 36) return Math.random() < 0.50; // 50% chance at mass 36+
   return Math.random() < 0.25; // 25% chance at mass 30-35
+}
+
+// ============================================================
+// PARTIES AND CREATURES
+// Who's at a location when a hunt starts.
+// ============================================================
+/** A small creature (rat, crow…) wandering the location during a hunt. */
+export interface SmallCreature extends LocationCreature {
+  uid: string;
+  isConsumed: boolean;
+  location: RoomName;
+}
+
+// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
+// Everyone else — including tier-gated monsters — fills the common slots.
+const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
+
+/**
+ * A normal party for a location: any adventurers it always has, then (Greater+) up to 2 elites,
+ * then a random mix of everyone else eligible. Some locations save slots for their locals
+ * (`nativeShare`), and a location's real monsters never come this way (see addRealMonster).
+ */
+export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: number, random: () => number = Math.random): PartyMember[] {
+  const [min, max] = location.partySize;
+  const size = min + Math.floor(random() * (max - min + 1));
+  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
+
+  // A location's real monsters only ever join through addRealMonster, never the normal draw
+  const eligible = ADVENTURER_TEMPLATES.filter(t =>
+    isTemplateEligible(t, location, mimicTier, mimicMass) && !location.realMonsters?.names.includes(t.name));
+  // Some locations guarantee certain adventurers a place (e.g. the Reliquary's pilgrim)
+  const required = eligible.filter(t => location.alwaysIncludes?.includes(t.name));
+  const pool = eligible.filter(t => !required.includes(t));
+  const common = pool.filter(t => !ELITE_GROUPS.includes(t.group));
+  const elite = pool.filter(t => ELITE_GROUPS.includes(t.group));
+
+  // Exclusive-roster locations draw only from their own adventurers, with no elite/common split
+  if (location.exclusiveRoster) {
+    common.push(...elite);
+    elite.length = 0;
+  }
+  const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
+  const shuffledCommon = [...common].sort(() => random() - 0.5);
+  const shuffledElite = [...elite].sort(() => random() - 0.5);
+
+  const baseParty: AdventurerTemplate[] = [...required];
+  // Some locations save a few slots for their own locals (e.g. the Snowbound Lodge's gnomes)
+  if (location.nativeShare) {
+    const natives = shuffledCommon.filter(t => t.locations?.includes(location.id)).slice(0, location.nativeShare);
+    for (const t of natives) {
+      if (baseParty.length >= size) break;
+      baseParty.push(t);
+      shuffledCommon.splice(shuffledCommon.indexOf(t), 1);
+    }
+  }
+  for (let i = 0; i < eliteCount && baseParty.length < size; i++) {
+    if (shuffledElite[i]) baseParty.push(shuffledElite[i]);
+  }
+  let ci = 0;
+  while (baseParty.length < size && ci < shuffledCommon.length) {
+    baseParty.push(shuffledCommon[ci++]);
+  }
+
+  const members: PartyMember[] = [];
+  baseParty.forEach((t, i) => {
+    const room = location.rooms[Math.floor(random() * location.rooms.length)];
+    members.push({
+      ...t,
+      id: `adv_${Date.now()}_${i}`,
+      suspicion: t.baseSuspicion,
+      isAlive: true,
+      isConsumed: false,
+      isAttracted: false,
+      location: room,
+    });
+    // Companion/familiar injection
+    if (t.companion && random() < t.companion.chance) {
+      const opts = t.companion.options;
+      const chosen = pickCompanionOption(opts);
+      const companionRoom = location.rooms[Math.floor(random() * location.rooms.length)];
+      members.push(createCompanion(t, chosen, `comp_${Date.now()}_${i}`, companionRoom));
+    }
+  });
+
+  return members;
+}
+
+const FALLBACK_CREATURES: readonly LocationCreature[] = [
+  { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "A fat cellar rat." },
+  { id: "cat", name: "Cat", ap: 2, discipline: 2, description: "A wary housecat." },
+  { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "A rooftop crow, curious and bold." },
+  { id: "spider", name: "Giant Spider", ap: 2, discipline: 2, description: "A palm-sized cellar spider." },
+  { id: "weasel", name: "Weasel", ap: 1, discipline: 2, description: "Fast and wiry." },
+  { id: "pigeon", name: "Pigeon", ap: 1, discipline: 1, description: "Fat and oblivious." },
+];
+
+/** The small creatures about at the start of a hunt: 3–5, each in a room it's allowed in, none over its `max`. */
+export function spawnSmallCreatures(loc: HuntLocation, random: () => number = Math.random): SmallCreature[] {
+  const pool = loc.locationCreatures.length ? loc.locationCreatures : FALLBACK_CREATURES;
+  const count = 3 + Math.floor(random() * 3);
+  const creatures: SmallCreature[] = [];
+  for (let i = 0; i < count; i++) {
+    // Skip any creature that has already reached its limit for the hunt (e.g. one reindeer)
+    const open = pool.filter(t => !t.max || creatures.filter(c => c.id === t.id).length < t.max);
+    if (open.length === 0) break;
+    const template = open[Math.floor(random() * open.length)];
+    // Some creatures keep to certain rooms (the Lodge's reindeer stays out by the woodpile)
+    const rooms = template.rooms ? loc.rooms.filter(r => template.rooms?.includes(r)) : loc.rooms;
+    const room = rooms[Math.floor(random() * rooms.length)];
+    creatures.push({ ...template, uid: `sc_${Date.now()}_${i}`, isConsumed: false, location: room });
+  }
+  return creatures;
 }
 
 // Build a Bounty Hunt party — all members are mimic hunter variants

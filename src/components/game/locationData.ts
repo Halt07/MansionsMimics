@@ -80,6 +80,23 @@ interface LocationDef {
    * fireworks, found empty and thrown out into a neighboring room (that much suspicion).
    */
   readonly fireworks?: { readonly every: number; readonly crates: Readonly<Partial<Record<FormId, number>>> };
+  /**
+   * Door to door: the houses form a loop, listed in `order` (clockwise). On each Wait the
+   * whole party moves on to the next house, a few of them together and the rest spread around
+   * the loop. A room that isn't on the loop (the village green) is only visited when someone
+   * is lured there; they rejoin the loop at a neighboring house on their next move. When they reach the mimic's house they knock: a mimic shaped like one of
+   * the `sweets` forms (a variant counts as its base) gives them a sweet and they come right
+   * up to it (attracted); any other shape doesn't answer, and they play a prank (+1 suspicion).
+   */
+  readonly procession?: { readonly order: readonly string[]; readonly sweets: readonly FormId[] };
+  /** Everyone comes in costume: shown only by their costume until the mimic eats them. */
+  readonly costumes?: boolean;
+  /**
+   * Sometimes a "costume" isn't one: each hunt has `chance` that one of these adventurers (by
+   * template name, if the mimic's tier and mass allow it) joins the party, looking like its own
+   * costume. They never turn up any other way, so they're kept out of the normal party draw.
+   */
+  readonly realMonsters?: { readonly chance: number; readonly names: readonly string[] };
 }
 
 const LOCATION_DATA = [
@@ -554,6 +571,43 @@ const LOCATION_DATA = [
     snowbound: { hearth: "Great Hearth", cold: ["Snowed-In Courtyard", "Woodshed"] },
   },
   {
+    id: "spell_or_sweet_street", name: "Spell or Sweet Street", minTier: "Minor",
+    description: "A crooked village lane of eight houses around the green, and every All Hallows' Eve a costumed crowd going door to door.",
+    flavorText: "\"Spell or sweet!\" Answer the door with a sweet, or something strange will happen to your house. Nobody knows who's under the masks. That works both ways.",
+    // Eight houses in a ring, with the village green in the middle. The green only reaches the
+    // four houses straight across from it, not the corners.
+    rooms: ["Crooked House", "Empty Lot", "Baker's House", "Widow's Cottage", "Doctor's House", "Pumpkin Farmhouse", "Candlemaker's House", "Mayor's House", "Village Green"],
+    roomGraph: {
+      "Crooked House":       ["Mayor's House", "Empty Lot"],
+      "Empty Lot":           ["Crooked House", "Baker's House", "Village Green"],
+      "Baker's House":       ["Empty Lot", "Widow's Cottage"],
+      "Widow's Cottage":     ["Baker's House", "Doctor's House", "Village Green"],
+      "Doctor's House":      ["Widow's Cottage", "Pumpkin Farmhouse"],
+      "Pumpkin Farmhouse":   ["Doctor's House", "Candlemaker's House", "Village Green"],
+      "Candlemaker's House": ["Pumpkin Farmhouse", "Mayor's House"],
+      "Mayor's House":       ["Candlemaker's House", "Crooked House", "Village Green"],
+      "Village Green":       ["Empty Lot", "Widow's Cottage", "Pumpkin Farmhouse", "Mayor's House"],
+    },
+    partySize: [5, 6], suspicionGrowthRate: 1,
+    advantageTags: ["Decor", "Hospitality", "Storage", "Entertainment"],
+    imageHint: "crooked village lane at dusk, jack-o'-lanterns on every step, costumed figures going door to door",
+    locationCreatures: [
+      { id: "black_cat", name: "Black Cat", ap: 2, discipline: 2, description: "Sitting on every doorstep in turn, as if it lives at all of them." },
+      { id: "bat", name: "Bat", ap: 1, discipline: 1, description: "Out of the belfry and into the lanterns." },
+      { id: "crow", name: "Crow", ap: 1, discipline: 1, description: "Waiting on the fence for dropped sweets." },
+      { id: "toad", name: "Warty Toad", ap: 1, discipline: 1, description: "Possibly someone's prank. Possibly the doctor." },
+      { id: "rat", name: "Rat", ap: 1, discipline: 1, description: "After the same sweets as everyone else." },
+      { id: "spider", name: "Window Spider", ap: 1, discipline: 1, description: "Real, unlike the ones in the windows." },
+    ],
+    holiday: "halloween",
+    procession: {
+      order: ["Crooked House", "Empty Lot", "Baker's House", "Widow's Cottage", "Doctor's House", "Pumpkin Farmhouse", "Candlemaker's House", "Mayor's House"],
+      sweets: ["standard_door", "minor_goblet", "minor_jack_o_lantern", "lesser_chest", "greater_gargoyle", "grand_haunted_mansion"],
+    },
+    costumes: true,
+    realMonsters: { chance: 1 / 3, names: ["Werewolf", "Swamp Hag", "Mummy", "Skeleton"] },
+  },
+  {
     id: "founders_fair", name: "The Founders' Fair", minTier: "Minor",
     description: "The whole town turns out on the green for Founders' Day: pies, ale, a brass band, and fireworks after dark.",
     flavorText: "Every few minutes another volley goes up and every face turns to the sky. Whatever happens on the ground in that moment, nobody sees it.",
@@ -941,6 +995,18 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "standard_wardrobe":       { plausibility: -2, note: "A wardrobe on the open deck?" } },
     "Bilge":               { "minor_pillow":            { plausibility: -2, note: "Nothing soft survives the bilge." },
                              "minor_book":              { plausibility: -2, note: "Soaked through — no book would be left down here." } },
+  },
+  // ── Spell or Sweet Street · all mimics, All Hallows' Eve only · wearable forms: Minor–Apex ──
+  spell_or_sweet_street: {
+    // Nobody questions a house turning up on an empty lot on All Hallows' Eve
+    "Empty Lot":           { "grand_haunted_mansion":   { plausibility: 2, allure: 1, note: "A haunted house where there was none yesterday? Tonight, nobody asks." },
+                             "apex_abandoned_cottage":  { plausibility: 2, note: "An old cottage on the empty lot. Has it always been there? Probably." },
+                             "grand_small_outhouse":    { plausibility: 2, note: "Every empty lot has an outhouse at the back." } },
+    "Pumpkin Farmhouse":   { "minor_jack_o_lantern":    { plausibility: 1, allure: 1, note: "The farmhouse steps are lined with jack-o'-lanterns." } },
+    "Mayor's House":       { "greater_gargoyle":        { plausibility: 1, note: "The mayor puts the gargoyles out every year." } },
+    "Village Green":       { "lesser_haunted_tree":     { plausibility: 2, allure: 1, note: "The old tree on the green has always looked like that. Everyone says so." } },
+    "Widow's Cottage":     { "lesser_haunted_tree":     { plausibility: 1, note: "The widow's yard is unkempt, explaining the state of the tree." } },
+    "Crooked House":       { "standard_door":           { plausibility: 1, note: "A crooked door for a crooked house." } },
   },
   // ── The Founders' Fair · all mimics, Founders' Day only · wearable forms: Minor–Apex ──
   founders_fair: {

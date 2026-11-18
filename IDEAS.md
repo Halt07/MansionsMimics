@@ -10,7 +10,7 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 
 ## Seasonal locations
 
-Like the Snowbound Lodge: open to every tier while their holiday is in season, each with its own twist. Drafted so far: the Snowbound Lodge (Midwinter), Stargazers' Hill (Night of Falling Stars) and the Founders' Fair (Founders' Day).
+Like the Snowbound Lodge: open to every tier while their holiday is in season, each with its own twist. Drafted so far: the Snowbound Lodge (Midwinter), Stargazers' Hill (Night of Falling Stars) the Founders' Fair (Founders' Day) and Spell or Sweet Street (All Hallows' Eve).
 
 ### Year's Turning ⏳
 
@@ -34,7 +34,7 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 
 ### Founders' Day 🎆
 
-- **The Founders' Fair.** *Drafted.* Fireworks go off every few turns. A Strike timed with the bangs makes no sound anyone notices (no acoustic suspicion). The Picnic Basket, Firework Crate and Parade Float forms are at home here.
+- **The Founders' Fair.** _Drafted._ Fireworks go off every few turns. A Strike timed with the bangs makes no sound anyone notices (no acoustic suspicion). The Picnic Basket, Firework Crate and Parade Float forms are at home here.
 - **The Town Hall Banquet.** Speeches at set times draw the whole party into one room, so you know exactly where the crowds will be, and where they won't.
 
 ### Night of Falling Stars 🌠
@@ -51,7 +51,12 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 ### All Hallows' Eve 🎃
 
 - **Gloaming Hall Masquerade.** A costume ball. Everything is decorated, so an odd object looks like part of the party (a plausibility bonus). The catch: guests are masked, so they show as "???" until one enters your room, and some of them are real monsters in costume.
-- **Trick-or-Treat Lane.** A village street where each house is a room, and parties go door to door. Ties in the "Trick or Treat!" idea for a mimic disguised as a door. A Lure plays as a treat; a failed Strike as a trick that spreads suspicion down the lane.
+- **Spell or Sweet Street.** *Drafted.* A village lane of eight houses in a loop (a ring around the village green), with costumed parties going door to door.
+  - _The procession:_ instead of wandering, everyone walks the loop clockwise, one house per Wait, so you can see who's coming and lie in wait ahead of them.
+  - _Spell or sweet:_ when they reach your house they knock and call "Spell or sweet!" Answer as a Door (or a Jack-o'-Lantern on the step) and they come right up for their sweet, ready to be struck without a Lure. Anywhere else, nobody answers, so they cast a "spell" (a prank) and take a closer look around: an extra stealth check.
+  - _Costumes:_ every party member shows only as their costume (Dracula, Bugbear, Bedsheet Ghost, Pumpkin-Head, Witch, Mummy…). Their type, what lures them and their Codex entry stay hidden until you eat one: "Under the Dracula cape: a Paranoid Cleric!" Now and then the costume isn't a costume (a real Werewolf, dressed as a werewolf).
+  - _The empty lot:_ one of the eight is an empty lot. A building form there (Haunted Mansion, Abandoned Cottage, Small Outhouse) gets a big bonus, since nobody questions a house appearing on All Hallows' Eve, and the procession knocks on it like any other.
+  - _Small mimics:_ the Door is a Standard form, so Minor mimics can't answer the door. A Minor Halloween "Sweets Bowl" form (left on the step) would give them a way in.
 - **The Hollow Hayride.** A cart route through a haunted orchard, with the rooms as stops along the way. Every few turns the cart moves the party on, so you plan where to lie in wait instead of chasing.
 
 ### Harvest Feast 🌾
@@ -62,6 +67,7 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 ### Midwinter 🎁
 
 - **Snowbound Lodge.** _Drafted._ Nobody can leave, and the cold freezes them one by one.
+- **Frozen Toy Workshop.**
 - **The Frozen Lake Fair.** Skating and stalls on the ice. Every few turns the ice cracks and a room closes for good, so the hunting ground shrinks as the hunt goes on.
 
 ## Easter eggs

@@ -892,7 +892,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater",
     group: "supernatural",
     repelledBy: { materials: ["Silver"] },
-    locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor"],
+    // On Spell or Sweet Street it only turns up as one of the street's real monsters
+    locations: ["manor", "hidden_grove", "country_road", "ruined_mill", "lonely_moor", "spell_or_sweet_street"],
     behavior: "bloodScent",
     quirks: ["Follows the smell of blood through walls", "Paces restlessly between rooms", "Snarls at anything that smells wrong"],
     appliedQuirk: "{name} paces past the {form}, snarling at a smell it can't place.",
@@ -1070,6 +1071,50 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Beanstalk Leather", "Titan Oak", "Sky Gold"],
     lootTraits: [],
     partialLoot: ["a length of beanstalk vine", "scrap of beanstalk-leather pack", "a giant's golden coin fragment"],
+  },
+
+  // ── Spell or Sweet Street (seasonal, All Hallows' Eve): the costumes that aren't ──
+  // On the street they only appear as its real monsters (see `realMonsters` on the location).
+  // The Swamp Hag also haunts the Lonely Moor, where she turns up like anyone else.
+  {
+    name: "Skeleton", type: "Undead", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "touch",
+    group: "supernatural",
+    locations: ["spell_or_sweet_street"],
+    quirks: ["Rattles when it walks, which everyone agrees is a great touch", "Never eats any of the sweets", "Its mask looks remarkably like a skull"],
+    appliedQuirk: "{name} rattles up to the {form} and taps it with one long, bony finger.",
+    alluringQualities: { materials: ["Limestone", "Horn"], traits: ["Dusty", "Cracked", "Musty"], tags: ["Storage", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 1, environmental: 0, acoustic: 2, presence: 1 },
+    lootMaterials: ["Horn", "Limestone"],
+    lootTraits: ["Musty"],
+    partialLoot: ["a loose rib", "a finger bone", "a scrap of grave-dirt cloak"],
+  },
+  {
+    name: "Mummy", type: "Undead", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    minTier: "Standard",
+    group: "supernatural",
+    repelledBy: { traits: ["Fresh"] },
+    locations: ["spell_or_sweet_street"],
+    quirks: ["Trails bandages that look centuries old", "Groans instead of saying \"spell or sweet\"", "Smells of resin and old tombs. Very committed."],
+    appliedQuirk: "{name} shuffles up to the {form} and lays a wrapped hand on it, groaning softly.",
+    alluringQualities: { materials: ["Gold", "Linen", "Limestone"], traits: ["Gilded", "Inlaid", "Musty"], tags: ["Valuable", "Religious"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 1, magical: 1, social: 0, spatial: 0, environmental: 1, acoustic: 0, presence: 2 },
+    lootMaterials: ["Linen", "Gold"],
+    lootTraits: ["Wrinkled", "Musty"],
+    partialLoot: ["a strip of ancient bandage", "a gold scarab amulet", "a handful of embalming resin"],
+  },
+  {
+    name: "Swamp Hag", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
+    minTier: "Standard",
+    group: "supernatural",
+    repelledBy: { traits: ["Polished", "Fragrant"] },
+    locations: ["spell_or_sweet_street", "lonely_moor"],
+    quirks: ["Her warts move when you aren't looking", "Asks everyone she meets for something other than coin", "The pond weed in her hair is still alive"],
+    appliedQuirk: "{name} sniffs the {form} and cackles. \"Oh, I know what YOU are, dearie.\"",
+    alluringQualities: { materials: ["Feywood", "Burlap", "Horn"], traits: ["Mossy", "Earthy", "Foul"], tags: ["Rural", "Storage"] },
+    perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 3, social: 1, spatial: 1, environmental: 2, acoustic: 0, presence: 2 },
+    lootMaterials: ["Feywood", "Burlap"],
+    lootTraits: ["Mossy", "Earthy"],
+    partialLoot: ["a clump of living pond weed", "a crooked nail", "a pouch of something that wriggles"],
   },
 
   // ── The Founders' Fair (seasonal, Founders' Day) ──
@@ -1303,6 +1348,12 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   warmthRoom?: RoomName;
   /** Frozen solid: out of the hunt (isAlive is false), but still there to be eaten. */
   isFrozen?: boolean;
+  /**
+   * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
+   * eaten. When the two are the same, it isn't a costume at all (a real werewolf).
+   */
+  costume?: string;
+  trueName?: string;
 };
 
 // ============================================================
