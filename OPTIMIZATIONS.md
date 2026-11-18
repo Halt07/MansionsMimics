@@ -31,4 +31,10 @@
 - Game.tsx writes 138 log lines inline. Moving the flavor text into a narration.ts, as the hunt report already does, would separate the writing from the rules.
 - Mainly worth it if a lot more text is coming.
 
+7. Clear the npm audit warnings (a todo more than an optimization)
+
+- npm audit reports 19 issues (13 high, 6 moderate), all in the build and lint tools: vite, @vitejs/plugin-react, tailwindcss and typescript-eslint, plus the file-matching helpers under them (picomatch, micromatch, minimatch, chokidar, fast-glob, tinyglobby…). None of it ships to players, but it's worth clearing.
+- Don't just run `npm audit fix --force`: some of its suggested fixes are downgrades (vite 8 → 6.2.7, @vitejs/plugin-react 6 → 5.2.0), and the Tailwind fix is a major upgrade (3 → 4).
+- The likely path: first try plain `npm audit fix` and updating vite, @vitejs/plugin-react and typescript-eslint within their current majors, then re-run the audit. Tailwind 4 is a real migration (its config moves into CSS), so it's best treated as its own task, with a visual check of every screen afterwards.
+
 Suggested order: 1, piece by piece (upgrading first), which leads into 2 and 3.
