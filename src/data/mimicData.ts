@@ -901,7 +901,7 @@ const SEASONAL_FORM_DATA = [
   },
   {
     id: "lesser_firework_crate", name: "Firework Crate", baseMassRange: [5, 16],
-    holiday: "independence_day", holidayTiers: ["Lesser", "Standard", "Greater"],
+    variantOf: "lesser_crate", holiday: "independence_day", holidayTiers: ["Lesser", "Standard", "Greater"],
     builtInTraits: ["Reinforced", "Rustic"],
     baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage", "Entertainment"],
     materialSlots: 2, digestCapacityRequired: 2, description: "A crate of rockets and fizzers stamped DO NOT DROP. Everyone wants a look inside; nobody wants to be the one who opens it carelessly.",

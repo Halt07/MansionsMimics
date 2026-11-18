@@ -818,6 +818,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "minor_book":              { plausibility: 1, note: "Books are at home in a study." } },
     "Armory":              { "lesser_chest":            { plausibility: 1, note: "Armories often have storage chests." },
                              "lesser_crate":            { plausibility: 1, note: "Equipment crates are normal in armories." },
+                             // Its own entry, so it doesn't inherit the Crate's bonus (it's a seasonal variant)
+                             "lesser_firework_crate":   { plausibility: 0, note: "Fireworks stored with the weapons: nobody is sure that's allowed." },
                              "greater_throne":          { plausibility: -2, note: "A throne in an armory is deeply suspicious." } },
   },
   // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──

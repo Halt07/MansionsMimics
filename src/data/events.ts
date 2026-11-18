@@ -291,13 +291,26 @@ export function rollOfferings(location: HuntLocation, random: () => number = Mat
 // ============================================================
 export type RivalKind = "lone" | "nest" | "elder";
 
-/** What a rival mimic is posing as once it's found (its marker on the room map). */
+/**
+ * What a rival mimic is posing as once it's found (its marker on the room map), and the mimic
+ * forms that count as each (their variants too: a Rum Cask is a barrel).
+ */
 export const RIVAL_DISGUISES = [
-  { icon: "📦", name: "crate" },
-  { icon: "🧰", name: "chest" },
-  { icon: "🛢️", name: "barrel" },
-] as const;
+  { icon: "📦", name: "crate", forms: ["lesser_crate"] },
+  { icon: "🧰", name: "chest", forms: ["minor_jewelry_box", "lesser_chest", "giant_chest"] },
+  { icon: "🛢️", name: "barrel", forms: ["lesser_barrel", "giant_barrel"] },
+  { icon: "🪑", name: "chair", forms: ["lesser_chair", "standard_grand_chair", "greater_throne", "giant_throne"] },
+  { icon: "📕", name: "book", forms: ["minor_book", "giant_book"] },
+  { icon: "🧱", name: "brick", forms: ["minor_brick", "greater_wall"] },
+] as const satisfies readonly { icon: string; name: string; forms: readonly FormId[] }[];
 export type RivalDisguise = (typeof RIVAL_DISGUISES)[number];
+
+/** The disguise matching a mimic form (a crate, chest or barrel, or a variant of one), if any. */
+export function disguiseOf(form: Pick<Form, "id" | "variantOf"> | null | undefined): RivalDisguise | null {
+  if (!form) return null;
+  const is = (id: string | undefined) => !!id && RIVAL_DISGUISES.find(d => (d.forms as readonly string[]).includes(id));
+  return is(form.id) || is(form.variantOf) || null;
+}
 
 export interface RivalMimic {
   id: string;

@@ -20,7 +20,7 @@ import {
   strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
   COLLAPSE_BONUS_AP, type Witnesses,
   STAT_CAP, getActiveForm, effectiveStats, lureRange, applyUpgrade, type UpgradeChoice,
-  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
+  RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine, disguiseOf,
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
   VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
@@ -569,8 +569,11 @@ export default function Game() {
         addEvent("alert", `You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
         addEvent("alert", `This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
       }
-      if (Math.random() < RIVAL_SAME_SHAPE_CHANCE) addEvent("info", RIVAL_SAME_SHAPE_LINE);
-      setRivals(prev => prev.map(r => r.id === found.id ? { ...r, revealed: true } : r));
+      const sameShape = Math.random() < RIVAL_SAME_SHAPE_CHANCE;
+      if (sameShape) addEvent("info", RIVAL_SAME_SHAPE_LINE);
+      // When it's wearing your shape, the map shows it too (if you're a crate, chest or barrel)
+      const mirrored = sameShape ? disguiseOf(getActiveForm(character)) : null;
+      setRivals(prev => prev.map(r => r.id === found.id ? { ...r, revealed: true, ...(mirrored ? { disguise: mirrored } : {}) } : r));
     }
 
     // Increment action count
