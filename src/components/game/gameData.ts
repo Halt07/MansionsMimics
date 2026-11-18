@@ -386,6 +386,11 @@ export function massPenalty(character: Pick<MimicCharacter, "tier" | "mass">): n
   return 0;
 }
 
+/** How many rooms away a Lure reaches: 1, or 2 with high base Allure (5+), plus 1 for Aether Crystal. */
+export function lureRange(character: Pick<MimicCharacter, "baseAllure" | "currentAppearance"> | null | undefined): number {
+  return ((character?.baseAllure ?? 2) >= 5 ? 2 : 1) + (hasMagic(character?.currentAppearance, "Aether Crystal") ? 1 : 0);
+}
+
 export interface EffectiveStats {
   /** For stealth and allure checks (at least 1). Stealth checks take the form-tier penalty off themselves. */
   plausibility: number;

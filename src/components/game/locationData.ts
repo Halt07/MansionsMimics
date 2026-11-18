@@ -1007,6 +1007,7 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "Village Green":       { "lesser_haunted_tree":     { plausibility: 2, allure: 1, note: "The old tree on the green has always looked like that. Everyone says so." } },
     "Widow's Cottage":     { "lesser_haunted_tree":     { plausibility: 1, note: "The widow's yard is unkempt, explaining the state of the tree." } },
     "Crooked House":       { "standard_door":           { plausibility: 1, note: "A crooked door for a crooked house." } },
+    "Candlemaker's House": { "minor_candlestick":       { plausibility: 1, note: "A candlestick at a candlemaker's house." } },
   },
   // ── The Founders' Fair · all mimics, Founders' Day only · wearable forms: Minor–Apex ──
   founders_fair: {

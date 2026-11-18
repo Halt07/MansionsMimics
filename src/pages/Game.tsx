@@ -4,25 +4,24 @@ import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_FORMS, LOCATIONS, TIER_CONFIG, TIER_ORDER,
+  ALL_FORMS, TIER_CONFIG, TIER_ORDER,
   rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, adhesionCheck, getApReward, ADVENTURER_MATERIALS,
   ADVENTURER_TRAITS, calcAllureInterest, getRoomDistance, getAdjacentRooms, wanderCreature, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions, isStationary,
   needsPartialBites, getBiteAp, rollBiteMaterial, hasMagic,
-  TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend,
-  isLocationAvailable, advanceRareLocation, findDevotee, rollOfferings,
+  TITANIC_FEAST_GIANTS, isTitanicFeastComplete, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
-  withWarmth, chillParty, frozenMealAp, uneatenFrozen, FROST_WARNING,
+  withWarmth, chillParty, frozenMealAp, uneatenFrozen,
   starfallDue, stepToward, claimStar, STAR_FRAGMENT,
   fireworksDue, distractedRooms, fireworksRummage, tossRoom, massDecay,
-  dressParty, unmask, nextHouse, housesAway, placeProcession, answersDoor, PRANKS, addRealMonster, isTheRealThing,
+  dressParty, unmask, nextHouse, placeProcession, answersDoor, PRANKS, addRealMonster, isTheRealThing,
   generateParty, spawnSmallCreatures, type SmallCreature,
-  STAT_CAP, getActiveForm, effectiveStats,
+  STAT_CAP, getActiveForm, effectiveStats, lureRange,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
-  isCat, creatureEmoji, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
+  isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
-  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, getSeasonalForms, today, HOLIDAYS, seasonEnd, dropExpiredSeasonalForms,
+  VARIANT_FORMS, isVariantUnlocked, formFamily, formTier, formsStillAllowed, effectiveFormTier, today, dropExpiredSeasonalForms,
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalEscapeRoom, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
@@ -30,32 +29,30 @@ import {
   type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness, type Tier,
   ACTION_LIMIT,
-  ACTION_WARNING,
 } from "../components/game/gameData";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Eye, Zap, RefreshCw, Shield, Home, BookOpen, Layers, Palette, MoveRight
-} from "lucide-react";
-import StatBar from "../components/game/StatBar";
-import SuspicionMeter from "../components/game/SuspicionMeter";
+import { Eye, Home, BookOpen } from "lucide-react";
 import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
-import BurnBadge from "../components/game/BurnBadge";
-import RoomMap from "../components/game/RoomMap";
-import HuntReport from "../components/game/HuntReport";
-import HolidayBadge from "../components/game/HolidayBadge";
-import KeyHint from "../components/game/KeyHint";
 import { buildHuntReport } from "../components/game/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
+import { HuntContext, type HuntState } from "../components/game/hunt/HuntContext";
+import StatusPanel from "../components/game/hunt/StatusPanel";
+import LocationBanners from "../components/game/hunt/LocationBanners";
+import PartyCard from "../components/game/hunt/PartyCard";
+import { LocationSelect, RoomSelect } from "../components/game/hunt/LocationSelect";
+import HuntHeader from "../components/game/hunt/HuntHeader";
+import ActionBar from "../components/game/hunt/ActionBar";
+import { FormSwitcher, MealsHere, RelocatePanel } from "../components/game/hunt/HuntPanels";
+import { EvolveScreen, GameOverScreen, HuntOverPanel, type UpgradeChoice } from "../components/game/hunt/EndScreens";
 
 // ── Game-screen state types ──
 type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
 type GameoverReason = "discovered" | "abandoned";
-type UpgradeChoice = "mass" | CombatStat;
 
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
@@ -590,8 +587,7 @@ export default function Game() {
   };
 
   // Lure range: 1 (same or adjacent room). +1 at baseAllure >= 5
-  const getAllureRange = () =>
-    ((character?.baseAllure ?? 2) >= 5 ? 2 : 1) + (hasMagic(character?.currentAppearance, "Aether Crystal") ? 1 : 0);
+  const getAllureRange = () => lureRange(character);
 
   const doAllureTurn = () => {
     if (!character || !location || !mimicRoom) return;
@@ -1445,29 +1441,13 @@ export default function Game() {
     }
     earnedRef.current = earned;
   }, [character, addEvent]);
-  const consumedCount = party.filter(a => a.isConsumed).length;
 
   // Stats after mass, sickness and form-tier penalties (see effectiveStats)
   const activeForm = getActiveForm(character);
   const stats = character ? effectiveStats(character, currentSickness, activeForm) : null;
-  const massPenalty = stats?.penalties.mass ?? 0;
-  const formTierPenalties = stats?.penalties.formTier ?? { plausibility: 0, patience: 0 };
   const effectivePlausibility = stats?.plausibility ?? 1;
   const effectiveAdhesion = stats?.adhesion ?? 1;
   const effectivePatience = stats?.patience ?? 1;
-  const cfg = character ? TIER_CONFIG[character.tier] : null;
-  const apProgress = cfg && character ? Math.min((character.assimilationPoints / cfg.apToEvolve) * 100, 100) : 0;
-
-  // Seasonal forms in season for this mimic that it isn't carrying yet (nudged on the setup screen)
-  const seasonalHint = (() => {
-    if (!character) return null;
-    const carried = new Set<string>(character.forms.map(f => f.formId));
-    const fresh = getSeasonalForms(formTier(character), today()).filter(f => !carried.has(f.id));
-    const holiday = fresh[0]?.holiday;
-    if (!holiday) return null;
-    const names = fresh.map(f => `a ${f.name}`);
-    return { holiday: HOLIDAYS[holiday], names: names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : names[0] };
-  })();
 
   // What the world says about the hunt once it's over (all inputs are final by then)
   const endReport = character && location && (huntOver || phase === "gameover") ? buildHuntReport({
@@ -1496,10 +1476,6 @@ export default function Game() {
     : latestTypes.has("escape") ? "shake"
     : null;
 
-  // Filter locations by minTier and minMass
-  const availableLocations = character
-    ? LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation))
-    : [];
 
   // What the four hunt actions can do right now (shared by the buttons and the keyboard)
   const someoneInMyRoom = activeAdventurers.some(a => a.location === mimicRoom);
@@ -1597,7 +1573,16 @@ export default function Game() {
     </div>
   ) : null;
 
+  // What the screen's pieces read (see HuntContext); actions are passed to them as props
+  const hunt: HuntState = {
+    character, activeForm, stats: effectiveStats(character, currentSickness, activeForm), sickness: currentSickness,
+    suspicion, lureRange: lureRange(character),
+    location, mimicRoom, party, activeAdventurers, creatures: smallCreatures, rivals, isBountyHunt, huntOver, actionCount, acting,
+    shipTurn, fairTurn, fireworksRoom, starTurn, starFragment, skyward: watchingSky(mimicRoom),
+  };
+
   return (
+    <HuntContext.Provider value={hunt}>
     <div
       className={`hunt-stage min-h-screen bg-background ${phase === "hunt" ? "pb-28 lg:pb-0" : ""}`}
       style={{ "--suspicion": suspicion } as CSSProperties}
@@ -1642,496 +1627,31 @@ export default function Game() {
 
         {/* Left: Status */}
         <div className="space-y-4">
-          <Card className="bg-card border-border">
-            <CardContent className="fx-shake p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-cinzel text-xs text-muted-foreground uppercase tracking-wide">Active Form</span>
-                {activeForm ? (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 border text-[11px]">{activeForm.name}</Badge>
-                ) : (
-                  <span className="text-xs text-destructive">None</span>
-                )}
-              </div>
-              {activeForm && (
-                <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
-              )}
-              {activeForm && activeForm.builtInTraits.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mb-1">
-                  Built-in: <span className="text-primary">{activeForm.builtInTraits.join(", ")}</span>
-                </p>
-              )}
-              {/* Current appearance summary */}
-              {character.currentAppearance && (() => {
-                const app = character.currentAppearance;
-                const mats = [...(app.primaryMaterials || []), ...(app.secondaryMaterials || [])];
-                const traits = [...(app.surfaceTraits || []), ...(app.symbolicTraits || []), ...(app.conditionTraits || []), ...(app.scentTraits || [])];
-                if (mats.length === 0 && traits.length === 0) return null;
-                return (
-                  <div className="space-y-1 pt-1 border-t border-border/50">
-                    {mats.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {mats.map(m => (
-                          <span key={m} className="text-[10px] bg-accent/20 text-accent-foreground rounded px-1.5 py-0.5 border border-accent/20">{m}</span>
-                        ))}{traits.length > 0 && (<>{traits.map(t => (
-                          <span key={t} className="text-[10px] bg-primary/10 text-primary/80 rounded px-1.5 py-0.5 border border-primary/20">{t}</span>
-                        ))}</>)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-              <div className="space-y-2 pt-1 border-t border-border">
-                <StatBar label="Plausibility" value={character.plausibility} max={6} color="bg-green-500"
-                  penalty={massPenalty + (stats?.penalties.sickness.plausibility ?? 0) + formTierPenalties.plausibility}
-                  penaltyLabel={currentSickness?.penalties?.plausibility ? `–${currentSickness.penalties.plausibility} ${currentSickness.name}` : null}
-                  massPenalty={massPenalty}
-                  formPenalty={formTierPenalties.plausibility}
-                  formPenaltyNote="Your form is from the tier above — you can't quite match its appearance (stealth checks)."
-                />
-                <StatBar label="Adhesion" value={character.adhesion} max={6} color="bg-primary"
-                  penalty={currentSickness?.penalties?.adhesion ?? 0}
-                  penaltyLabel={currentSickness?.penalties?.adhesion ? `–${currentSickness.penalties.adhesion} ${currentSickness.name}` : null}
-                />
-                <StatBar label="Patience" value={character.patience} max={6} color="bg-purple-500"
-                  penalty={(stats?.penalties.sickness.patience ?? 0) + formTierPenalties.patience}
-                  penaltyLabel={currentSickness?.penalties?.patience ? `–${currentSickness.penalties.patience} ${currentSickness.name}` : null}
-                  formPenalty={formTierPenalties.patience}
-                  formPenaltyNote="Your form is from the tier below — too much mass in a small space makes you restless."
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <StatusPanel />
 
-          <Card className="fx-shake bg-card border-border">
-            <CardContent className="p-4 space-y-3">
-              <SuspicionMeter value={suspicion} max={10} />
-              <div className="border-t border-border pt-3">
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-muted-foreground font-cinzel uppercase tracking-wide text-[11px]">Assimilation</span>
-                  <span className="text-foreground font-bold">{character.assimilationPoints} AP</span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-accent rounded-full transition-all duration-700" style={{ width: `${apProgress}%` }} />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1 text-right">
-                  {`${character.assimilationPoints} / ${cfg?.apToEvolve} AP`}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-
-          {/* Rival mimic / nest status */}
-          {phase === "hunt" && !huntOver && rivals.some(r => !r.consumed) && (() => {
-            const remaining = rivals.filter(r => !r.consumed);
-            const exposed = remaining.filter(r => r.revealed);
-            const tracked = remaining.some(r => r.clueGiven && !r.revealed);
-            const devoured = rivals.filter(r => r.consumed).length;
-            const elder = remaining.find(r => r.kind === "elder");
-            return (
-              <Card className={`border ${exposed.length > 0 ? "border-orange-400/50 bg-orange-400/5" : "border-purple-400/20 bg-card"}`}>
-                <CardContent className="p-3 space-y-1">
-                  <p className="font-cinzel text-xs text-orange-400/90">{isNest ? "🕸 The Nest" : "⚠ Rival Mimic"}</p>
-                  {isNest && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Mimics devoured: {devoured}{elder && !elder.revealed ? " · The Elder still hides." : ""}
-                    </p>
-                  )}
-                  {exposed.map(r => (
-                    <p key={r.id} className="text-[11px] text-orange-400/80">
-                      {r.kind === "elder" ? "The Elder Mimic" : `A ${RIVAL_STATS[r.kind].name}`} is exposed in the <span className="font-bold">{r.room}</span>. Strike to devour it!
-                    </p>
-                  ))}
-                  {tracked && (
-                    <p className="text-[11px] text-muted-foreground italic">Something consumed one of the party. Track the predator — relocate to where they vanished.</p>
-                  )}
-                  {!tracked && exposed.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground/60 italic">A presence lurks... Wait and observe.</p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Sinking ship status */}
-          {phase === "hunt" && !huntOver && location?.sinkingTurns && (() => {
-            const left = location.sinkingTurns - shipTurn;
-            const urgent = left <= 3;
-            return (
-              <div className={`px-3 py-2 rounded border text-xs ${urgent ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-sky-400/30 bg-sky-400/5 text-sky-400/80"}`}>
-                <span className="font-cinzel">🌊 {left} {left === 1 ? "turn" : "turns"} until she goes under</span>
-                <div className="h-1 mt-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${urgent ? "bg-destructive/70" : "bg-sky-400/60"} transition-all duration-500`} style={{ width: `${(shipTurn / location.sinkingTurns) * 100}%` }} />
-                </div>
-              </div>
-            );
-          })()}
-
-          {phase === "hunt" && !huntOver && location?.procession && mimicRoom && (() => {
-            const sweet = answersDoor(location, activeForm);
-            const onGreen = !(location.procession.order as readonly string[]).includes(mimicRoom);
-            const coming = activeAdventurers
-              .map(a => ({ a, away: housesAway(location, a.location, mimicRoom) }))
-              .filter(x => x.away > 0)
-              .sort((x, y) => x.away - y.away);
-            const nextUp = coming.length ? coming.filter(x => x.away === coming[0].away) : [];
-            return (
-              <div className="px-3 py-2 rounded border text-xs border-orange-400/30 bg-orange-400/5 text-orange-200/90">
-                <span className="font-cinzel">🎃 Spell or sweet! The costumed crowd goes door to door, one house each time you wait.</span>
-                <p className="text-[11px] mt-0.5 opacity-80">
-                  {onGreen
-                    ? `You're out on the ${mimicRoom}: nobody knocks here, so lure them over.`
-                    : sweet
-                    ? `As a ${activeForm?.name}, you've got sweets: whoever knocks comes right up to you.`
-                    : "Nobody's answering at your house: whoever knocks will prank it (+1 suspicion). A Door, Chest, Jack-o'-Lantern, Gargoyle or Haunted Mansion hands out sweets."}
-                  {nextUp.length > 0 && ` Next at your door: ${nextUp.map(x => x.a.name).join(" and ")}, ${nextUp[0].away === 1 ? "next turn" : `in ${nextUp[0].away} houses`}.`}
-                </p>
-              </div>
-            );
-          })()}
-
-          {phase === "hunt" && !huntOver && location?.fireworks && (() => {
-            const every = location.fireworks.every;
-            const next = every - (fairTurn % every);
-            const crate = fireworksRummage(location, activeForm) !== null;
-            return (
-              <div className="px-3 py-2 rounded border text-xs border-rose-300/30 bg-rose-400/5 text-rose-200/90">
-                <span className="font-cinzel">🎆 Fireworks every {every} turns, over a different part of the fair.</span>
-                <p className="text-[11px] mt-0.5 opacity-80">
-                  {fireworksRoom
-                    ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses${watchingSky(mimicRoom) ? ", and you can Strike anyone in your room without luring them first" : ""}.`
-                    : `The next volley goes up in ${next} ${next === 1 ? "turn" : "turns"}.`}
-                  {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
-                </p>
-              </div>
-            );
-          })()}
-
-          {phase === "hunt" && !huntOver && location?.starfall && (() => {
-            const every = location.starfall.every;
-            const next = every - (starTurn % every);
-            return (
-              <div className="px-3 py-2 rounded border text-xs border-indigo-300/30 bg-indigo-400/5 text-indigo-200/90">
-                <span className="font-cinzel">🌠 Stars are falling. When one lands, the whole party runs for it.</span>
-                <p className="text-[11px] mt-0.5 opacity-80">
-                  {starFragment
-                    ? `A fragment glows in the ${starFragment}. Each time you wait, they all move a room closer to it.`
-                    : `The next one should fall in ${next} ${next === 1 ? "turn" : "turns"}.`}
-                </p>
-              </div>
-            );
-          })()}
-
-          {phase === "hunt" && !huntOver && location?.snowbound && (() => {
-            const frozenCount = party.filter(a => a.isFrozen).length;
-            return (
-              <div className="px-3 py-2 rounded border text-xs border-sky-400/30 bg-sky-400/5 text-sky-300/90">
-                <span className="font-cinzel">❄️ Snowed in. Nobody can leave, and the cold is getting to them.</span>
-                <p className="text-[11px] mt-0.5 opacity-80">
-                  {frozenCount > 0 ? `${frozenCount} frozen solid so far. ` : ""}The {location.snowbound.hearth} warms whoever walks in; the {location.snowbound.cold.join(" and ")} chill them.
-                </p>
-              </div>
-            );
-          })()}
-
-          {/* Action counter warning */}
-          {phase === "hunt" && !location?.snowbound && ACTION_LIMIT - actionCount <= ACTION_WARNING && (
-            <div className={`px-3 py-2 rounded border text-xs ${ACTION_LIMIT - actionCount <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}`}>
-              <span className="font-cinzel">⏳ {ACTION_LIMIT - actionCount} actions remaining</span>
-              <p className="text-[11px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
-            </div>
-          )}
+          {phase === "hunt" && <LocationBanners />}
 
           {/* Party list or room map: one card, click it to switch (remembered per mimic) */}
-          {phase !== "setup" && location && mimicRoom && party.length > 0 && (() => {
-            const showMap = character.sidebarView === "map";
-            const counts = `(${activeAdventurers.length} active / ${consumedCount} consumed)`;
-            return (
-              <Card
-                role="button"
-                tabIndex={0}
-                aria-label={showMap ? "Show the party list" : "Show the room map"}
-                onClick={toggleSidebarView}
-                onKeyDown={e => {
-                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSidebarView(); }
-                }}
-                className={"sidebar-view-card bg-card border-border fx-shake"}
-              >
-                <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
-                      {showMap ? <>{location.name} <span className="normal-case tracking-normal">{counts}</span></> : <>Party {counts}</>}
-                    </CardTitle>
-                    {showMap
-                      ? <span className="view-toggle-icon" aria-hidden>Aa</span>
-                      : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
-                  </div>
-                </CardHeader>
-                {showMap ? (
-                  <CardContent className="px-4 pb-4">
-                    <RoomMap
-                      location={location}
-                      mimicRoom={mimicRoom}
-                      lureRange={getAllureRange()}
-                      adventurers={activeAdventurers}
-                      creatures={smallCreatures.filter(c => !c.isConsumed)}
-                      rivals={rivals}
-                      frozen={uneatenFrozen(party)}
-                      markers={[
-                        ...(location.starfall && starFragment ? [{ room: starFragment, icon: "🌠", title: "A fallen star fragment" }] : []),
-                        ...(location.fireworks && fireworksRoom ? [{ room: fireworksRoom, icon: "🎆", title: "Fireworks overhead: everyone here and next door is looking up" }] : []),
-                      ]}
-                      formName={activeForm?.name}
-                    />
-                  </CardContent>
-                ) : (
-                  <CardContent className="px-4 pb-3 space-y-2">
-                    {party.map(adv => {
-                      const dist = mimicRoom && location && adv.isAlive && !adv.isConsumed
-                        ? getRoomDistance(location, mimicRoom, adv.location) : null;
-                      const inRange = dist !== null && dist <= getAllureRange();
-                      const fled = adv.fled && !adv.isConsumed;
-                      const disappeared = adv.isDisappeared && !adv.isConsumed;
-                      const frozen = adv.isFrozen && !adv.isConsumed;
-                      const maxHits = adv.constitution || 3;
-                      return (
-                        <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared ? "opacity-40" : ""}`}>
-                          <span className={
-                            adv.isConsumed ? "line-through text-muted-foreground" :
-                            fled ? "text-muted-foreground italic" :
-                            disappeared ? "text-purple-400/60 italic" :
-                            frozen ? "text-sky-300/80 italic" :
-                            adv.isAttracted ? "text-yellow-400" : "text-foreground"
-                          }>
-                            {adv.isConsumed && isTheRealThing(adv) ? `${adv.name} (a real one!)`
-                              : adv.isConsumed && adv.trueName ? `${adv.trueName} (the ${adv.costume})` : adv.name}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
-                            {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
-                            {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
-                            {adv.warmth !== undefined && adv.isAlive && !adv.isConsumed && (
-                              <span
-                                title={`Warmth ${adv.warmth}/${adv.maxWarmth ?? adv.warmth}: freezes at 0`}
-                                className={`text-[10px] whitespace-nowrap ${adv.warmth <= FROST_WARNING ? "text-sky-300" : "text-muted-foreground"}`}
-                              >
-                                ❄️ {adv.warmth}
-                              </span>
-                            )}
-                            {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
-                            {adv.isAttracted && !adv.isConsumed && (
-                              <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
-                            )}
-                            {(adv.hitsTaken ?? 0) > 0 && !adv.isConsumed && !fled && (
-                              <span className="text-[10px] text-destructive/70">{maxHits - (adv.hitsTaken ?? 0)}/{maxHits}hp</span>
-                            )}
-                            {dist !== null && (
-                              <span title={adv.location} className={`text-[10px] whitespace-nowrap ${inRange ? "text-green-400/80" : "text-muted-foreground"}`}>
-                                <span className="inline-block max-w-[6.5rem] truncate align-bottom">{adv.location}</span> ({dist})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })()}
-
+          {phase !== "setup" && party.length > 0 && <PartyCard onToggle={toggleSidebarView} />}
         </div>
 
         {/* Center: Main action area */}
         <div className="lg:col-span-2 space-y-4">
-
-          {/* SETUP phase */}
           {phase === "setup" && !roomSelecting && (
-            <div>
-              <h2 className="font-cinzel text-xl text-foreground mb-1">Choose Your Hunting Ground</h2>
-              <p className="text-muted-foreground text-sm mb-1 flavor-text italic">Where will you lie in wait?</p>
-              {character && TIER_ORDER.indexOf(character.tier) < TIER_ORDER.indexOf("Grand") && (
-                <p className="text-[11px] text-muted-foreground/60 mb-4 italic">Wilderness territories unlock at Grand tier and beyond.</p>
-              )}
-              {seasonalHint && (
-                <button
-                  onClick={() => startFormSelection("setup")}
-                  data-holiday={seasonalHint.holiday.id}
-                  className="holiday-card w-full text-left mb-4 px-3 py-2 rounded-lg border bg-card text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="holiday-badge text-xs font-cinzel">{seasonalHint.holiday.icon} {seasonalHint.holiday.name}</span>
-                  {" "}· Something in the air: you could take the shape of {seasonalHint.names}. <span className="text-primary">Choose forms →</span>
-                </button>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[...availableLocations].sort((a, b) => Number(!!b.holiday) - Number(!!a.holiday) || Number(!!b.rare) - Number(!!a.rare)).map(loc => (
-                  <Card
-                    key={loc.id}
-                    onClick={() => chooseLocation(loc)}
-                    data-holiday={loc.holiday}
-                    className={`cursor-pointer bg-card transition-all group ${loc.holiday ? "holiday-card border-border" : loc.rare
-                      ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
-                      : "border-border hover:border-primary/40"}`}
-                  >
-                    <CardContent className="p-4">
-                      {character && <BurnBadge huntsLeft={locationBurn(character, loc.id)} />}
-                      {loc.holiday && (
-                        <p className="holiday-badge text-[11px] font-cinzel uppercase tracking-wide mb-1">
-                          {HOLIDAYS[loc.holiday].icon} {HOLIDAYS[loc.holiday].name} · open to all until {seasonEnd(loc.holiday)}
-                        </p>
-                      )}
-                      {loc.rare && character?.rareLocation && (
-                        <p className="text-[11px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
-                          ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
-                        </p>
-                      )}
-                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{loc.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-2">{loc.description}</p>
-                      <p className="flavor-text text-[11px] text-muted-foreground/70 italic mb-3 line-clamp-2">{loc.flavorText}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                          {loc.partySize[0]}–{loc.partySize[1]} adventurers
-                        </span>
-                        {loc.advantageTags.slice(0, 2).map(t => (
-                          <span key={t} className="text-[11px] text-primary border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5">{t}</span>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            <LocationSelect onChoose={chooseLocation} onChooseForms={() => startFormSelection("setup")} />
           )}
 
-          {/* ROOM SELECTION phase */}
-          {roomSelecting && location && (
-            <div>
-              <h2 className="font-cinzel text-xl text-foreground mb-1">{location.name}</h2>
-              <p className="text-muted-foreground text-sm mb-1 flavor-text italic">{location.flavorText}</p>
-              <p className="text-xs text-muted-foreground mb-4">Choose the room where you will take your form and wait.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {location.rooms.map(room => {
-                  const adjacent = getAdjacentRooms(location, room);
-                  return (
-                    <Card
-                      key={room}
-                      onClick={() => confirmRoom(room, location)}
-                      className="cursor-pointer border-border hover:border-primary/40 bg-card transition-all group"
-                    >
-                      <CardContent className="p-4">
-                        <h3 className="font-cinzel text-sm text-foreground group-hover:text-primary transition-colors mb-1">{room}</h3>
-                        <p className="text-[11px] text-muted-foreground">
-                          Adjacent: {adjacent.join(", ")}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => { setRoomSelecting(false); setLocation(null); }}
-                className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                ← Back to location select
-              </button>
-            </div>
-          )}
+          {roomSelecting && <RoomSelect onConfirm={confirmRoom} onBack={() => { setRoomSelecting(false); setLocation(null); }} />}
 
-          {/* HUNT phase */}
           {phase === "hunt" && (
             <div className="space-y-4">
-              {isBountyHunt && (
-                <div className="p-3 bg-destructive/10 border border-destructive/40 rounded-lg">
-                  <p className="font-cinzel text-destructive text-sm font-bold mb-0.5">⚠ Bounty Hunt</p>
-                  <p className="text-xs text-destructive/80">
-                    A bounty has been placed on <span className="font-bold">{character?.name}</span>. These hunters know your kind intimately — they will be extremely difficult to deceive.
-                  </p>
-                </div>
-              )}
-              {currentSickness && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-lg">
-                  <p className="font-cinzel text-amber-400 text-sm font-bold mb-0.5">☠ {currentSickness.name}</p>
-                  <p className="text-xs text-amber-400/80 flavor-text italic mb-1">{currentSickness.flavorText}</p>
-                  <p className="text-xs text-amber-400/70">
-                    {Object.entries(currentSickness.penalties).map(([k, v]) => `–${v} ${k}`).join(" · ")} — this hunt only.
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-cinzel text-xl text-foreground">{location?.name}</h2>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-xs text-muted-foreground">{activeAdventurers.length} adventurers remain</p>
-                    {mimicRoom && (
-                      <>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-primary/80 font-cinzel">You: {mimicRoom}</span>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-yellow-400/70">Lure range: {getAllureRange()} rooms</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setPhase("setup")} disabled={ceremonyRunning} className="text-xs border-border gap-1">
-                  <RefreshCw className="w-3 h-3" /> New Hunt
-                </Button>
-              </div>
-
-              {/* Form & Appearance quick-change */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setShowFormPanel(!showFormPanel); setShowAppearancePanel(false); setShowMovePanel(false); }}
-                  className="text-xs border-border gap-1 flex-1"
-                >
-                  <Layers className="w-3 h-3" /> Change Form
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setShowAppearancePanel(!showAppearancePanel); setShowFormPanel(false); setShowMovePanel(false); }}
-                  className="text-xs border-border gap-1 flex-1"
-                >
-                  <Palette className="w-3 h-3" /> Appearance
-                </Button>
-              </div>
-
-              {/* Form switcher panel */}
-              {showFormPanel && character.forms.length > 0 && (
-                <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-2">
-                  <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest">Select Active Form (costs 1 suspicion)</p>
-                  {character.forms.map((ref, i) => {
-                    const form = ALL_FORMS.find(f => f.id === ref.formId);
-                    if (!form) return null;
-                    const isActive = i === (character.activeFormIndex ?? 0);
-                    return (
-                      <button
-                        key={ref.formId}
-                        onClick={() => !isActive && doChangeForm(i)}
-                        data-holiday={form.holiday}
-                        className={`${form.holiday ? "holiday-card" : ""} w-full text-left px-3 py-2 rounded border text-xs transition-all ${
-                          isActive ? "border-primary bg-primary/10 text-primary cursor-default" :
-                          "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-cinzel">{form.name}</span>
-                          <div className="flex gap-1">
-                            <span className="text-[10px] border border-border rounded px-1">{effectiveFormTier(form, formTier(character))}</span>
-                            {isActive && <span className="text-[10px] text-primary">Active</span>}
-                          </div>
-                        </div>
-                        <HolidayBadge form={form} />
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
-                        <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Appearance panel */}
+              <HuntHeader
+                canLeave={!ceremonyRunning}
+                onNewHunt={() => setPhase("setup")}
+                onToggleForms={() => { setShowFormPanel(!showFormPanel); setShowAppearancePanel(false); setShowMovePanel(false); }}
+                onToggleAppearance={() => { setShowAppearancePanel(!showAppearancePanel); setShowFormPanel(false); setShowMovePanel(false); }}
+              />
+              {showFormPanel && <FormSwitcher onChange={doChangeForm} />}
               {showAppearancePanel && (
                 <AppearanceEditor
                   character={character}
@@ -2139,162 +1659,24 @@ export default function Game() {
                   onClose={() => setShowAppearancePanel(false)}
                 />
               )}
-
-              {/* Relocate panel */}
-              {showMovePanel && (() => {
-                if (!location || !mimicRoom) return null;
-                const openRooms = relocateRooms;
-                return (
-                  <div className="bg-muted/20 border border-blue-400/20 rounded-lg p-3 space-y-2">
-                    <p className="text-[11px] text-blue-400/70 font-cinzel uppercase tracking-widest">Relocate — Choose Destination</p>
-                    {openRooms.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">There are too many people nearby — moving now would be too risky.</p>
-                    ) : (
-                      openRooms.map((room, i) => (
-                        <button
-                          key={room}
-                          onClick={() => doRelocate(room)}
-                          className="w-full text-left px-3 py-2 rounded border border-border text-xs text-muted-foreground hover:border-blue-400/40 hover:text-foreground transition-all"
-                        >
-                          {i < 9 && <KeyHint k={String(i + 1)} className="mr-2" />}
-                          <span className="font-cinzel">{room}</span>
-                          <span className="text-[10px] text-muted-foreground ml-2">(+1 suspicion)</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Action buttons: a bar fixed to the bottom of the screen below lg, a 2×2 grid above */}
-              <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 backdrop-blur lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
-              <div className="h-1 bg-muted lg:hidden" aria-hidden><div className="action-bar-suspicion h-full" /></div>
-              <div className="grid grid-cols-4 gap-2 p-2 lg:grid-cols-2 lg:gap-3 lg:p-0">
-                <Button
-                  onClick={toggleMovePanel}
-                  disabled={!canRelocate}
-                  variant="outline"
-                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-blue-400/30 hover:text-blue-400"
-                >
-                  <KeyHint k="R" className="absolute top-1 right-1" />
-                  <MoveRight className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-cinzel">Relocate</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Slip to empty room</span>
-                </Button>
-                <Button
-                  onClick={doAllureTurn}
-                  disabled={!canLure}
-                  variant="outline"
-                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-yellow-400/30 hover:text-yellow-400"
-                >
-                  <KeyHint k="L" className="absolute top-1 right-1" />
-                  <Zap className="w-5 h-5 text-yellow-400/70" />
-                  <span className="text-xs font-cinzel">Lure</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Attract adventurers</span>
-                </Button>
-                <Button
-                  onClick={doStrikeTurn}
-                  disabled={!canStrike}
-                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30"
-                  variant="ghost"
-                >
-                  <KeyHint k="S" className="absolute top-1 right-1" />
-                  <Shield className="w-5 h-5" />
-                  <span className="text-xs font-cinzel">Strike!</span>
-                  <span className="hidden lg:inline text-[11px]">Consume attracted prey</span>
-                </Button>
-                <Button
-                  onClick={doWaitTurn}
-                  disabled={!canWait}
-                  variant="outline"
-                  className="relative h-auto py-2 lg:py-3 flex-col gap-1 border-border hover:border-purple-400/30"
-                >
-                  <KeyHint k="W" className="absolute top-1 right-1" />
-                  <RefreshCw className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-cinzel">Wait</span>
-                  <span className="hidden lg:inline text-[11px] text-muted-foreground">Rest & reduce suspicion</span>
-                </Button>
-              </div>
-              </div>
-
-              {/* Small creatures — only show those currently in mimic's room */}
-              {(() => {
-                const inRoom = smallCreatures.filter(c => !c.isConsumed && c.location === mimicRoom);
-                if (inRoom.length === 0) return null;
-                return (
-                  <div className="bg-muted/10 border border-border rounded-lg p-3">
-                    <p className="text-[11px] text-muted-foreground font-cinzel uppercase tracking-widest mb-2">
-                      Creatures of Opportunity
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {inRoom.map(creature => (
-                        <button
-                          key={creature.uid}
-                          onClick={() => doConsumeCreature(creature)}
-                          disabled={acting}
-                          className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-border bg-card hover:border-primary/40 hover:text-primary transition-all text-muted-foreground"
-                          title={creature.description}
-                        >
-                          {creatureEmoji(creature.name)} {creature.name} <span className="text-primary ml-1">+{creature.ap} AP</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Starfall: a fragment lying in your room */}
-              {location?.starfall && starFragment && starFragment === mimicRoom && !huntOver && (
-                <div className="bg-indigo-400/5 border border-indigo-300/30 rounded-lg p-3">
-                  <p className="text-[11px] text-indigo-200 font-cinzel uppercase tracking-widest mb-2">Fallen Star</p>
-                  <button
-                    onClick={doEatStar}
-                    disabled={acting}
-                    className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-indigo-300/30 bg-card hover:border-indigo-200/60 hover:text-indigo-100 transition-all text-muted-foreground"
-                    title="Swallow it before anyone else gets here, or leave it as bait: whoever comes for it walks right up to you."
-                  >
-                    🌠 Star fragment <span className="text-primary ml-1">+{STAR_FRAGMENT.ap} AP</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Snowbound: frozen adventurers in your room, there for the taking */}
-              {(() => {
-                const bodies = uneatenFrozen(party).filter(a => a.location === mimicRoom);
-                if (bodies.length === 0) return null;
-                return (
-                  <div className="bg-sky-400/5 border border-sky-400/30 rounded-lg p-3">
-                    <p className="text-[11px] text-sky-300 font-cinzel uppercase tracking-widest mb-2">Frozen Solid</p>
-                    <div className="flex flex-wrap gap-2">
-                      {bodies.map(body => (
-                        <button
-                          key={body.id}
-                          onClick={() => doEatFrozen(body)}
-                          disabled={acting}
-                          className="disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border border-sky-400/30 bg-card hover:border-sky-300/60 hover:text-sky-200 transition-all text-muted-foreground"
-                          title="Frozen meals are easy to take, but worth half as much and teach you nothing."
-                        >
-                          🧊 {body.name} <span className="text-primary ml-1">+{frozenMealAp(body)} AP</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
+              {showMovePanel && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
+              <ActionBar
+                canRelocate={canRelocate}
+                canLure={canLure}
+                canStrike={canStrike}
+                canWait={canWait}
+                onRelocate={toggleMovePanel}
+                onLure={doAllureTurn}
+                onStrike={doStrikeTurn}
+                onWait={doWaitTurn}
+              />
+              <MealsHere
+                onEatCreature={doConsumeCreature}
+                onEatStar={doEatStar}
+                onEatFrozen={doEatFrozen}
+              />
               {huntOver && (
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
-                  <p className="text-primary font-cinzel mb-3">The hunt is over.</p>
-                  {endReport && <div className="mb-4"><HuntReport report={endReport} /></div>}
-                  <div className="flex gap-2 justify-center">
-                    <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 text-xs">
-                      Choose New Forms
-                    </Button>
-                    <Button onClick={() => setPhase("setup")} variant="outline" className="border-border text-xs">
-                      Hunt Again (Keep Forms)
-                    </Button>
-                  </div>
-                </div>
+                <HuntOverPanel report={endReport} onChooseForms={() => startFormSelection("setup")} onHuntAgain={() => setPhase("setup")} />
               )}
             </div>
           )}
@@ -2310,76 +1692,17 @@ export default function Game() {
             </ScrollArea>
           )}
 
-          {/* EVOLVE phase */}
           {phase === "evolve" && (
-            <div>
-              <h2 className="font-cinzel text-2xl text-primary mb-2">Assimilation Threshold Reached</h2>
-              <p className="flavor-text text-muted-foreground mb-6 italic">
-                Your body strains with absorbed essence. Spend your assimilation — grow, or refine.
-              </p>
-              <p className="text-xs text-muted-foreground -mt-4 mb-6">
-                Choose one. To upgrade again, you&apos;ll need to reach the threshold again ({character.assimilationPoints} / {cfg?.apToEvolve} AP).
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { key: "mass", label: "Increase Mass", desc: `Grow toward the next tier. Cost: ${cfg?.apToEvolve} AP`, icon: "⬆", capped: false },
-                  { key: "plausibility", label: "+1 Plausibility", desc: `Improve deception. Cost: ${cfg?.apToUpgrade} AP (${character.plausibility}/${STAT_CAP})`, icon: "👁", capped: character.plausibility >= STAT_CAP },
-                  { key: "adhesion", label: "+1 Adhesion", desc: `Better grappling. Cost: ${cfg?.apToUpgrade} AP (${character.adhesion}/${STAT_CAP})`, icon: "🔒", capped: character.adhesion >= STAT_CAP },
-                  { key: "patience", label: "+1 Patience", desc: `Longer stillness. Cost: ${cfg?.apToUpgrade} AP (${character.patience}/${STAT_CAP})`, icon: "⌛", capped: character.patience >= STAT_CAP },
-                ] satisfies { key: UpgradeChoice; label: string; desc: string; icon: string; capped: boolean }[]).map(opt => (
-                  <Card
-                    key={opt.key}
-                    onClick={() => !opt.capped && handleEvolution(opt.key)}
-                    className={`border-border bg-card transition-all group ${opt.capped ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl mb-2">{opt.icon}</div>
-                      <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{opt.label}</h3>
-                      <p className="text-xs text-muted-foreground">{opt.capped ? "MAX — cannot increase further" : opt.desc}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setPhase("hunt")}
-                className="w-full mt-4 border-border text-muted-foreground hover:text-foreground text-xs"
-              >
-                Not Now — Continue Hunting
-              </Button>
-            </div>
+            <EvolveScreen onChoose={handleEvolution} onSkip={() => setPhase("hunt")} />
           )}
 
-          {/* GAME OVER */}
           {phase === "gameover" && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">{gameoverReason === "abandoned" ? "🌫️" : "🔥"}</div>
-              <h2 className={`font-cinzel text-3xl mb-2 ${gameoverReason === "abandoned" ? "text-muted-foreground" : "text-destructive"}`}>
-                {gameoverReason === "abandoned" ? "They Left" : "Discovered"}
-              </h2>
-              <p className="flavor-text text-muted-foreground mb-2 italic max-w-sm mx-auto">
-                {gameoverReason === "abandoned"
-                  ? "The adventurers found nothing of interest and moved on. Hunger remains."
-                  : "Torches are lit. Steel is drawn. You scatter into the dark — this lair is burned."}
-              </p>
-              {endReport && <div className="my-6"><HuntReport report={endReport} /></div>}
-              <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
-                {gameoverReason === "abandoned"
-                  ? "Find a new hunting ground. Better forms and higher stats will help you lure more resistant prey."
-                  : `This hunting ground and the form you were caught in are burned for ${BURN_HUNTS} hunts: using either starts you under suspicion (+${BURN_SUSPICION} each). Consider a new form.`}
-              </p>
-              <div className="flex flex-col gap-2 items-center">
-                <Button onClick={() => startFormSelection("setup")} className="bg-primary text-primary-foreground hover:bg-primary/80 w-48">
-                  Change Forms & Hunt Again
-                </Button>
-                <Button onClick={() => setPhase("setup")} variant="outline" className="border-border w-48">
-                  Hunt Again (Keep Forms)
-                </Button>
-                <Button asChild variant="ghost" className="text-muted-foreground w-48">
-                  <Link to={createPageUrl("Home")}>Return Home</Link>
-                </Button>
-              </div>
-            </div>
+            <GameOverScreen
+              reason={gameoverReason}
+              report={endReport}
+              onChooseForms={() => startFormSelection("setup")}
+              onHuntAgain={() => setPhase("setup")}
+            />
           )}
 
           {/* Achievement banners */}
@@ -2394,5 +1717,6 @@ export default function Game() {
         </div>
       </div>
     </div>
+    </HuntContext.Provider>
   );
 }
