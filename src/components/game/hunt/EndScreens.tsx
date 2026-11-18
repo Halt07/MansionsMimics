@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type CombatStat, type HuntReport as Report } from "@/data/gameData";
+import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type HuntReport as Report, type UpgradeChoice } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import HuntReport from "../HuntReport";
 import { useHunt } from "./HuntContext";
 
-export type UpgradeChoice = "mass" | CombatStat;
 
 /** Every adventurer is gone: the hunt's report, then forms or straight back out. */
 export function HuntOverPanel({ report, onChooseForms, onHuntAgain }: { report: Report | null; onChooseForms: () => void; onHuntAgain: () => void }) {

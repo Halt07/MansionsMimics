@@ -4,12 +4,12 @@
 // the lifetime stats on the character sheet. Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type LearnableTrait, type Material, type Tier } from "./vocabulary";
+import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type CombatStat, type LearnableTrait, type Material, type Tier } from "./vocabulary";
 import { ALL_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
 import { ADVENTURER_TEMPLATES } from "./adventurerData";
 import { LOCATIONS, type LocationId } from "./locationData";
-import { HOLIDAYS, type HolidayId } from "./holidays";
-import { VARIANT_FORMS, effectiveFormTier, formTier, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
+import { HOLIDAYS, today, type HolidayId } from "./holidays";
+import { VARIANT_FORMS, effectiveFormTier, formTier, formsStillAllowed, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
 
 // ============================================================
 // EFFECTIVE STATS
@@ -304,6 +304,86 @@ export function lifetimeStats(c: Pick<MimicCharacter,
     favoriteForm: form ? { name: ALL_FORMS.find(f => f.id === form.key)?.name ?? form.key, hunts: form.count } : null,
     favoriteHuntingGround: place ? { name: LOCATIONS.find(l => l.id === place.key)?.name ?? place.key, hunts: place.count } : null,
   };
+}
+
+// ============================================================
+// UPGRADES
+// What the mimic can spend its AP on once it reaches its tier's threshold: grow (+2 mass,
+// tier-up past the tier's top mass) or raise a stat (+1, up to STAT_CAP). Pure: Game writes
+// the log and saves the changes.
+// ============================================================
+export type UpgradeChoice = "mass" | CombatStat;
+
+/** Mass gained per growth upgrade. */
+export const MASS_PER_UPGRADE = 2;
+/** The Peak of the Apex: this much mass at Apex. */
+export const APEX_PEAK_MASS = 40;
+
+export type UpgradeResult =
+  /** A stat already at STAT_CAP: nothing changes, no AP spent. */
+  | { kind: "capped"; stat: CombatStat }
+  /** +1 to a stat. */
+  | { kind: "stat"; stat: CombatStat; value: number; changes: Partial<MimicCharacter> }
+  /** More mass, same tier. */
+  | { kind: "grew"; mass: number; apexPeak: boolean; changes: Partial<MimicCharacter> }
+  /** Grown past the tier's top mass: on to the next tier. */
+  | {
+      kind: "evolved"; tier: Tier; mass: number;
+      /** The highest stat gives a point to the strain of growth (never below 1). */
+      weakened: { stat: CombatStat; value: number };
+      hatboxToLegend: boolean;
+      /** Some forms no longer fit the new size and are gone (pick replacements). */
+      formsLost: boolean;
+      changes: Partial<MimicCharacter>;
+    };
+
+/**
+ * Spend AP on one upgrade. Growing costs the tier's apToEvolve; a stat costs its apToUpgrade.
+ * On a tier-up the highest stat (one of them at random, if tied) drops by 1, and forms that no
+ * longer fit (at the new size, with Thimblewood still shrinking it, on `date`) are lost.
+ */
+export function applyUpgrade(
+  character: MimicCharacter, choice: UpgradeChoice, date: Date = today(), random: () => number = Math.random,
+): UpgradeResult {
+  const cfg = TIER_CONFIG[character.tier];
+
+  if (choice !== "mass") {
+    if (character[choice] >= STAT_CAP) return { kind: "capped", stat: choice };
+    const value = character[choice] + 1;
+    return { kind: "stat", stat: choice, value, changes: { [choice]: value, assimilationPoints: character.assimilationPoints - cfg.apToUpgrade } };
+  }
+
+  const assimilationPoints = character.assimilationPoints - cfg.apToEvolve;
+  const grown = character.mass + MASS_PER_UPGRADE;
+  const nextTier: Tier | undefined = TIER_ORDER[TIER_ORDER.indexOf(character.tier) + 1];
+  if (!nextTier || grown <= cfg.massRange[1]) {
+    // Peak of the Apex: crossing the line at Apex (not landing in Apex by evolving)
+    const apexPeak = character.tier === "Apex" && grown >= APEX_PEAK_MASS && character.mass < APEX_PEAK_MASS;
+    return {
+      kind: "grew", mass: grown, apexPeak,
+      changes: { mass: grown, assimilationPoints, tier: character.tier, ...(apexPeak ? { apexPeakReached: true } : {}) },
+    };
+  }
+
+  const mass = TIER_CONFIG[nextTier].massRange[0];
+  const changes: Partial<MimicCharacter> = { mass, assimilationPoints, tier: nextTier };
+  const hatboxToLegend = earnsHatboxToLegend(character, nextTier);
+  if (hatboxToLegend) changes.hatboxToLegendReached = true;
+
+  const stats: CombatStat[] = ["plausibility", "adhesion", "patience"];
+  const top = Math.max(...stats.map(s => character[s]));
+  const highest = stats.filter(s => character[s] === top);
+  const stat = highest[Math.floor(random() * highest.length)];
+  const weakened = { stat, value: Math.max(1, top - 1) };
+  changes[stat] = weakened.value;
+
+  const kept = formsStillAllowed(character.forms, formTier({ ...character, tier: nextTier }), mass, character, date);
+  const formsLost = kept.length < character.forms.length;
+  if (formsLost) {
+    changes.forms = kept;
+    changes.activeFormIndex = 0;
+  }
+  return { kind: "evolved", tier: nextTier, mass, weakened, hatboxToLegend, formsLost, changes };
 }
 
 // ============================================================

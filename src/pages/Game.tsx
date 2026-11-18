@@ -8,7 +8,7 @@ import {
   rollDice, maxTargetForChance, consumeSuspicion, stealthCheck, allureCheck, getRoomDistance, getAdjacentRooms, ROOM_FORM_IDS, FORM_ROOM_TYPE, getRoomContextMod,
   shouldTriggerBountyHunt, generateBountyParty, rollForSickness, getBehaviorReactions,
   needsPartialBites, hasMagic,
-  TITANIC_FEAST_GIANTS, earnsHatboxToLegend, advanceRareLocation, findDevotee, rollOfferings,
+  TITANIC_FEAST_GIANTS, advanceRareLocation, findDevotee, rollOfferings,
   CULT_CONVERSIONS, CANNIBAL_MIMICS,
   sinkingWarning, pickTreasurePrize, escapeRoom,
   withWarmth, chillParty, frozenMealAp, uneatenFrozen,
@@ -19,7 +19,7 @@ import {
   moveParty, moveCreatures, VANISHING_LINES,
   strikeDice, strikeCandidates, pickStrikeTarget, strikeWitnesses, resolveRivalStrike, resolveBite, resolveSwallow,
   COLLAPSE_BONUS_AP, type Witnesses,
-  STAT_CAP, getActiveForm, effectiveStats, lureRange,
+  STAT_CAP, getActiveForm, effectiveStats, lureRange, applyUpgrade, type UpgradeChoice,
   RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, quirkLine,
   isCat, CAT_KNOWS_LINE, STILLNESS_TURNS, STILLNESS_LINE,
   PORTER_SISTER, PORTER_TOKEN_LINE, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE,
@@ -27,9 +27,9 @@ import {
   withDiscovered, withFormUsed, withCount, withBiggestMeal, ACHIEVEMENTS,
   BURN_HUNTS, BURN_SUSPICION, burnAfterDiscovery, locationBurn, formBurn, tickBurns,
   placeRivals, rollNestKinds, rivalInRoom, isNestCleared, RIVAL_STATS, type RivalMimic,
-  type BehaviorContext, type BehaviorTrigger, type CombatStat,
+  type BehaviorContext, type BehaviorTrigger,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
-  type RoomName, type Sickness, type Tier,
+  type RoomName, type Sickness,
   ACTION_LIMIT,
 } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ import { LocationSelect, RoomSelect } from "../components/game/hunt/LocationSele
 import HuntHeader from "../components/game/hunt/HuntHeader";
 import ActionBar from "../components/game/hunt/ActionBar";
 import { FormSwitcher, MealsHere, RelocatePanel } from "../components/game/hunt/HuntPanels";
-import { EvolveScreen, GameOverScreen, HuntOverPanel, type UpgradeChoice } from "../components/game/hunt/EndScreens";
+import { EvolveScreen, GameOverScreen, HuntOverPanel } from "../components/game/hunt/EndScreens";
 
 // ── Game-screen state types ──
 type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
@@ -1181,81 +1181,40 @@ export default function Game() {
     endTurn();
   };
 
-  // Spend AP on one upgrade, then return to the hunt. Only one choice per visit:
-  // to upgrade again you have to reach the AP threshold again.
+  // Spend AP on one upgrade (see applyUpgrade), then return to the hunt. Only one choice per
+  // visit: to upgrade again you have to reach the AP threshold again.
   const handleEvolution = (choice: UpgradeChoice) => {
     if (!character || upgradeChosenRef.current) return;
     beginTurn();
-    let updates: Partial<MimicCharacter> = {};
-    const cfg = TIER_CONFIG[character.tier];
-
-    if (choice === "mass") {
-      const nextTier: Tier | undefined = TIER_ORDER[TIER_ORDER.indexOf(character.tier) + 1];
-      const newMass = character.mass + 2;
-      const shouldEvolve = !!nextTier && newMass > cfg.massRange[1];
-
-      updates = {
-        mass: shouldEvolve ? TIER_CONFIG[nextTier].massRange[0] : newMass,
-        assimilationPoints: character.assimilationPoints - cfg.apToEvolve,
-        tier: shouldEvolve ? nextTier : character.tier,
-      };
-
-      if (shouldEvolve) {
-        addEvent("evolve", `🌟 You have evolved to ${nextTier} tier!`);
-        if (earnsHatboxToLegend(character, nextTier)) {
-          addEvent("evolve", `📦 From Hatbox to Legend! You began as a Minor mimic and have risen all the way to Apex.`);
-          updates.hatboxToLegendReached = true;
-        }
-        // On tier evolution: reduce the highest stat by 1 (min 1)
-        const stats: Record<CombatStat, number> = { plausibility: character.plausibility, adhesion: character.adhesion, patience: character.patience };
-        const maxVal = Math.max(stats.plausibility, stats.adhesion, stats.patience);
-        const highStats = (Object.keys(stats) as CombatStat[]).filter(k => stats[k] === maxVal);
-        const statToReduce = highStats[Math.floor(Math.random() * highStats.length)];
-        const newVal = Math.max(1, maxVal - 1);
-        updates[statToReduce] = newVal;
-        addEvent("evolve", `The strain of growth weakens your ${statToReduce} by 1 (now ${newVal}). Choose your next hunts carefully.`);
-
-        // Invalidate forms that are now out of range at the new size (Thimblewood still shrinks it)
-        const currentForms = character.forms;
-        const validForms = formsStillAllowed(
-          currentForms, formTier({ ...character, tier: nextTier }), updates.mass ?? character.mass, character, today());
-        if (validForms.length < currentForms.length) {
-          updates.forms = validForms;
-          updates.activeFormIndex = 0;
-          addEvent("evolve", `Some of your forms are no longer compatible with your new tier and have been lost. You must choose replacements.`);
-        }
-      } else {
-        addEvent("evolve", `Your mass increases to ${updates.mass}.`);
-        // Apex peak achievement at mass 40
-        if (updates.tier === "Apex" || character.tier === "Apex") {
-          const newMassVal = updates.mass ?? character.mass + 2;
-          if (newMassVal >= 40 && character.mass < 40) {
-            addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
-            updates.apexPeakReached = true;
-          }
-        }
+    const result = applyUpgrade(character, choice);
+    if (result.kind === "capped") {
+      const label = result.stat.charAt(0).toUpperCase() + result.stat.slice(1);
+      addEvent("info", `${label} is already at its maximum (${STAT_CAP}).`);
+      return;
+    }
+    if (result.kind === "stat") {
+      addEvent("evolve", `Your ${result.stat} increases to ${result.value}.`);
+    } else if (result.kind === "grew") {
+      addEvent("evolve", `Your mass increases to ${result.mass}.`);
+      if (result.apexPeak) addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
+    } else {
+      addEvent("evolve", `🌟 You have evolved to ${result.tier} tier!`);
+      if (result.hatboxToLegend) {
+        addEvent("evolve", `📦 From Hatbox to Legend! You began as a Minor mimic and have risen all the way to Apex.`);
       }
-    } else if (choice === "plausibility") {
-      if (character.plausibility >= STAT_CAP) { addEvent("info", `Plausibility is already at its maximum (${STAT_CAP}).`); return; }
-      updates = { plausibility: character.plausibility + 1, assimilationPoints: character.assimilationPoints - cfg.apToUpgrade };
-      addEvent("evolve", `Your plausibility increases to ${character.plausibility + 1}.`);
-    } else if (choice === "adhesion") {
-      if (character.adhesion >= STAT_CAP) { addEvent("info", `Adhesion is already at its maximum (${STAT_CAP}).`); return; }
-      updates = { adhesion: character.adhesion + 1, assimilationPoints: character.assimilationPoints - cfg.apToUpgrade };
-      addEvent("evolve", `Your adhesion increases to ${character.adhesion + 1}.`);
-    } else if (choice === "patience") {
-      if (character.patience >= STAT_CAP) { addEvent("info", `Patience is already at its maximum (${STAT_CAP}).`); return; }
-      updates = { patience: character.patience + 1, assimilationPoints: character.assimilationPoints - cfg.apToUpgrade };
-      addEvent("evolve", `Your patience increases to ${character.patience + 1}.`);
+      addEvent("evolve", `The strain of growth weakens your ${result.weakened.stat} by 1 (now ${result.weakened.value}). Choose your next hunts carefully.`);
+      if (result.formsLost) {
+        addEvent("evolve", `Some of your forms are no longer compatible with your new tier and have been lost. You must choose replacements.`);
+      }
     }
 
     upgradeChosenRef.current = true;
-    const updatedChar = { ...character, ...updates };
-    setCharacter(updatedChar);
+    const updates = result.changes;
+    setCharacter({ ...character, ...updates });
 
-    // Leave the upgrade screen right away. If forms were invalidated on tier-up, force form selection.
-    if (updates.forms !== undefined) {
-      // Tier-ups happen while feeding, so pick the replacement and go straight back to the hunt
+    // Leave the upgrade screen right away. If forms were lost on tier-up, choose replacements
+    // first: tier-ups happen while feeding, so that goes straight back to the hunt afterwards.
+    if (result.kind === "evolved" && result.formsLost) {
       startFormSelection("hunt");
     } else if (phase === "evolve") {
       setPhase("hunt");
