@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import type {
   EffectiveStats, Form, HuntLocation, PartyMember, RivalMimic, RoomName, Sickness, SmallCreature,
-} from "../gameData";
+} from "@/data/gameData";
 
 /**
  * Everything about the current hunt that the game screen's pieces read: who you are, where you

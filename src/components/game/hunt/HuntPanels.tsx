@@ -1,7 +1,7 @@
 import {
   ALL_FORMS, STAR_FRAGMENT, creatureEmoji, effectiveFormTier, formBurn, formTier, frozenMealAp, uneatenFrozen,
   type PartyMember, type RoomName, type SmallCreature,
-} from "../gameData";
+} from "@/data/gameData";
 import { useHunt } from "./HuntContext";
 import BurnBadge from "../BurnBadge";
 import HolidayBadge from "../HolidayBadge";

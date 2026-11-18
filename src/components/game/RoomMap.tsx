@@ -1,7 +1,7 @@
 import {
   creatureEmoji, floorPlan, getRoomDistance, RIVAL_STATS,
   type HuntLocation, type PartyMember, type RivalMimic, type RoomName,
-} from "./gameData";
+} from "@/data/gameData";
 
 interface RoomMapProps {
   location: HuntLocation;

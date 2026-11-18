@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type CombatStat, type HuntReport as Report } from "../gameData";
+import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type CombatStat, type HuntReport as Report } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import HuntReport from "../HuntReport";

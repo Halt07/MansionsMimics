@@ -1,4 +1,4 @@
-import { BURN_SUSPICION } from "./gameData";
+import { BURN_SUSPICION } from "@/data/gameData";
 
 /** Shown on a burned location or form card: the starting-suspicion penalty and how long it lasts. */
 export default function BurnBadge({ huntsLeft }: { huntsLeft: number }) {

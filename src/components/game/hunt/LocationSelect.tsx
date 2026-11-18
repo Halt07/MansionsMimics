@@ -2,7 +2,7 @@ import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   HOLIDAYS, LOCATIONS, TIER_ORDER, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, seasonEnd, today,
   type Holiday, type HuntLocation, type RoomName,
-} from "../gameData";
+} from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import BurnBadge from "../BurnBadge";
 import { useHunt } from "./HuntContext";

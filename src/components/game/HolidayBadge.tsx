@@ -1,4 +1,4 @@
-import { HOLIDAYS, isInSeason, seasonEnd, seasonStart, today, type Form } from "./gameData";
+import { HOLIDAYS, isInSeason, seasonEnd, seasonStart, today, type Form } from "@/data/gameData";
 
 /**
  * Props that dress a card as a seasonal form: the `holiday-card` border and glow from index.css,

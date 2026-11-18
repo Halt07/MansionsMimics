@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "./gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "@/data/gameData";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
 type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits" | "scentTraits";

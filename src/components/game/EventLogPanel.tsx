@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { GameEvent, GameEventType } from "./vocabulary";
+import type { GameEvent, GameEventType } from "@/data/vocabulary";
 
 // A Record over every event type, so a new type can't be added without a style
 const EVENT_STYLES: Record<GameEventType, { prefix: string; color: string }> = {

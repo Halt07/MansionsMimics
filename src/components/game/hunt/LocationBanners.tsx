@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import {
   ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, turnsUntil,
   type HuntLocation, type RoomName,
-} from "../gameData";
+} from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHunt, type HuntState } from "./HuntContext";
 

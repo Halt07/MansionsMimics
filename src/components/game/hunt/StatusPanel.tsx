@@ -1,4 +1,4 @@
-import { TIER_CONFIG } from "../gameData";
+import { TIER_CONFIG } from "@/data/gameData";
 import { useHunt } from "./HuntContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

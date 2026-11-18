@@ -30,7 +30,7 @@ import {
   type Form, type GameEvent, type GameEventType, type HuntLocation, type PartyMember,
   type RoomName, type Sickness, type Tier,
   ACTION_LIMIT,
-} from "../components/game/gameData";
+} from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,7 +39,7 @@ import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
-import { buildHuntReport } from "../components/game/huntReportData";
+import { buildHuntReport } from "@/data/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
 import { HuntContext, type HuntState } from "../components/game/hunt/HuntContext";
 import StatusPanel from "../components/game/hunt/StatusPanel";
@@ -1379,7 +1379,7 @@ export default function Game() {
     const earned = new Set(ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => a.id));
     if (earnedRef.current) {
       for (const a of ACHIEVEMENTS) {
-        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons"];
+        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons", "seasonalTraveler"];
         if (announced.includes(a.id) && earned.has(a.id) && !earnedRef.current.has(a.id)) {
           addEvent("evolve", `${a.icon} ${a.name}! ${a.flavor(character.name)}`);
         }

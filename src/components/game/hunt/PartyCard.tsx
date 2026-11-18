@@ -1,4 +1,4 @@
-import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "../gameData";
+import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "@/data/gameData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";

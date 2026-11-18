@@ -10,7 +10,7 @@ import {
   ACTION_WARNING,
   ACTION_LIMIT, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason, seasonEnd, seasonRange, today,
   LOCATION_GROUPS, creatureEmoji, locationGroup, locationHunts, locationKnowledge, type HuntLocation, type LocationKnowledge} from
-"../components/game/gameData";
+"@/data/gameData";
 import RoomMap, { MysteryMap } from "@/components/game/RoomMap";
 import HolidayBadge from "@/components/game/HolidayBadge";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
