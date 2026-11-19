@@ -8,7 +8,7 @@ import { TIER_ORDER, type Material, type TeachableTrait, type Tier, type Trait }
 import { type Form, type FormId } from "./mimicData";
 import { ADVENTURER_TEMPLATES, type PartyMember, type Treasure } from "./adventurerData";
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
-import { getAdjacentRooms, getApReward, getRoomDistance } from "./gameData";
+import { getAdjacentRooms, getApReward, getRoomDistance, shuffle } from "./gameData";
 import { plural } from "./text";
 
 // ============================================================
@@ -29,7 +29,7 @@ export const COSTUMES = [
 export function dressParty(party: readonly PartyMember[], random: () => number = Math.random): PartyMember[] {
   const isCostume = (name: string) => (COSTUMES as readonly string[]).includes(name);
   const taken = new Set(party.map(a => a.name).filter(isCostume));
-  const pool = [...COSTUMES].filter(c => !taken.has(c)).sort(() => random() - 0.5);
+  const pool = shuffle(COSTUMES.filter(c => !taken.has(c)), random);
   let next = 0;
   return party.map(a => {
     if (isCostume(a.name)) return { ...a, costume: a.name, trueName: a.name };
@@ -93,7 +93,7 @@ export function placeProcession(
   party: readonly PartyMember[], location: HuntLocation, avoid: RoomName | null, random: () => number = Math.random,
 ): PartyMember[] {
   const order = (location.procession?.order ?? location.rooms) as readonly RoomName[];
-  const free = [...order.filter(r => r !== avoid)].sort(() => random() - 0.5);
+  const free = shuffle(order.filter(r => r !== avoid), random);
   const groupSize = Math.min(party.length, random() < 0.5 ? 2 : 3);
   const [groupHouse, ...others] = free;
   return party.map((a, i) => ({
@@ -344,11 +344,7 @@ export function rollNestKinds(location: HuntLocation, random: () => number = Mat
 export function placeRivals(
   location: HuntLocation, startRoom: RoomName, kinds: readonly RivalKind[], random: () => number = Math.random,
 ): RivalMimic[] {
-  const rooms = location.rooms.filter(r => r !== startRoom);
-  for (let i = rooms.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [rooms[i], rooms[j]] = [rooms[j], rooms[i]];
-  }
+  const rooms = shuffle(location.rooms.filter(r => r !== startRoom), random);
   return kinds.slice(0, rooms.length).map((kind, i) => ({
     id: `rival_${i}`, kind, room: rooms[i], revealed: false, consumed: false, clueGiven: false,
     disguise: RIVAL_DISGUISES[Math.floor(random() * RIVAL_DISGUISES.length)],

@@ -1127,10 +1127,6 @@ export const FORM_IDS = ALL_FORMS.map((form) => form.id) as [FormId, ...FormId[]
 // ============================================================
 // MATERIALS (the lists themselves are in ./vocabulary)
 // ============================================================
-export const ALL_MATERIALS_FLAT: readonly Material[] = [
-  ...MATERIALS.mundane, ...MATERIALS.valuable, ...MATERIALS.rare, ...MATERIALS.magic, ...MATERIALS.giant,
-];
-
 export const MATERIAL_RARITY = Object.fromEntries(
   (Object.entries(MATERIALS) as [MaterialRarity, readonly Material[]][])
     .flatMap(([rarity, mats]) => mats.map((mat) => [mat, rarity] as const)),

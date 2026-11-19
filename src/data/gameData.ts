@@ -92,6 +92,19 @@ export function getAdjacentRooms(location: HuntLocation, room: RoomName): readon
 // ============================================================
 // DICE ENGINE
 // ============================================================
+/**
+ * A shuffled copy (Fisher–Yates: every order equally likely). Sorting by a random comparison
+ * isn't: some orders come up far more often than others, depending on how the sort compares.
+ */
+export function shuffle<T>(items: readonly T[], random: () => number = Math.random): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 export function rollDice(numDice: number, random: () => number = Math.random): number {
   let total = 0;
   for (let i = 0; i < numDice; i++) {

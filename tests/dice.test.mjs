@@ -18,4 +18,12 @@ export default async function ({ gameData: m, ok, log }) {
     ok(m.diceSuccessChance(n, t + 1) < 0.4 || t === n * 6, `${n} dice: ${t} is the highest ≥40% target`);
     log(`${n} dice: cap ${t} (${(m.diceSuccessChance(n, t) * 100).toFixed(0)}%)`);
   }
+
+  // ---------- shuffling ----------
+  const items = ['a', 'b', 'c'];
+  const counts = {};
+  for (let i = 0; i < 6000; i++) { const k = m.shuffle(items).join(''); counts[k] = (counts[k] ?? 0) + 1; }
+  const orders = Object.values(counts);
+  ok(orders.length === 6 && orders.every((n) => n > 800 && n < 1200), `shuffle: all six orders of three, about equally often (${JSON.stringify(counts)})`);
+  ok(items.join('') === 'abc' && m.shuffle(items, () => 0).join('') === 'bca', '…a copy (the list is left alone), and the same for the same rolls');
 }

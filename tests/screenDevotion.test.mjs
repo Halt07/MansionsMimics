@@ -1,8 +1,8 @@
 // A Devotion ceremony in the real game screen (src/pages/Game.tsx), with React Testing Library:
 // at the Hollow Reliquary, once a devoted pilgrim is the last one left, they bring offerings one
 // at a time. Each offering's AP is saved as it's accepted, so leaving partway keeps what was
-// given, and lifetime AP never runs ahead of it. The dice are pinned (at 0.6 the party starts in
-// the Pilgrims' Dormitory: one Lure from the Nave and three Strikes leave a devotee alone), and the
+// given, and lifetime AP never runs ahead of it. The dice are pinned (at 0.85, one Lure from the Nave
+// and three Strikes leave a devoted pilgrim alone), and the
 // ceremony's 2-second steps are sped up twenty times.
 import { createElement } from 'react';
 import { screen, waitFor, cleanup } from '@testing-library/react';
@@ -50,7 +50,7 @@ export default async function ({ db: dbModule, storage, load, ok }) {
   const realTimeout = globalThis.setTimeout;
   try {
     onDate(storage, '5-15');
-    Math.random = () => 0.6;
+    Math.random = () => 0.85;
 
     // ---------- leaving partway through ----------
     await withEmptyDb(storage, async () => {

@@ -12,7 +12,7 @@ import type { AdventurerTemplate, PartyMember, QualityList } from "./adventurerD
 import type { HuntLocation, RoomContextMod, RoomName } from "./locationData";
 import {
   FORM_ROOM_TYPE, ROOM_FORM_IDS, effectiveFormTier, formFamily, formTier, getFormTierPenalties, getRoomContextMod,
-  getRoomDistance, hasMagic, quirkLine, rollDice, wornMagic, type AppearanceLike,
+  getRoomDistance, hasMagic, quirkLine, rollDice, shuffle, wornMagic, type AppearanceLike,
 } from "./gameData";
 
 // ---------- the checks: stealth and allure ----------
@@ -65,7 +65,7 @@ export function stealthCheck(
   else if (plausibility <= 3) flawCount = 1;
 
   const detectedFlaws: string[] = [];
-  const shuffled = [...form.flawProfiles].sort(() => random() - 0.5).slice(0, flawCount);
+  const shuffled = shuffle(form.flawProfiles, random).slice(0, flawCount);
   shuffled.forEach((flaw) => {
     // Void Marble: acoustic flaws can't be spotted
     if (flaw.type === "acoustic" && hasMagic(appearance, "Void Marble")) return;

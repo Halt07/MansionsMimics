@@ -9,7 +9,7 @@ import { SICKNESSES, type Form, type Sickness } from "./mimicData";
 import { ADVENTURER_TEMPLATES, type AdventurerGroupId, type AdventurerTemplate, type CompanionOption, type PartyMember } from "./adventurerData";
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
 import {
-  BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, tickBurns, type RareLocationState,
+  BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
 } from "./gameData";
 import {
   addRealMonster, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
@@ -135,8 +135,8 @@ export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass
     elite.length = 0;
   }
   const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
-  const shuffledCommon = [...common].sort(() => random() - 0.5);
-  const shuffledElite = [...elite].sort(() => random() - 0.5);
+  const shuffledCommon = shuffle(common, random);
+  const shuffledElite = shuffle(elite, random);
 
   const baseParty: AdventurerTemplate[] = [...required];
   // Some locations save a few slots for their own locals (e.g. the Snowbound Lodge's gnomes)
@@ -211,7 +211,7 @@ export function spawnSmallCreatures(loc: HuntLocation, random: () => number = Ma
 export function generateBountyParty(location: HuntLocation, mimicMass: number, random: () => number = Math.random): PartyMember[] {
   const hunterTemplates = ADVENTURER_TEMPLATES.filter(t => t.isMimicHunter);
   const size = mimicMass >= 36 ? 4 : 3;
-  const shuffled = [...hunterTemplates].sort(() => random() - 0.5);
+  const shuffled = shuffle(hunterTemplates, random);
   const members: PartyMember[] = [];
   for (let i = 0; i < size; i++) {
     const t = shuffled[i % shuffled.length];

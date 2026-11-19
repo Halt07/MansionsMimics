@@ -11,7 +11,7 @@ import type { Material, TeachableTrait } from "./vocabulary";
 import type { Form } from "./mimicData";
 import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, AP_REWARDS, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, type CheckResult } from "./gameData";
+import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle, type CheckResult } from "./gameData";
 import { RIVAL_STATS, pickTreasurePrize, rivalEscapeRoom, type RivalMimic, type TreasurePrize } from "./events";
 import { TITANIC_FEAST_GIANTS, isTitanicFeastComplete } from "./stats";
 
@@ -289,8 +289,8 @@ export function rollLearning(
 ): Learning {
   const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
   const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
-  const shuffledMats = [...allMaterials].sort(() => random() - 0.5);
-  const shuffledTraits = [...allTraits].sort(() => random() - 0.5);
+  const shuffledMats = shuffle(allMaterials, random);
+  const shuffledTraits = shuffle(allTraits, random);
   const materials = shuffledMats.slice(0, Math.max(1, Math.floor(random() * (shuffledMats.length + 1))));
   const traits = shuffledTraits.length > 0 ? shuffledTraits.slice(0, random() < 0.6 ? 1 : shuffledTraits.length) : [];
   const newMaterials = materials.filter(m => !known.learnedMaterials.includes(m));
