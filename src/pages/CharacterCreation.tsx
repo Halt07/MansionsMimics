@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
-  canAddForm, nameFlavor, MAX_FORMS, MAX_FORMS_ABOVE_TIER, STARTING_FORMS, effectiveFormTier, getSeasonalForms, today,
+  canAddForm, nameFlavor, MAX_FORMS, MAX_FORMS_ABOVE_TIER, STARTING_FORMS, effectiveFormTier, getSeasonalForms, toggleChoice, today,
   type Form, type Material, type StartingType,
 } from "@/data/gameData";
 import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
 import StatBar from "../components/game/StatBar";
+import ChoiceSection from "../components/game/ChoiceSection";
 
 const STEPS = ["Origin", "Name", "Forms", "Appearance", "Confirm"];
 
@@ -92,19 +93,12 @@ export default function CharacterCreation() {
   };
 
   // Starting mimics may pick one trait per category
-  const toggleTrait = <F extends TraitField>(category: F, trait: Appearance[F][number]) => {
-    const current: Appearance[F][number][] = appearance[category];
-    if (current.includes(trait)) {
-      setAppearance(withField(appearance, category, current.filter(t => t !== trait) as Appearance[F]));
-    } else if (current.length < 1) {
-      setAppearance(withField(appearance, category, [...current, trait] as Appearance[F]));
-    }
-  };
+  const toggleTrait = <F extends TraitField>(category: F, trait: Appearance[F][number]) =>
+    setAppearance(withField(appearance, category, toggleChoice(appearance[category] as Appearance[F][number][], trait, 1) as Appearance[F]));
 
   // Starting mimics may pick one material per slot, so a new pick replaces the old one.
-  const toggleMaterial = (field: "primaryMaterials" | "secondaryMaterials", mat: Material) => {
-    setAppearance(withField(appearance, field, appearance[field].includes(mat) ? [] : [mat]));
-  };
+  const toggleMaterial = (field: "primaryMaterials" | "secondaryMaterials", mat: Material) =>
+    setAppearance(withField(appearance, field, toggleChoice(appearance[field], mat, 1, { swap: true })));
 
   const handleCreate = async () => {
     if (!origin || !name.trim() || selectedForms.length < STARTING_FORMS) return;
@@ -341,68 +335,27 @@ export default function CharacterCreation() {
               </p>
             </div>
 
-            {/* Primary material */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Primary Material (required)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_MATERIALS[origin || "Minor"].map(mat => (
-                  <button
-                    key={mat}
-                    aria-pressed={appearance.primaryMaterials.includes(mat)}
-                    onClick={() => toggleMaterial("primaryMaterials", mat)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      appearance.primaryMaterials.includes(mat)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {mat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Surface trait */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Surface Trait (optional, max 1)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_TRAITS.surface.map(trait => (
-                  <button
-                    key={trait}
-                    aria-pressed={(appearance.surfaceTraits || []).includes(trait)}
-                    onClick={() => toggleTrait("surfaceTraits", trait)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      (appearance.surfaceTraits || []).includes(trait)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {trait}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Condition trait */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Condition Trait (optional, max 1)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_TRAITS.condition.map(trait => (
-                  <button
-                    key={trait}
-                    aria-pressed={(appearance.conditionTraits || []).includes(trait)}
-                    onClick={() => toggleTrait("conditionTraits", trait)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      (appearance.conditionTraits || []).includes(trait)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {trait}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ChoiceSection
+              size="md"
+              heading="Primary Material (required)"
+              choices={STARTING_MATERIALS[origin || "Minor"].map(mat => ({
+                key: mat, label: mat, on: appearance.primaryMaterials.includes(mat), onToggle: () => toggleMaterial("primaryMaterials", mat),
+              }))}
+            />
+            <ChoiceSection
+              size="md"
+              heading="Surface Trait (optional, max 1)"
+              choices={STARTING_TRAITS.surface.map(trait => ({
+                key: trait, label: trait, on: appearance.surfaceTraits.includes(trait), onToggle: () => toggleTrait("surfaceTraits", trait),
+              }))}
+            />
+            <ChoiceSection
+              size="md"
+              heading="Condition Trait (optional, max 1)"
+              choices={STARTING_TRAITS.condition.map(trait => ({
+                key: trait, label: trait, on: appearance.conditionTraits.includes(trait), onToggle: () => toggleTrait("conditionTraits", trait),
+              }))}
+            />
 
             {appearance.primaryMaterials.length === 0 && (
               <div className="flex items-center gap-2 text-xs text-orange-400 bg-orange-400/10 border border-orange-400/20 rounded p-3">

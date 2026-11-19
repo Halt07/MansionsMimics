@@ -167,6 +167,18 @@ export function wornMagic(appearance: AppearanceLike | undefined): MagicMaterial
   return [...new Set(wornMaterials(appearance).filter(isMagicMaterial))];
 }
 
+/**
+ * Clicking a choice in an appearance slot (a material or a trait): a chosen one comes off;
+ * otherwise it goes on, unless the slot is full. With `swap`, a slot that holds just one swaps
+ * instead (the new pick replaces the old). Materials swap; traits don't.
+ */
+export function toggleChoice<T>(current: readonly T[], item: T, max: number, { swap = false }: { swap?: boolean } = {}): T[] {
+  if (current.includes(item)) return current.filter(x => x !== item);
+  if (swap && max === 1) return [item];
+  if (current.length >= max) return [...current];
+  return [...current, item];
+}
+
 /** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
 export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
   return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);

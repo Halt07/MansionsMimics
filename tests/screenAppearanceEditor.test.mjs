@@ -37,6 +37,7 @@ export default async function ({ gameData: m, load, ok }) {
   await user.click(slot('Oak'));
   ok(on(slot('Oak')), 'clicking a material wears it');
   ok(slot('Oak').getAttribute('aria-pressed') === 'true' && slot('Iron').getAttribute('aria-pressed') === 'false', '…announced as pressed (worn), the rest not');
+  ok(slot('Oak').className.includes('text-xs'), '…in the panel\'s compact size');
   await user.click(slot('Iron'));
   ok(on(slot('Iron')) && !on(slot('Oak')), '…a slot of one swaps it for the next one clicked');
   await user.click(slot('Iron'));

@@ -93,6 +93,7 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     await user.click(button('Iron'));
     ok(picked(button('Iron')) && !picked(button('Pine')) && !next().disabled, 'one primary material: a second pick swaps it');
     ok(button('Iron').getAttribute('aria-pressed') === 'true' && button('Pine').getAttribute('aria-pressed') === 'false', '…announced as pressed (chosen), the others not');
+    ok(button('Iron').className.includes('text-sm') && !button('Iron').className.includes('text-xs'), '…in the roomier size, with the page to itself');
     await user.click(button('Polished'));
     await user.click(button('Smooth'));
     ok(picked(button('Polished')) && !picked(button('Smooth')), 'one surface trait: a second is ignored until the first is taken off');

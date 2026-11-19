@@ -99,6 +99,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `holidays.test.mjs` | Seasonal forms: offered only in season and to their tiers |
 | `thimblewood.test.mjs` | Thimblewood: the shrunk form tier, form range, penalties, forms kept |
 | `magic.test.mjs` | Magic material effects and arcane residue |
+| `appearance.test.mjs` | Choosing what to wear in a slot: on, off, swapping, a full slot |
 | `honeyamber.test.mjs` | Honeyamber drawing small creatures toward the mimic |
 | `traits.test.mjs` | Forms' built-in traits and flaw data |
 | `scents.test.mjs` | Scent traits: all learned, slots by tier, who reacts, allure |
