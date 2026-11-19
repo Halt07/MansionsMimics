@@ -8,7 +8,7 @@ import pluginUnusedImports from "eslint-plugin-unused-imports";
 export default tseslint.config(
   {
     // Generated/vendored code: build output and the shadcn UI primitives
-    ignores: ["dist/**", "src/components/ui/**", "src/lib/**"],
+    ignores: ["dist/**", "src/components/ui/**"],
   },
   {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
@@ -46,10 +46,6 @@ export default tseslint.config(
       ],
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off",
-      "react/no-unknown-property": [
-        "error",
-        { ignore: ["cmdk-input-wrapper", "toast-close"] },
-      ],
       // React's recommended hooks rules (including the React Compiler checks)…
       ...pluginReactHooks.configs["recommended-latest"].rules,
       // …except two that misread Game.tsx: its event handlers (which call Math.random and touch
