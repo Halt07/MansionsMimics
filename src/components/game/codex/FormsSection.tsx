@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   ALL_FORMS, TIER_ORDER, MASTER_FORMS, type Tier, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason,
-  seasonEnd, today,
+  MAX_FORMS, MAX_FORMS_ABOVE_TIER, plural, seasonEnd, today,
 } from "@/data/gameData";
 import HolidayBadge from "@/components/game/HolidayBadge";
 import { ChompCard } from "@/components/game/CardChomp";
@@ -22,8 +22,8 @@ export default function FormsSection() {
     <div>
         <h2 className="font-cinzel text-2xl text-foreground mb-2">Forms</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          A mimic can hold up to 3 forms at once. Forms must be within 1 tier of your current tier.
-          Only 1 form may be from the tier above (–2 plausibility). A tier below penalizes patience (–1).
+          A mimic can hold up to {MAX_FORMS} forms at once. Forms must be within 1 tier of your current tier.
+          Only {MAX_FORMS_ABOVE_TIER} {plural(MAX_FORMS_ABOVE_TIER, "form")} may be from the tier above (–2 plausibility). A tier below penalizes patience (–1).
         </p>
         <div className="p-3 mb-4 border border-amber-400/20 bg-amber-400/5 rounded-lg text-xs text-amber-400/80">
           <span className="font-cinzel font-semibold text-amber-400">Giant Forms</span> — The Apex tier includes oversized Giant versions of classic forms (Giant Pillow, Giant Goblet, Giant Chest, Giant Tome, Giant Barrel, Giant Throne, Giant Bed). These are mass-gated (minimum mass 28–35) and are specifically designed to lure <span className="font-semibold">Giant-kin prey</span> in the Giant's Castle and Cloud Kingdom locations. They have higher digestive capacity requirements and larger material slot counts than their standard equivalents.

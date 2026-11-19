@@ -47,6 +47,9 @@ async function run(dbModule, storage, ok) {
     try { await M.update(a.id, bad); ok(false, label); } catch (e) { ok(e instanceof ValidationError, label); }
   }
   try { await M.create({ name: '   ' }); ok(false, 'blank name rejected'); } catch (e) { ok(e instanceof ValidationError, 'blank name rejected'); }
+  const tooMany = ['lesser_chest', 'lesser_crate', 'lesser_barrel', 'minor_book'].map((formId) => ({ formId, name: formId, tier: 'Lesser' }));
+  try { await M.create({ name: 'Greedy', forms: tooMany }); ok(false, 'too many forms rejected'); }
+  catch (e) { ok(e instanceof ValidationError && e.message.includes('at most 3 forms'), 'more forms than a mimic can hold (3) is rejected'); }
   ok((await M.get(a.id)).assimilationPoints === 3, 'failed updates did not persist');
 
   ok((await M.filter({ id: a.id }))[0]?.name === 'Chesty', 'filter by id');

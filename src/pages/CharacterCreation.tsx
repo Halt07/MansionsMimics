@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
-  canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, effectiveFormTier, getSeasonalForms, today,
+  canAddForm, nameFlavor, MAX_FORMS, MAX_FORMS_ABOVE_TIER, STARTING_FORMS, effectiveFormTier, getSeasonalForms, today,
   type Form, type Material, type StartingType,
 } from "@/data/gameData";
 import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
@@ -78,7 +78,7 @@ export default function CharacterCreation() {
   const canProceed = () => {
     if (step === 0) return !!origin;
     if (step === 1) return name.trim().length >= 2;
-    if (step === 2) return selectedForms.length === 2;
+    if (step === 2) return selectedForms.length === STARTING_FORMS;
     if (step === 3) return appearance.primaryMaterials.length > 0;
     return true;
   };
@@ -86,7 +86,7 @@ export default function CharacterCreation() {
   const toggleForm = (form: Form) => {
     if (selectedForms.find(f => f.id === form.id)) {
       setSelectedForms(selectedForms.filter(f => f.id !== form.id));
-    } else if (selectedForms.length < 2 && canAddForm(selectedForms, form, startingTier)) {
+    } else if (selectedForms.length < STARTING_FORMS && canAddForm(selectedForms, form, startingTier)) {
       setSelectedForms([...selectedForms, form]);
     }
   };
@@ -107,7 +107,7 @@ export default function CharacterCreation() {
   };
 
   const handleCreate = async () => {
-    if (!origin || !name.trim() || selectedForms.length < 2) return;
+    if (!origin || !name.trim() || selectedForms.length < STARTING_FORMS) return;
     setSaving(true);
     setSaveError(null);
     const stats = STARTING_STATS[origin];
@@ -263,7 +263,7 @@ export default function CharacterCreation() {
         {step === 2 && (
           <div>
             <p className="text-center text-muted-foreground text-sm mb-2">
-              Choose <strong className="text-foreground">2 starting forms</strong>. You may adopt up to 3 forms later as you grow.
+              Choose <strong className="text-foreground">{STARTING_FORMS} starting forms</strong>. You may adopt up to {MAX_FORMS} forms later as you grow.
             </p>
             <p className="text-center text-xs text-muted-foreground/60 mb-2 flavor-text italic">
               Forms from your tier, plus one tier above or below. Only {MAX_FORMS_ABOVE_TIER} may come from the tier above.
@@ -277,7 +277,7 @@ export default function CharacterCreation() {
               {availableForms.map(form => {
                 const isSelected = selectedForms.find(f => f.id === form.id);
                 const blockedByAboveRule = !isSelected && !canAddForm(selectedForms, form, startingTier);
-                const disabled = !isSelected && (selectedForms.length >= 2 || blockedByAboveRule);
+                const disabled = !isSelected && (selectedForms.length >= STARTING_FORMS || blockedByAboveRule);
                 const formTierIdx = TIER_ORDER.indexOf(effectiveFormTier(form, startingTier));
                 const holidayProps = holidayCardProps(form);
                 const myTierIdx = TIER_ORDER.indexOf(startingTier);
@@ -304,7 +304,7 @@ export default function CharacterCreation() {
                       </div>
                       {form.holiday && <p className="mb-1"><HolidayBadge form={form} /></p>}
                       <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
-                      {blockedByAboveRule && selectedForms.length < 2 && (
+                      {blockedByAboveRule && selectedForms.length < STARTING_FORMS && (
                         <p className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
@@ -321,7 +321,7 @@ export default function CharacterCreation() {
                 );
               })}
             </div>
-            {selectedForms.length === 2 && (
+            {selectedForms.length === STARTING_FORMS && (
               <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary text-center font-cinzel">
                 ✓ {selectedForms.map(f => f.name).join(" & ")} selected
               </div>

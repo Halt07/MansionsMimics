@@ -63,6 +63,7 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
 
     // ---------- forms (Minor) ----------
     await user.click(next());
+    ok(document.body.textContent.includes(`Choose ${m.STARTING_FORMS} starting forms. You may adopt up to ${m.MAX_FORMS} forms later as you grow.`), `the forms step asks for ${m.STARTING_FORMS}, of up to ${m.MAX_FORMS}`);
     const minorForms = baseForms(['Minor', 'Lesser']).map((f) => f.name);
     ok(formNames().join() === minorForms.join(), 'Minor: base forms from its own tier and the one above (no variants, nothing in season today)');
     ok(next().disabled, 'no forms chosen: Continue stays shut');

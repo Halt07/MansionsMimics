@@ -56,6 +56,12 @@ export function formsStillAllowed<T extends { formId: string }>(
 // Only one of a mimic's forms may come from the tier above its own.
 export const MAX_FORMS_ABOVE_TIER = 1;
 
+/** How many forms a mimic can hold at once. */
+export const MAX_FORMS = 3;
+
+/** How many forms a new mimic chooses to start with. */
+export const STARTING_FORMS = 2;
+
 /** The parts of a form that decide which tier it counts as. */
 type TieredForm = Pick<Form, "tier" | "holidayTiers">;
 

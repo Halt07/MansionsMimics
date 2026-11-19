@@ -2,13 +2,11 @@ import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_ORDER, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
-  MAX_FORMS_ABOVE_TIER, type Form, type Tier,
+  MAX_FORMS, MAX_FORMS_ABOVE_TIER, type Form, type Tier,
 } from "@/data/gameData";
 import BurnBadge from "./BurnBadge";
 import HolidayBadge, { holidayCardProps } from "./HolidayBadge";
 import { Button } from "@/components/ui/button";
-
-const MAX_FORMS = 3;
 
 interface FormSelectorProps {
   character: MimicCharacter;

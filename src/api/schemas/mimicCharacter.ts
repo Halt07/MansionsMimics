@@ -16,7 +16,7 @@ import { z } from 'zod';
 import {
   ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
 } from '@/data/vocabulary';
-import { FORM_IDS, LOCATIONS, type LocationId } from '@/data/gameData';
+import { FORM_IDS, LOCATIONS, MAX_FORMS, type LocationId } from '@/data/gameData';
 
 const TierSchema = z.enum(TIER_ORDER);
 const MaterialSchema = z.enum(ALL_MATERIALS);
@@ -52,7 +52,7 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   plausibility: z.number().default(3),
   assimilationPoints: z.number().default(0),
   baseAllure: z.number().default(2),
-  forms: z.array(FormRefSchema).max(3, 'A mimic can hold at most 3 forms').default([]),
+  forms: z.array(FormRefSchema).max(MAX_FORMS, `A mimic can hold at most ${MAX_FORMS} forms`).default([]),
   activeFormIndex: z.number().int().min(0).default(0),
   learnedMaterials: z.array(MaterialSchema).default([]),
   learnedTraits: z.array(z.enum(ALL_TRAITS)).default([]),
