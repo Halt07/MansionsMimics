@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Eye, Home, BookOpen } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import EventLogPanel from "../components/game/EventLogPanel";
 import CharacterSheet from "../components/game/CharacterSheet";
 import AppearanceEditor from "../components/game/AppearanceEditor";
@@ -524,9 +525,25 @@ export default function Game() {
           <Badge variant="outline" className="border-primary/30 text-primary text-[11px]">{character.tier}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setShowSheet(!showSheet)} className="text-muted-foreground hover:text-foreground text-xs gap-1">
-            <BookOpen className="w-3 h-3" /> Sheet
-          </Button>
+          {/* The character sheet, over everything: a modal dialog (focus moves in and stays there, and
+              Escape, a click outside or Close puts it away, back to this button) */}
+          <Dialog.Root open={showSheet} onOpenChange={setShowSheet}>
+            <Dialog.Trigger asChild>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs gap-1">
+                <BookOpen className="w-3 h-3" /> Sheet
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70" />
+              <Dialog.Content
+                aria-describedby={undefined}
+                className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+              >
+                <Dialog.Title className="sr-only">{character.name}&apos;s character sheet</Dialog.Title>
+                <CharacterSheet character={character} onClose={() => setShowSheet(false)} />
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
           <Link to={createPageUrl(character ? `Codex?characterId=${character.id}` : "Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
             <Eye className="w-3 h-3" /> Codex
           </Link>
@@ -537,13 +554,6 @@ export default function Game() {
       {MassDecayBanner}
       {SeasonBanner}
 
-      {showSheet && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSheet(false)}>
-          <div onClick={e => e.stopPropagation()} className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CharacterSheet character={character} onClose={() => setShowSheet(false)} />
-          </div>
-        </div>
-      )}
 
       <div className="max-w-5xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
 

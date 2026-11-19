@@ -84,14 +84,30 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       await user.keyboard('r');
       ok(action('Relocate').disabled && !has('Relocate — Choose Destination'), "with the party in the room, Relocate is greyed out, and R doesn't open it");
 
-      // The character sheet, over the top
-      await user.click(screen.getByRole('button', { name: /Sheet/ }));
-      ok(screen.getByRole('button', { name: 'Close' }) && reads('Lifetime Stats'), 'Sheet opens the character sheet');
+      // The character sheet, over the top: a modal dialog
+      const sheetButton = screen.getByRole('button', { name: /Sheet/ });
+      await user.click(sheetButton);
+      const sheet = screen.getByRole('dialog', { name: "Gristle's character sheet" });
+      ok(sheet && reads('Lifetime Stats'), 'Sheet opens the character sheet, a dialog named for the mimic');
+      ok(sheet.contains(document.activeElement), '…focus moves into it');
+      for (let i = 0; i < 4; i++) await user.tab();
+      ok(sheet.contains(document.activeElement), '…and Tab stays inside it');
+      ok(!screen.queryByRole('button', { name: /Sheet/ }) && !screen.queryByRole('button', { name: /Wait/ }), '…the page behind is hidden from screen readers while it is open');
       const whileOpen = log().length;
       await user.keyboard('w');
-      ok(log().length === whileOpen, '…where the hunt keys do nothing');
+      ok(log().length === whileOpen, '…and the hunt keys do nothing');
+      await user.keyboard('{Escape}');
+      await until(() => !screen.queryByRole('dialog'), 'the sheet to close');
+      await until(() => document.activeElement === sheetButton, 'focus to return');
+      ok(document.activeElement === sheetButton, 'Escape puts it away, back to the Sheet button');
+      await user.click(sheetButton);
+      await user.click(document.querySelector('.bg-black\\/70'));
+      await until(() => !screen.queryByRole('dialog'), 'the sheet to close');
+      ok(!reads('Lifetime Stats'), 'so does a click outside it');
+      await user.click(sheetButton);
       await user.click(screen.getByRole('button', { name: 'Close' }));
-      ok(!reads('Lifetime Stats'), '…and Close puts it away');
+      await until(() => !screen.queryByRole('dialog') && document.activeElement === sheetButton, 'the sheet to close');
+      ok(!reads('Lifetime Stats') && document.activeElement === sheetButton, '…and Close, focus back on the Sheet button');
     });
 
     // ---------- a hunt where nothing happens: the party gets bored and leaves ----------

@@ -73,6 +73,12 @@ export default async function ({ gameData: m, load, ok }) {
   const ship = m.ACHIEVEMENTS.find((a) => a.id === 'downWithTheShip');
   ok(has(`Achievements (1/${m.ACHIEVEMENTS.length})`) && screen.getByText(ship.name) && has(ship.flavor('Bilge')), 'an earned one: named, in its words, with the mimic in it');
 
+  // ---------- one frame: the header stays put, the body scrolls inside it ----------
+  const framed = sheet({}, spy());
+  const viewport = framed.querySelector('[data-radix-scroll-area-viewport]');
+  ok(viewport && viewport.textContent.includes('Lifetime Stats') && viewport.textContent.includes('Achievements'), 'the body scrolls, inside the card');
+  ok(!viewport.contains(screen.getByRole('button', { name: 'Close' })) && !viewport.contains(screen.getByText('Testy', { exact: true })), "…the name and Close stay put above it");
+
   // ---------- closing ----------
   const onClose = spy();
   sheet({}, onClose);
