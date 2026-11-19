@@ -8,7 +8,8 @@
 import type { GameEventType } from "./vocabulary";
 import { BEHAVIORS, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import { getRoomDistance, hasMagic, stepToward, type AppearanceLike } from "./gameData";
+import { getRoomDistance, hasMagic, type AppearanceLike } from "./gameData";
+import { stepToward } from "./movement";
 
 /** Mimic actions that behaviors can react to. */
 export type BehaviorTrigger = "relocate" | "strike" | "formChange" | "feed";
@@ -43,11 +44,6 @@ export interface BehaviorContext {
 export function isHiddenBehavior(id: BehaviorId): boolean {
   const info: BehaviorInfo = BEHAVIORS[id];
   return !!info.hidden;
-}
-
-/** Adventurers with this behavior never wander on their own. */
-export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean {
-  return adventurer.behavior === "stoneWatch";
 }
 
 const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
