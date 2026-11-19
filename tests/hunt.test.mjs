@@ -36,6 +36,13 @@ export default async function ({ gameData: m, ok }) {
   ok(said(begun, 'You settle into the Library') && begun.changes.locationHuntCounts.manor === 1, 'written up, and counted for the location');
   ok(begun.character.locationHuntCounts.manor === 1, '…on the character too');
 
+  // Locations that bring their own "The" don't get a second one
+  const aboard = m.beginHunt(mimic(), loc('sinking_ship'), loc('sinking_ship').rooms[0], opts());
+  ok(said(aboard, 'of the Sinking Ship') && !aboard.log.some((l) => /the The/.test(l.message)), 'no "the The Sinking Ship" in the log');
+  const shipRoom = loc('sinking_ship').rooms[0];
+  const burned = m.relocate(hunt({ location: loc('sinking_ship'), mimicRoom: shipRoom, party: [], suspicion: m.MAX_SUSPICION - 1 }), mimic(), m.getAdjacentRooms(loc('sinking_ship'), shipRoom)[0], opts());
+  ok(said(burned, 'The Sinking Ship is burned') && !burned.log.some((l) => /The The|the The/.test(l.message)), '…nor when it burns');
+
   // ---------- nothing is changed in place ----------
   const before = hunt({ suspicion: 3 });
   const snapshot = JSON.stringify(before);

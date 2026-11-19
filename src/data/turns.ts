@@ -19,6 +19,7 @@ import {
   type RivalMimic, type Witnesses,
 } from "./gameData";
 import { Turn, skyward, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+import { the } from "./text";
 
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
@@ -44,10 +45,10 @@ export function beginHunt(character: MimicCharacter, location: HuntLocation, roo
 
   if (start.bounty) {
     t.say("alert", `⚠️ A bounty has been placed on the mimic known as "${character.name}". Hunters from across the realm have come to collect.`);
-    t.say("alert", `${party.length} bounty hunters are sweeping the ${location.name} — they know exactly what they are looking for.`);
+    t.say("alert", `${party.length} bounty hunters are sweeping ${the(location.name)} — they know exactly what they are looking for.`);
     t.say("alert", `The hunters enter with weapons drawn. Suspicion starts at ${BOUNTY_START_SUSPICION}.`);
   } else {
-    t.say("info", `You settle into the ${room} of the ${location.name}, perfectly still.`);
+    t.say("info", `You settle into the ${room} of ${the(location.name)}, perfectly still.`);
     t.say("system", `${party.length} adventurers are exploring the premises.`);
   }
   if (burned.location) t.say("alert", `🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
@@ -217,9 +218,9 @@ function strikeRival(t: Turn, rival: RivalMimic, dice: number) {
   const stats = RIVAL_STATS[rival.kind];
   const outcome = resolveRivalStrike(rival, dice, location, rivals, mimicRoom, t.random);
   if (!outcome.devoured) {
-    t.say("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into the ${location.name}.`);
+    t.say("escape", `The ${stats.name} slips your grasp — it is clever, as mimics are. It retreats deeper into ${the(location.name)}.`);
     t.patchRival(rival.id, { revealed: false, room: outcome.hidesIn });
-    t.say("alert", `It has hidden itself once more somewhere in the ${location.name}. Track it down.`);
+    t.say("alert", `It has hidden itself once more somewhere in ${the(location.name)}. Track it down.`);
     t.raise(1);
     return;
   }
@@ -248,7 +249,7 @@ function revealCostume(t: Turn, member: PartyMember) {
   if (isTheRealThing(member)) {
     t.say("evolve", `😱 That wasn't a costume. It was a real ${member.trueName?.toLowerCase() ?? "monster"}!`);
   } else if (member.costume && member.trueName) {
-    t.say("evolve", `🎭 Under the ${member.costume} costume: ${/^The /.test(member.trueName) ? member.trueName.replace(/^The /, "the ") : `a ${member.trueName}`}!`);
+    t.say("evolve", `🎭 Under the ${member.costume} costume: ${/^The /.test(member.trueName) ? the(member.trueName) : `a ${member.trueName}`}!`);
   }
 }
 

@@ -12,6 +12,7 @@ import type { HuntLocation, RoomName } from "./locationData";
 import type { Sickness } from "./mimicData";
 import type { GameEventType } from "./vocabulary";
 import type { HuntEnding } from "./huntReportData";
+import { the } from "./text";
 import {
   BURN_HUNTS, CAT_KNOWS_LINE, CULT_CONVERSIONS, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE, STILLNESS_LINE, STILLNESS_TURNS,
   ACTION_LIMIT, DUPLICATE_ROOM_SUSPICION, TIER_CONFIG,
@@ -181,7 +182,7 @@ export class Turn {
     const { location } = this.hunt;
     const form = this.form;
     this.update(burnAfterDiscovery(this.character, location.id, form?.id ?? null));
-    this.say("alert", `The ${location.name} is burned${form ? `, and the survivors will describe your ${form.name} shape to anyone who listens` : ""}. For the next ${BURN_HUNTS} hunts, returning here${form ? " or wearing that form" : ""} means starting under suspicion.`);
+    this.say("alert", `${the(location.name, true)} is burned${form ? `, and the survivors will describe your ${form.name} shape to anyone who listens` : ""}. For the next ${BURN_HUNTS} hunts, returning here${form ? " or wearing that form" : ""} means starting under suspicion.`);
     this.set({ ending: "discovered" });
   }
 
@@ -234,7 +235,7 @@ export class Turn {
     // Snowed in, the party can't wander off: the cold is the only clock
     if (actionCount >= ACTION_LIMIT && !this.hunt.location.snowbound && !this.hunt.ending) {
       this.say("info", `After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
-      this.say("system", `The party leaves the ${this.hunt.location.name} of their own accord. Find new prey.`);
+      this.say("system", `The party leaves ${the(this.hunt.location.name)} of their own accord. Find new prey.`);
       this.set({ ending: "abandoned" });
       this.record("survived");
     }
@@ -421,10 +422,10 @@ export function devotion(hunt: Hunt, character: MimicCharacter, opts: TurnOption
   const evolve = total >= TIER_CONFIG[character.tier].apToEvolve;
   const steps: DevotionStep[] = [
     line("evolve", `${devotee.name} stares at the empty places where their companions stood… then falls to their knees before you. "It is real. It has come back."`),
-    ...(zealot !== devotee.name ? [line("evolve", `${devotee.name} is now the ${zealot}.`)] : []),
-    line("info", `The ${zealot} hurries out, and returns with offerings, laying them before you one by one.`),
+    ...(zealot !== devotee.name ? [line("evolve", `${devotee.name} is now ${the(zealot)}.`)] : []),
+    line("info", `${the(zealot, true)} hurries out, and returns with offerings, laying them before you one by one.`),
     ...offerings.map(c => ({ log: [{ type: "consume" as const, message: `You accept the ${c.name}. +${c.ap} AP.` }], ap: c.ap })),
-    line("system", `🕯 The ${zealot} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`),
+    line("system", `🕯 ${the(zealot, true)} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`),
     // Easter egg: the skeptic's treatise gets an ending
     ...(hunt.party.some(a => a.name === DOUBTING_SCHOLAR) ? [line("info", SCHOLAR_NOTES_LINE)] : []),
     {

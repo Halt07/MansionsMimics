@@ -56,6 +56,19 @@ export default async function ({ gameData: m, ok, log }) {
   const ship = m.buildHuntReport({ ...base, ending: 'cleared', locationName: 'The Sinking Ship', sank: true, party: [member('Ship\'s Captain', { fled: true })] });
   ok(!/the The|the the/i.test(text(ship)), 'no "the The Sinking Ship"');
 
+  // Names that bring their own "The" (The Princess, The King) don't get a second one, in any telling
+  const royals = (over) => [member('The Princess', over), member('The King', { fled: true })];
+  const doubled = [];
+  for (let seed = 0; seed < 40; seed++) {
+    for (const locationId of [undefined, 'spell_or_sweet_street']) {
+      for (const [ending, party] of [['discovered', royals({ isConsumed: true })], ['abandoned', royals({ isConsumed: true })], ['cleared', royals({ isConsumed: true })], ['cleared', [member('The Princess', { isConverted: true })]], ['cleared', [member('The Princess', { isConsumed: true })]]]) {
+        const r = m.buildHuntReport({ ...base, seed, locationId, ending, party, biggestMeal: { name: 'The Princess', ap: 4 } });
+        if (/the The|The The|a The /.test(text(r))) doubled.push(text(r));
+      }
+    }
+  }
+  ok(doubled.length === 0, `no "the The Princess" in any report${doubled.length ? `: ${doubled[0].match(/[^]{0,60}(the The|The The|a The ).{0,30}/s)?.[0]}` : ''}`);
+
   // Same seed, same report; the seed varies the wording
   const again = m.buildHuntReport({ ...base, ending: 'discovered', biggestMeal: { name: 'Greedy Rogue', ap: 4 },
     party: [member('Greedy Rogue', { isConsumed: true }), member('Paranoid Cleric', { fled: true }), member('Naive Bard')] });
