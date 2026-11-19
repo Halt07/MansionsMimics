@@ -5,8 +5,7 @@
 
 2. Finish splitting gameData.ts (low–medium)
 
-- Still about 1,120 lines. Natural homes for what's left:
-  - The combat checks (stealthCheck, allureCheck, adhesionCheck, allure interest, AP rewards; about 200 lines) next to the code that now uses them: lure.ts and strike.ts.
+- Down to about 890 lines (the combat checks now live in lure.ts and strike.ts, and the action limit in hunt.ts). Natural homes for what's left:
   - Behavior reactions (about 155) into behaviors.ts.
   - Easter eggs (about 130) into easterEggs.ts.
   - Party and creature movement (about 155) into movement.ts.

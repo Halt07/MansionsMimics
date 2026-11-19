@@ -1,14 +1,14 @@
 // ============================================================
 // MANSIONS & MIMICS — Game rules
-// The core rules of a hunt: rooms, dice, which forms a mimic can take, magic, the stealth,
-// allure and adhesion checks, bites, burns, where the party moves, and how adventurers react.
+// The core rules of a hunt: rooms, dice, which forms a mimic can take, magic, burns, where
+// the party moves, and how adventurers react.
 // The rest lives alongside it:
 //   ./events     location events (rivals, the Sinking Ship, Devotion, the seasonal twists)
 //   ./stats      effective stats, mass decay, achievements and lifetime stats
 //   ./codex      what the Codex knows (adventurers met and eaten, hunting grounds found)
 //   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
-//   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole)
-//   ./lure       luring adventurers in, and the stealth checks everyone who comes in faces
+//   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole), and the adhesion check
+//   ./lure       luring adventurers in, and the stealth and allure checks
 //   ./hunt       a hunt in progress (Hunt), and what every turn shares (Turn): suspicion, meals, the end of a turn
 //   ./turns      each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait and eating
 // The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
@@ -16,15 +16,13 @@
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_MATERIALS, ALL_STARTING_TRAITS, MATERIALS, TIER_ORDER, isPerceptionSense,
-  type GameEventType, type MagicMaterial, type Material, type Tier, type Trait, type UtilityTag,
+  ALL_MATERIALS, ALL_STARTING_TRAITS, MATERIALS, TIER_ORDER,
+  type GameEventType, type MagicMaterial, type Material, type Tier, type Trait,
 } from "./vocabulary";
 import {
   ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type SeasonalForm,
 } from "./mimicData";
-import { AP_REWARDS, BEHAVIORS, type AdventurerTemplate, type BehaviorId, type BehaviorInfo,
-  type PartyMember, type QualityList,
-} from "./adventurerData";
+import { BEHAVIORS, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
 import {
   LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
@@ -377,235 +375,6 @@ export function getFormTierPenalties(formTier: Tier, mimicTier: Tier): { plausib
 /** Whether a mimic knows a trait: every mimic knows the starting traits; the rest must be learned. */
 export function knowsTrait(character: Pick<MimicCharacter, "learnedTraits">, trait: Trait): boolean {
   return (ALL_STARTING_TRAITS as readonly Trait[]).includes(trait) || character.learnedTraits.includes(trait);
-}
-
-// ============================================================
-// COMBAT ENGINE
-// ============================================================
-/** The result of a contested roll (stealth, allure or adhesion). */
-export interface CheckResult {
-  success: boolean;
-  mimicRoll: number;
-  advRoll: number;
-  suspicionChange: number;
-  detectedFlaws: string[];
-  narrative: string;
-}
-
-/** Anything an adventurer can like or dislike. */
-export type Quality = Material | Trait | UtilityTag;
-
-export interface AllureResult extends CheckResult {
-  interestBonus: number;
-  aversion: number;
-  disliked: Quality[];
-}
-
-// Hunt Action Timeframe
-export const ACTION_LIMIT = 50;
-export const ACTION_WARNING = 20;
-
-// roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
-export function stealthCheck(
-  plausibility: number, patience: number, formTier: Tier, mimicTier: Tier, form: Form, adventurer: PartyMember,
-  roomContextMod: Partial<RoomContextMod> = {}, appearance: AppearanceLike = {}, random: () => number = Math.random,
-): CheckResult {
-  // Gravecloth: undead take the mimic for one of their own
-  if (adventurer.type === "Undead" && hasMagic(appearance, "Gravecloth")) {
-    return {
-      success: true, mimicRoll: 0, advRoll: 0, suspicionChange: 0, detectedFlaws: [],
-      narrative: `${adventurer.name} passes the ${form.name} without a second glance — it smells of the grave, like one of its own.`,
-    };
-  }
-  // Form one tier above: –2 Plausibility. (A form one tier below costs Patience instead,
-  // which the caller has already applied to the `patience` passed in.)
-  let basePlausi = plausibility - getFormTierPenalties(formTier, mimicTier).plausibility;
-  // Apply room context plausibility modifier
-  basePlausi += (roomContextMod.plausibility || 0);
-  basePlausi = Math.max(1, basePlausi);
-
-  // Patience adds bonus dice to the mimic's stealth roll (stillness aids deception)
-  const patienceBonus = Math.floor((patience || 1) / 2);
-  const stealthDice = basePlausi + patienceBonus + (hasMagic(appearance, "Shadowwood") ? 1 : 0);
-  const hunterPenalty = adventurer.isMimicHunter && hasMagic(appearance, "Starforged Iron") ? 2 : 0;
-
-  let flawCount = 0;
-  if (plausibility <= 2) flawCount = 2;
-  else if (plausibility <= 3) flawCount = 1;
-
-  const detectedFlaws: string[] = [];
-  const shuffled = [...form.flawProfiles].sort(() => random() - 0.5).slice(0, flawCount);
-  shuffled.forEach((flaw) => {
-    // Void Marble: acoustic flaws can't be spotted
-    if (flaw.type === "acoustic" && hasMagic(appearance, "Void Marble")) return;
-    // Flaw types that are also senses get the adventurer's bonus for that sense
-    const affinityBonus = isPerceptionSense(flaw.type) ? adventurer.perceptionAffinity[flaw.type] : 0;
-    const scentPenalty = flaw.type === "environmental" && hasMagic(appearance, "Direwolf Pelt") ? 1 : 0;
-    const advRollResult = rollDice(Math.max(1, adventurer.discipline + affinityBonus - scentPenalty - hunterPenalty), random);
-    const mimicRollResult = rollDice(stealthDice, random);
-    if (advRollResult > mimicRollResult) detectedFlaws.push(flaw.description);
-  });
-
-  // Arcane residue: each worn magic material is an extra flaw check for magic-sensitive adventurers
-  const magicalAffinity = adventurer.perceptionAffinity.magical || 0;
-  if (magicalAffinity >= 2) {
-    wornMagic(appearance).forEach((mat) => {
-      const advRollResult = rollDice(Math.max(1, adventurer.discipline + magicalAffinity - hunterPenalty), random);
-      const mimicRollResult = rollDice(stealthDice, random);
-      if (advRollResult > mimicRollResult) detectedFlaws.push(`Faint arcane residue clings to it (${mat})`);
-    });
-  }
-
-  const mimicRoll = rollDice(stealthDice, random);
-  const advRoll = rollDice(Math.max(1, adventurer.discipline + adventurer.suspicion - hunterPenalty), random);
-  const success = mimicRoll >= advRoll;
-  const suspicionChange = detectedFlaws.length + (success ? 0 : 1);
-
-  return {
-    success, mimicRoll, advRoll, suspicionChange, detectedFlaws,
-    narrative: success
-      ? `${adventurer.name} glances at the ${form.name} and moves on.`
-      : `${adventurer.name} pauses, eyes narrowing at the ${form.name}.`,
-  };
-}
-
-// Which of an adventurer's liked and disliked qualities the mimic's current look matches.
-// Materials: primary and secondary (including any magic ones). Traits: surface, symbolic and condition traits from the appearance,
-// plus the form's built-in traits (structural/aura, e.g. a Chest is Iron-Banded). Tags: the form's utility tags.
-//   liked    — each match is +1 allure die (capped by plausibility, see allureCheck)
-//   disliked — each match is -1 allure die (adventurer.repelledBy)
-export function calcAllureBreakdown(
-  form: Pick<Form, "builtInTraits" | "utilityTags">,
-  currentAppearance: AppearanceLike,
-  adventurer: Pick<AdventurerTemplate, "alluringQualities" | "repelledBy">,
-): { liked: Quality[]; disliked: Quality[]; interest: number; aversion: number } {
-  const appearanceMats: Material[] = [
-    ...(currentAppearance.primaryMaterials || []),
-    ...(currentAppearance.secondaryMaterials || []),
-  ];
-  const appearanceTraits: Trait[] = [
-    ...(currentAppearance.surfaceTraits || []),
-    ...(currentAppearance.symbolicTraits || []),
-    ...(currentAppearance.conditionTraits || []),
-    ...(currentAppearance.scentTraits || []),
-    ...(form.builtInTraits || []),
-  ];
-  const formTags: readonly UtilityTag[] = form.utilityTags || [];
-  const matching = (qualities: QualityList = {}): Quality[] => [
-    ...(qualities.materials || []).filter(mat => appearanceMats.includes(mat)),
-    ...(qualities.traits || []).filter(trait => appearanceTraits.includes(trait)),
-    ...(qualities.tags || []).filter(tag => formTags.includes(tag)),
-  ];
-  const liked = matching(adventurer.alluringQualities);
-  const disliked = matching(adventurer.repelledBy);
-  return { liked, disliked, interest: liked.length, aversion: disliked.length };
-}
-
-// Net interest score (likes minus dislikes) without rolling — used for targeting priority
-export function calcAllureInterest(
-  form: Pick<Form, "builtInTraits" | "utilityTags">,
-  currentAppearance: AppearanceLike,
-  adventurer: Pick<AdventurerTemplate, "alluringQualities" | "repelledBy">,
-): number {
-  const { interest, aversion } = calcAllureBreakdown(form, currentAppearance, adventurer);
-  return interest - aversion;
-}
-
-// roomContextMod: { plausibility: number, allure: number } — from getRoomContextMod()
-export function allureCheck(
-  baseAllure: number, plausibility: number, form: Form, currentAppearance: AppearanceLike, adventurer: PartyMember,
-  roomContextMod: Partial<RoomContextMod> = {}, random: () => number = Math.random,
-): AllureResult {
-  // Base mimic allure dice = baseAllure + form modifier + room context
-  let allureDice = baseAllure + (form.baseAllureModifier || 0) + (roomContextMod.allure || 0);
-
-  const { interest: interestBonus, aversion, disliked } = calcAllureBreakdown(form, currentAppearance, adventurer);
-
-  let suspicionChange = 0;
-  // Only add interest bonus if plausibility supports it; excess causes suspicion
-  const usableBonus = Math.min(interestBonus, plausibility);
-  if (interestBonus > plausibility) suspicionChange += 1;
-  allureDice += usableBonus;
-  // Each disliked quality costs a die — dislikes are never capped
-  allureDice -= aversion;
-  if (hasMagic(currentAppearance, "Spellweave Silk")) allureDice += 1;
-  allureDice = Math.max(1, allureDice);
-
-  // Adventurer resists with discipline + suspicion (wariness makes luring harder)
-  const resistDice = adventurer.discipline + Math.ceil(adventurer.suspicion / 2);
-  const mimicRoll = rollDice(allureDice, random);
-  const advRoll = rollDice(resistDice, random);
-  const success = mimicRoll >= advRoll;
-
-  return {
-    success, mimicRoll, advRoll, interestBonus, aversion, disliked, suspicionChange, detectedFlaws: [],
-    narrative: success
-      ? `${adventurer.name} is drawn toward the ${form.name}, eyes gleaming with interest.`
-      : `${adventurer.name} glances at the ${form.name} but shows no interest.`,
-  };
-}
-
-/** Extra dice an Elusive adventurer rolls when resisting a Strike (or bite). */
-export const ELUSIVE_EXTRA_DICE = 1;
-
-/** Dice an adventurer resists a Strike (or bite) with: its Discipline, plus any Elusive dice. */
-export function strikeResistDice(adventurer: Pick<PartyMember, "discipline" | "behavior">): number {
-  return adventurer.discipline + (adventurer.behavior === "elusive" ? ELUSIVE_EXTRA_DICE : 0);
-}
-
-/** Where an adventurer that slipped a Strike runs to: a room next to it, never the mimic's. */
-export function escapeRoom(
-  location: HuntLocation, fromRoom: RoomName, mimicRoom: RoomName | null, random: () => number = Math.random,
-): RoomName {
-  const adjacent = getAdjacentRooms(location, fromRoom).filter(r => r !== mimicRoom);
-  const options = adjacent.length > 0 ? adjacent : location.rooms.filter(r => r !== mimicRoom && r !== fromRoom);
-  return options.length > 0 ? options[Math.floor(random() * options.length)] : fromRoom;
-}
-
-export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember, random: () => number = Math.random): CheckResult {
-  const mimicRoll = rollDice(adhesion, random);
-  const advRoll = rollDice(strikeResistDice(adventurer), random);
-  const success = mimicRoll >= advRoll;
-  return {
-    success, mimicRoll, advRoll, suspicionChange: 0, detectedFlaws: [],
-    narrative: success
-      ? `The ${form.name} snaps shut! ${adventurer.name} is caught!`
-      : `${adventurer.name} recoils just in time, evading your grasp!`,
-  };
-}
-
-// AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
-// their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
-export function getApReward(adventurer: Pick<PartyMember, "group" | "type" | "apReward">): number {
-  if (adventurer.apReward !== undefined) return adventurer.apReward;
-  if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
-  return AP_REWARDS[adventurer.type] || 3;
-}
-
-// ============================================================
-// PARTIAL BITES
-// Minor mimics are too small to swallow anyone whole, and Apex mimics can't swallow
-// a giant until they reach its wholeMealMass. Both bite pieces off instead.
-// ============================================================
-export const BITE_MATERIAL_CHANCE = 0.35; // chance a held bite teaches one of the target's loot materials
-
-export function needsPartialBites(
-  character: Pick<MimicCharacter, "tier" | "mass">, target: Pick<PartyMember, "wholeMealMass">,
-): boolean {
-  if (character.tier === "Minor") return true;
-  return !!target.wholeMealMass && (character.mass ?? 0) < target.wholeMealMass;
-}
-
-/** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
-export function getBiteAp(target: Pick<PartyMember, "group">, random: () => number = Math.random): number {
-  return target.group === "giantKin" ? 2 + Math.floor(random() * 2) : 1;
-}
-
-/** Maybe learn a real material from a bite. Returns a material name or null. */
-export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">, random: () => number = Math.random): Material | null {
-  const mats = target.lootMaterials || [];
-  if (mats.length === 0 || random() >= BITE_MATERIAL_CHANCE) return null;
-  return mats[Math.floor(random() * mats.length)];
 }
 
 // ============================================================

@@ -15,12 +15,17 @@ import type { HuntEnding } from "./huntReportData";
 import { the } from "./text";
 import {
   BURN_HUNTS, CAT_KNOWS_LINE, CULT_CONVERSIONS, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE, STILLNESS_LINE, STILLNESS_TURNS,
-  ACTION_LIMIT, DUPLICATE_ROOM_SUSPICION, TIER_CONFIG,
+  DUPLICATE_ROOM_SUSPICION, TIER_CONFIG,
   burnAfterDiscovery, chillParty, distractedRooms, effectiveStats, findDevotee, fireworksDue, fireworksRummage,
   getActiveForm, getBehaviorReactions, isCat, isNestCleared, resolveStealth, rollOfferings, sinkingWarning,
   starfallDue, tossRoom, uneatenFrozen, withBiggestMeal,
   type BehaviorContext, type BehaviorTrigger, type RivalMimic, type SmallCreature,
 } from "./gameData";
+
+/** A hunt with this many actions and no meal ends: the party gets bored and leaves. */
+export const ACTION_LIMIT = 50;
+/** The banner starts warning this many actions before the limit. */
+export const ACTION_WARNING = 20;
 
 /** Suspicion tops out here, and reaching it ends the hunt: you've been found out. */
 export const MAX_SUSPICION = 10;
