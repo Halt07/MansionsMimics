@@ -15,7 +15,7 @@ import {
   consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, getRoomDistance, hasMagic, isTheRealThing,
   lureRange, maxTargetForChance, moveCreatures, moveParty, needsPartialBites, pickStrikeTarget, pickTreasurePrize,
   resolveBite, resolveLure, resolveRivalStrike, resolveSwallow, rivalInRoom, rollDice, startHunt, strikeCandidates,
-  strikeDice, strikeWitnesses, today, unmask, withBiggestMeal, withDiscovered, withFormUsed,
+  strikeDice, strikeWitnesses, unmask, withBiggestMeal, withDiscovered, withFormUsed,
   type RivalMimic, type Witnesses,
 } from "./gameData";
 import { Turn, skyward, stillInHunt, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
@@ -62,11 +62,7 @@ export function beginHunt(character: MimicCharacter, location: HuntLocation, roo
   } else if (rivals.length > 0) {
     t.alert(`Something feels wrong. Another predator lurks within these walls — and it is not you.`);
   }
-  // Soulglass senses the strongest presence: the Elder if there is one
-  const sensed = rivals.find(r => r.kind === "elder") ?? rivals[0];
-  if (sensed && hasMagic(character.currentAppearance, "Soulglass")) {
-    t.alert(`Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : "The intruder"} hides in the ${sensed.room}.`);
-  }
+  if (hasMagic(character.currentAppearance, "Soulglass")) t.senseRival();
   t.info(`Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
   party.forEach(a => t.info(a.costume
     ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
@@ -602,7 +598,7 @@ export function changeAppearance(hunt: Hunt, character: MimicCharacter, appearan
   const t = new Turn(hunt, character, opts);
   const resized = hasMagic(appearance, "Thimblewood") !== hasMagic(character.currentAppearance, "Thimblewood");
   if (resized) {
-    const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: appearance }), character.mass, character, today());
+    const kept = formsStillAllowed(character.forms, formTier({ ...character, currentAppearance: appearance }), character.mass, character, t.now);
     const activeId = character.forms[character.activeFormIndex]?.formId;
     t.update({ forms: kept, activeFormIndex: Math.max(0, kept.findIndex(f => f.formId === activeId)) });
     t.evolve(hasMagic(appearance, "Thimblewood")
@@ -614,11 +610,7 @@ export function changeAppearance(hunt: Hunt, character: MimicCharacter, appearan
   }
   t.update({ currentAppearance: appearance });
   t.info(`You adjust your surface appearance.`);
-  const soulglassNew = hasMagic(appearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass");
-  const hidden = hunt.rivals.filter(r => !r.consumed && !r.revealed);
-  const sensed = hidden.find(r => r.kind === "elder") ?? hidden[0];
-  if (soulglassNew && sensed) {
-    t.alert(`Your Soulglass hums faintly. ${sensed.kind === "elder" ? "The Elder" : `The ${RIVAL_STATS[sensed.kind].name}`} hides in the ${sensed.room}.`);
-  }
+  // Soulglass senses a hidden rival when it's first put on
+  if (hasMagic(appearance, "Soulglass") && !hasMagic(character.currentAppearance, "Soulglass")) t.senseRival();
   return t.finish();
 }

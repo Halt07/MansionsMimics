@@ -258,6 +258,22 @@ export default async function ({ gameData: m, ok }) {
   ok(said(m.changeAppearance(hunt({ rivals: [rival('a', 'lone', 'Kitchen')] }), mimic(), look(['Soulglass']), opts()), `The ${m.RIVAL_STATS.lone.name} hides in the Kitchen.`), '…or whichever is hiding');
   ok(!said(m.changeAppearance(lurking, mimic({ currentAppearance: look(['Soulglass']) }), look(['Soulglass', 'Oak']), opts()), 'Soulglass hums'), '…only when first put on');
   ok(!said(m.changeAppearance(hunt({ rivals: [rival('a', 'lone', 'Kitchen', { revealed: true })] }), mimic(), look(['Soulglass']), opts()), 'Soulglass hums'), '…and not for a rival already exposed');
+  // Worn from the start of a hunt, it senses the same way (and names a rival the same way)
+  const nest = loc('mimic_nest');
+  const nestStart = m.beginHunt(mimic({ tier: 'Greater', mass: 20, currentAppearance: look(['Soulglass']) }), nest, nest.rooms[0], opts());
+  const elder = nestStart.hunt.rivals.find((r) => r.kind === 'elder');
+  ok(said(nestStart, `Your Soulglass hums faintly. The Elder hides in the ${elder.room}.`), 'Soulglass worn into the Nest: it senses the Elder');
+  // (a lone rival lurks in an ordinary hunt only for Greater mimics and up, 1 time in 7: the pinned roll is under that)
+  const loneStart = m.beginHunt(mimic({ tier: 'Greater', mass: 20, currentAppearance: look(['Soulglass']) }), loc('manor'), 'Library', opts(0.1));
+  const lone = loneStart.hunt.rivals.find((x) => x.kind === 'lone');
+  ok(lone && said(loneStart, `The ${m.RIVAL_STATS.lone.name} hides in the ${lone.room}.`) && !said(loneStart, 'The intruder'), '…and a lone rival is named as it is everywhere else');
+
+  // Thimblewood's resize goes by the turn's own date (seasonal forms are kept only in season)
+  const lantern = mimic({ forms: [ref('lesser_chest'), ref('minor_jack_o_lantern')] });
+  const allHallows = { random: () => 0.5, now: new Date(2026, 9, 31) };
+  const may = { random: () => 0.5, now: new Date(2026, 4, 15) };
+  ok(m.changeAppearance(hunt(), lantern, look(['Thimblewood']), allHallows).character.forms.some((f) => f.formId === 'minor_jack_o_lantern'), 'shrinking on All Hallows\' Eve keeps the Jack-o\'-Lantern');
+  ok(!m.changeAppearance(hunt(), lantern, look(['Thimblewood']), may).character.forms.some((f) => f.formId === 'minor_jack_o_lantern'), '…in May it\'s out of season and goes');
 
   // ---------- the Sinking Ship ----------
   const ship = loc('sinking_ship');

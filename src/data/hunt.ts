@@ -15,7 +15,7 @@ import type { HuntEnding } from "./huntReportData";
 import { the } from "./text";
 import {
   BURN_HUNTS, CAT_KNOWS_LINE, CULT_CONVERSIONS, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE, STILLNESS_LINE, STILLNESS_TURNS,
-  DUPLICATE_ROOM_SUSPICION, TIER_CONFIG,
+  DUPLICATE_ROOM_SUSPICION, RIVAL_STATS, TIER_CONFIG,
   burnAfterDiscovery, chillParty, distractedRooms, effectiveStats, findDevotee, fireworksDue, fireworksRummage,
   getActiveForm, getBehaviorReactions, isCat, isNestCleared, resolveStealth, rollOfferings, sinkingWarning,
   starfallDue, tossRoom, uneatenFrozen, withBiggestMeal,
@@ -200,6 +200,18 @@ export class Turn {
 
   patchRival(id: string, patch: Partial<RivalMimic>) {
     this.set({ rivals: this.hunt.rivals.map(r => r.id === id ? { ...r, ...patch } : r) });
+  }
+
+  /**
+   * Soulglass: senses where a hidden rival lurks, the strongest presence first (the Elder, if
+   * there is one). Worn at the start of a hunt, or put on during one.
+   */
+  senseRival() {
+    const hidden = this.hunt.rivals.filter(r => !r.consumed && !r.revealed);
+    const sensed = hidden.find(r => r.kind === "elder") ?? hidden[0];
+    if (!sensed) return;
+    const who = sensed.kind === "elder" ? "The Elder" : the(RIVAL_STATS[sensed.kind].name, true);
+    this.alert(`Your Soulglass hums faintly. ${who} hides in the ${sensed.room}.`);
   }
 
   /** Raise suspicion (up to MAX_SUSPICION). Reaching it ends the hunt: you've been found out. */
