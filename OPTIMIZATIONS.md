@@ -5,8 +5,7 @@
 
 2. Finish splitting gameData.ts (low–medium)
 
-- Down to about 750 lines (the combat checks now live in lure.ts and strike.ts, the action limit in hunt.ts, and the behavior reactions in behaviors.ts). Natural homes for what's left:
-  - Easter eggs (about 130) into easterEggs.ts.
+- Down to about 620 lines (the combat checks now live in lure.ts and strike.ts, the action limit in hunt.ts, the behavior reactions in behaviors.ts, and the easter eggs in easterEggs.ts). Natural homes for what's left:
   - Party and creature movement (about 155) into movement.ts.
   - Form rules (valid forms, variants, seasonal forms, form-tier penalties; about 225) into forms.ts.
 - That would leave gameData.ts with rooms, dice, burns and location availability (about 180 lines), plus the re-exports, the same way as the events/stats/codex/mealPrep split.
