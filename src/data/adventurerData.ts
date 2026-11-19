@@ -1358,6 +1358,14 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   trueName?: string;
 };
 
+/**
+ * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
+ * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
+ * for this, used everywhere.
+ */
+export const stillInHunt = (a: PartyMember): boolean =>
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
+
 // ============================================================
 // AP REWARDS & LOOT FALLBACKS
 // ============================================================
@@ -1370,6 +1378,14 @@ export const AP_REWARDS: Record<ApRewardKey, number> = {
   Fey: 5, Construct: 6, Beast: 6,
   Giant: 12, // Giant-kin yield significantly more AP (applied by group, see getApReward)
 };
+
+// AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
+// their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
+export function getApReward(adventurer: Pick<PartyMember, "group" | "type" | "apReward">): number {
+  if (adventurer.apReward !== undefined) return adventurer.apReward;
+  if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
+  return AP_REWARDS[adventurer.type] || 3;
+}
 
 // Materials / traits learned from FULL consumption — pulled directly from adventurer template now
 // These are fallback values if template lootMaterials is missing

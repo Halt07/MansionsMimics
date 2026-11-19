@@ -10,7 +10,7 @@ import { ADVENTURER_TEMPLATES, type AdventurerGroupId, type AdventurerTemplate, 
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
 import {
   BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
-} from "./gameData";
+} from "./core";
 import {
   addRealMonster, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";

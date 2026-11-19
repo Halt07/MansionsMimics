@@ -6,10 +6,10 @@
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { ALL_MATERIALS, TIER_ORDER, type Material, type Tier, type Trait } from "./vocabulary";
-import { ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type SeasonalForm } from "./mimicData";
+import { MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type SeasonalForm } from "./mimicData";
 import { HOLIDAYS, isInSeason, seasonStart } from "./holidays";
 import { plural } from "./text";
-import { hasMagic, knowsTrait, type AppearanceLike } from "./gameData";
+import { hasMagic, knowsTrait, type AppearanceLike } from "./core";
 
 // ---------- which forms a mimic can take ----------
 // Forms from the tier below, the current tier and the tier above are available
@@ -94,11 +94,6 @@ export const VARIANT_FORMS: readonly Form[] = TIER_ORDER.flatMap(t => MASTER_FOR
 
 export function isVariantForm(form: Pick<Form, "variantOf">): boolean {
   return !!form.variantOf;
-}
-
-/** The base form of a variant (or the form itself): what burns and room modifiers are keyed by. */
-export function formFamily(formId: FormId): FormId {
-  return (ALL_FORMS.find(f => f.id === formId)?.variantOf as FormId | undefined) ?? formId;
 }
 
 /** What a mimic knows, for unlocking variant forms. */

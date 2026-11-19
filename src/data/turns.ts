@@ -6,19 +6,26 @@
 // the result. Re-exported from ./gameData.
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type { PartyMember } from "./adventurerData";
-import type { HuntLocation, RoomName } from "./locationData";
-import type { Form } from "./mimicData";
+import { stillInHunt, type PartyMember } from "./adventurerData";
+import { withDiscovered } from "./codex";
+import { BURN_SUSPICION, getRoomDistance, hasMagic, maxTargetForChance, rollDice } from "./core";
+import { PORTER_SISTER, PORTER_TOKEN_LINE, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE } from "./easterEggs";
 import {
-  ALL_FORMS, BOUNTY_START_SUSPICION, BURN_SUSPICION, CANNIBAL_MIMICS, COLLAPSE_BONUS_AP, PORTER_SISTER, PORTER_TOKEN_LINE,
-  PRANKS, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, RIVAL_STATS, STAR_FRAGMENT, TITANIC_FEAST_GIANTS, VANISHING_LINES, rivalAteFirst,
-  consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, getRoomDistance, hasMagic, isTheRealThing,
-  lureRange, maxTargetForChance, moveCreatures, moveParty, needsPartialBites, pickStrikeTarget, pickTreasurePrize,
-  resolveBite, resolveLure, resolveRivalStrike, resolveSwallow, rivalInRoom, rollDice, startHunt, strikeCandidates,
-  strikeDice, strikeWitnesses, unmask, withBiggestMeal, withDiscovered, withFormUsed,
-  type RivalMimic, type Witnesses,
-} from "./gameData";
-import { Turn, skyward, stillInHunt, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+  PRANKS, RIVAL_STATS, STAR_FRAGMENT, disguiseOf, frozenMealAp, isTheRealThing, pickTreasurePrize, rivalInRoom,
+  unmask, type RivalMimic,
+} from "./events";
+import { formsStillAllowed, formTier } from "./forms";
+import { skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+import type { HuntLocation, RoomName } from "./locationData";
+import { resolveLure } from "./lure";
+import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
+import { ALL_FORMS, type Form } from "./mimicData";
+import { VANISHING_LINES, moveCreatures, moveParty, rivalAteFirst } from "./movement";
+import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, lureRange, withBiggestMeal, withFormUsed } from "./stats";
+import {
+  COLLAPSE_BONUS_AP, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
+  resolveRivalStrike, resolveSwallow, strikeCandidates, strikeDice, strikeWitnesses, type Witnesses,
+} from "./strike";
 import { plural, the } from "./text";
 
 /** How a devoured rival is named in the "biggest meal" stat. */

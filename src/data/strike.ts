@@ -7,13 +7,14 @@
 // the dice. Re-exported from ./gameData.
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type { Material, TeachableTrait } from "./vocabulary";
-import type { Form } from "./mimicData";
-import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, AP_REWARDS, type PartyMember } from "./adventurerData";
-import type { HuntLocation, RoomName } from "./locationData";
-import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle, stillInHunt, type CheckResult } from "./gameData";
+import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, getApReward, stillInHunt, type PartyMember } from "./adventurerData";
+import { getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle } from "./core";
 import { RIVAL_STATS, pickTreasurePrize, rivalEscapeRoom, type RivalMimic, type TreasurePrize } from "./events";
+import type { HuntLocation, RoomName } from "./locationData";
+import { calcAllureInterest, type CheckResult } from "./lure";
+import type { Form } from "./mimicData";
 import { TITANIC_FEAST_GIANTS, isTitanicFeastComplete } from "./stats";
+import type { Material, TeachableTrait } from "./vocabulary";
 
 // ---------- the checks: adhesion, escaping, AP, witnesses ----------
 
@@ -55,14 +56,6 @@ export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMem
       ? `The ${form.name} snaps shut! ${adventurer.name} is caught!`
       : `${adventurer.name} recoils just in time, evading your grasp!`,
   };
-}
-
-// AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
-// their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
-export function getApReward(adventurer: Pick<PartyMember, "group" | "type" | "apReward">): number {
-  if (adventurer.apReward !== undefined) return adventurer.apReward;
-  if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
-  return AP_REWARDS[adventurer.type] || 3;
 }
 
 // ---------- partial bites ----------

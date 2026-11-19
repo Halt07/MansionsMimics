@@ -5,11 +5,11 @@
 // ./adventurerData; Elusive is handled by ./strike, Devotion by ./events.) Pure: returns the
 // changes for the turn to apply. Re-exported from ./gameData.
 // ============================================================
-import type { GameEventType } from "./vocabulary";
-import { BEHAVIORS, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
+import { BEHAVIORS, stillInHunt, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
+import { getRoomDistance, hasMagic, type AppearanceLike } from "./core";
 import type { HuntLocation, RoomName } from "./locationData";
-import { getRoomDistance, hasMagic, stillInHunt, type AppearanceLike } from "./gameData";
 import { stepToward } from "./movement";
+import type { GameEventType } from "./vocabulary";
 
 /** Mimic actions that behaviors can react to. */
 export type BehaviorTrigger = "relocate" | "strike" | "formChange" | "feed";

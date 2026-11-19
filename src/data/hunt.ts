@@ -7,20 +7,22 @@
 // Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type { PartyMember } from "./adventurerData";
+import { stillInHunt, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import type { Sickness } from "./mimicData";
+import { getBehaviorReactions, type BehaviorContext, type BehaviorTrigger } from "./behaviors";
+import { BURN_HUNTS, burnAfterDiscovery } from "./core";
+import { CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS, isCat } from "./easterEggs";
+import {
+  RIVAL_STATS, chillParty, distractedRooms, fireworksDue, fireworksRummage, isNestCleared, sinkingWarning,
+  starfallDue, tossRoom, uneatenFrozen, type RivalMimic,
+} from "./events";
+import { DUPLICATE_ROOM_SUSPICION, resolveStealth } from "./lure";
+import type { SmallCreature } from "./mealPrep";
+import { TIER_CONFIG, type Sickness } from "./mimicData";
+import { effectiveStats, getActiveForm, withBiggestMeal } from "./stats";
 import type { GameEventType } from "./vocabulary";
 import type { HuntEnding } from "./huntReportData";
 import { the } from "./text";
-import {
-  BURN_HUNTS, CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS,
-  DUPLICATE_ROOM_SUSPICION, RIVAL_STATS, TIER_CONFIG,
-  burnAfterDiscovery, chillParty, distractedRooms, effectiveStats, fireworksDue, fireworksRummage,
-  getActiveForm, getBehaviorReactions, isCat, isNestCleared, resolveStealth, sinkingWarning,
-  starfallDue, tossRoom, uneatenFrozen, withBiggestMeal,
-  type BehaviorContext, type BehaviorTrigger, type RivalMimic, type SmallCreature,
-} from "./gameData";
 
 /** A hunt with this many actions and no meal ends: the party gets bored and leaves. */
 export const ACTION_LIMIT = 50;
@@ -88,15 +90,7 @@ export interface TurnOptions {
   now?: Date;
 }
 
-/** Still in the hunt: not eaten, fled, vanished, frozen or converted. */
-/**
- * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
- * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
- * for this, used everywhere.
- */
-export const stillInHunt = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
-
+/** Everyone still in the hunt (see stillInHunt). */
 export const activeAdventurers = (hunt: Pick<Hunt, "party">): PartyMember[] => hunt.party.filter(stillInHunt);
 
 /**

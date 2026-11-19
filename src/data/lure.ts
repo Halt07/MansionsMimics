@@ -6,14 +6,15 @@
 // Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type { Form } from "./mimicData";
-import { isPerceptionSense, type Material, type Tier, type Trait, type UtilityTag } from "./vocabulary";
-import type { AdventurerTemplate, PartyMember, QualityList } from "./adventurerData";
-import type { HuntLocation, RoomContextMod, RoomName } from "./locationData";
+import { stillInHunt, type AdventurerTemplate, type PartyMember, type QualityList } from "./adventurerData";
 import {
-  FORM_ROOM_TYPE, ROOM_FORM_IDS, effectiveFormTier, formFamily, formTier, getFormTierPenalties, getRoomContextMod,
-  getRoomDistance, hasMagic, quirkLine, rollDice, shuffle, stillInHunt, wornMagic, type AppearanceLike,
-} from "./gameData";
+  getRoomContextMod, getRoomDistance, hasMagic, rollDice, shuffle, wornMagic, type AppearanceLike,
+} from "./core";
+import { quirkLine } from "./easterEggs";
+import { effectiveFormTier, formTier, getFormTierPenalties } from "./forms";
+import { FORM_ROOM_TYPE, ROOM_FORM_IDS, type HuntLocation, type RoomContextMod, type RoomName } from "./locationData";
+import { formFamily, type Form } from "./mimicData";
+import { isPerceptionSense, type Material, type Tier, type Trait, type UtilityTag } from "./vocabulary";
 
 // ---------- the checks: stealth and allure ----------
 

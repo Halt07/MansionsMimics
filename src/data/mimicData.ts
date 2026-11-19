@@ -1124,6 +1124,11 @@ export const SEASONAL_FORMS: readonly SeasonalForm[] = SEASONAL_FORM_DATA.map((f
 export const ALL_FORMS: readonly Form[] = [...TIER_ORDER.flatMap((tier) => MASTER_FORMS[tier]), ...SEASONAL_FORMS];
 export const FORM_IDS = ALL_FORMS.map((form) => form.id) as [FormId, ...FormId[]];
 
+/** The base form of a variant (or the form itself): what burns and room modifiers are keyed by. */
+export function formFamily(formId: FormId): FormId {
+  return (ALL_FORMS.find(f => f.id === formId)?.variantOf as FormId | undefined) ?? formId;
+}
+
 // ============================================================
 // MATERIALS (the lists themselves are in ./vocabulary)
 // ============================================================

@@ -5,11 +5,11 @@
 // creatures (with Honeyamber drawing them toward the mimic). Pure: each returns where they
 // ended up, and the turn logs and applies it. Re-exported from ./gameData.
 // ============================================================
-import type { Form } from "./mimicData";
-import type { PartyMember } from "./adventurerData";
-import type { HuntLocation, LocationCreature, RoomName } from "./locationData";
-import { getAdjacentRooms, getRoomDistance, stillInHunt } from "./gameData";
+import { stillInHunt, type PartyMember } from "./adventurerData";
+import { getAdjacentRooms, getRoomDistance } from "./core";
 import { answersDoor, claimStar, nextHouse, rivalInRoom, type RivalMimic } from "./events";
+import type { HuntLocation, LocationCreature, RoomName } from "./locationData";
+import type { Form } from "./mimicData";
 import { the } from "./text";
 
 // ---------- the party ----------

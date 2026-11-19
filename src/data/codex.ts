@@ -8,7 +8,7 @@ import { TIER_ORDER } from "./vocabulary";
 import { ADVENTURER_TEMPLATES, type PartyMember } from "./adventurerData";
 import { LOCATIONS, type HuntLocation } from "./locationData";
 import { isInSeason, today } from "./holidays";
-import { meetsLocationRequirements } from "./gameData";
+import { meetsLocationRequirements } from "./core";
 
 // ============================================================
 // CODEX DISCOVERY

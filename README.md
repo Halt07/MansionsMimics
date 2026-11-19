@@ -24,12 +24,13 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | File | Contains |
 |---|---|
 | `vocabulary.ts` | Word lists: tiers, materials, traits, tags, senses, adventurer types |
-| `mimicData.ts` | Forms, appearance limits, starting stats, tier config, magic effects, sicknesses |
-| `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks |
+| `mimicData.ts` | Forms (and each variant's base form), appearance limits, starting stats, tier config, magic effects, sicknesses |
+| `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks; who's still in the hunt |
 | `locationData.ts` | Hunting grounds, rooms, local creatures, room/form modifiers |
 | `roomLayouts.ts` | Where each location's rooms sit on the hunt's floor plan (doors and stairs follow from the room graph) |
 | `holidays.ts` | Holiday seasons and the dates they run |
-| `gameData.ts` | The core rules: rooms, dice, magic materials and what a mimic knows, burns, which locations are open. Re-exports everything in this folder, so the rest of the app imports from here |
+| `gameData.ts` | The front door: re-exports everything in this folder, so the app and the tests import from here. The modules themselves import from each other directly (never through this file), so nothing loops back |
+| `core.ts` | The core rules: rooms, dice and shuffling, magic materials and what a mimic knows, choosing what to wear, burns, which locations are open |
 | `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, form-tier penalties |
 | `hunt.ts` | A hunt in progress (`Hunt`) and what every turn shares (`Turn`): suspicion and being found out, meals, the end of a turn |
 | `turns.ts` | Each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait, eating, and changing form or look |
@@ -37,7 +38,8 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | `strike.ts` | Strikes: rival mimics, partial bites, swallowing whole, and the adhesion check |
 | `movement.ts` | Where the party and the small creatures go each Wait |
 | `behaviors.ts` | How adventurers with a behavior react to what the mimic does |
-| `events.ts` | Location events: rival mimics, the Sinking Ship, Devotion (the whole ceremony), and the seasonal locations' twists |
+| `events.ts` | Location events: rival mimics, the Sinking Ship, and the seasonal locations' twists |
+| `devotion.ts` | Devotion at the Hollow Reliquary: who's ready, the offerings, and the whole ceremony |
 | `mealPrep.ts` | Setting up a hunt: the party, companions, small creatures, sickness |
 | `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats |
 | `codex.ts` | What the Codex knows: adventurers met and eaten, hunting grounds found |
@@ -122,6 +124,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
 | `creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |
 | `text.test.mjs` | `the()` and `plural()` |
+| `imports.test.mjs` | The rule modules import each other directly (never through `gameData.ts`), with no circles |
 | `db.test.mjs` | Saving and loading characters, validation, defaults, names, damaged saves |
 
 ### Screens (`screen*.test.mjs`)

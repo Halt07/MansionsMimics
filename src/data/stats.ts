@@ -9,7 +9,10 @@ import { ALL_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Si
 import { ADVENTURER_TEMPLATES } from "./adventurerData";
 import { LOCATIONS, type LocationId } from "./locationData";
 import { HOLIDAYS, today, type HolidayId } from "./holidays";
-import { VARIANT_FORMS, dropExpiredSeasonalForms, effectiveFormTier, formTier, formsStillAllowed, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
+import { hasMagic, knowsTrait } from "./core";
+import {
+  VARIANT_FORMS, dropExpiredSeasonalForms, effectiveFormTier, formsStillAllowed, formTier, getFormTierPenalties,
+} from "./forms";
 
 // ============================================================
 // EFFECTIVE STATS
