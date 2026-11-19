@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type HuntReport as Report, type UpgradeChoice } from "@/data/gameData";
@@ -45,6 +45,8 @@ export function HuntOverPanel({ report, onChooseForms, onHuntAgain }: { report: 
 export function EvolveScreen({ onChoose, onSkip }: { onChoose: (choice: UpgradeChoice) => void; onSkip: () => void }) {
   const { character } = useHunt();
   const cfg = TIER_CONFIG[character.tier];
+  // Each choice is named by what it does, and described by its cost (or that it's maxed out)
+  const ids = useId();
   const options = [
     { key: "mass", label: "Increase Mass", desc: `Grow toward the next tier. Cost: ${cfg.apToEvolve} AP`, icon: "⬆", capped: false },
     { key: "plausibility", label: "+1 Plausibility", desc: `Improve deception. Cost: ${cfg.apToUpgrade} AP (${character.plausibility}/${STAT_CAP})`, icon: "👁", capped: character.plausibility >= STAT_CAP },
@@ -64,13 +66,13 @@ export function EvolveScreen({ onChoose, onSkip }: { onChoose: (choice: UpgradeC
         {options.map(opt => (
           <Card
             key={opt.key}
-            {...asButton(() => onChoose(opt.key), { disabled: opt.capped })}
+            {...asButton(() => onChoose(opt.key), { disabled: opt.capped, labelledBy: `${ids}-${opt.key}-name`, describedBy: [`${ids}-${opt.key}-cost`] })}
             className={`border-border bg-card transition-all group ${FOCUS_RING} ${opt.capped ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
           >
             <CardContent className="p-4 text-center">
               <div className="text-2xl mb-2">{opt.icon}</div>
-              <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{opt.label}</h3>
-              <p className="text-xs text-muted-foreground">{opt.capped ? "MAX — cannot increase further" : opt.desc}</p>
+              <h3 id={`${ids}-${opt.key}-name`} className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{opt.label}</h3>
+              <p id={`${ids}-${opt.key}-cost`} className="text-xs text-muted-foreground">{opt.capped ? "MAX — cannot increase further" : opt.desc}</p>
             </CardContent>
           </Card>
         ))}

@@ -95,6 +95,8 @@ export default async function ({ gameData: m, load, ok }) {
   ok(picks.onSkip.calls.length === 1, 'or put it off and keep hunting');
 
   // ---------- by keyboard ----------
+  ok(screen.getByRole('button', { name: '+1 Plausibility', description: `Improve deception. Cost: ${cfg.apToUpgrade} AP (3/${m.STAT_CAP})` }) &&
+    screen.getByRole('button', { name: '+1 Adhesion', description: 'MAX — cannot increase further' }), 'each choice is heard by what it does, then its cost (or that it\'s maxed out)');
   ok(card('+1 Adhesion').getAttribute('role') === 'button' && card('+1 Adhesion').getAttribute('aria-disabled') === 'true', 'each choice is a button to screen readers, a maxed one marked unavailable');
   card('+1 Adhesion').focus();
   await user.keyboard('{Enter}');

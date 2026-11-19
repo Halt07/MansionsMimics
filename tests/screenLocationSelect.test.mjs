@@ -34,6 +34,9 @@ export default async function ({ gameData: m, load, storage, ok }) {
     ok(lesser.onChoose.calls.length === 1 && lesser.onChoose.calls[0][0].id === 'manor', 'clicking a ground chooses it');
     const keyed = choose(mimic());
     ok(cardOf('manor').getAttribute('role') === 'button' && cardOf('manor').tabIndex === 0, 'each ground is a button that the keyboard can reach');
+    const manorCard = screen.getByRole('button', { name: loc('manor').name, description: (d) => d.includes(loc('manor').description) && d.includes(`${loc('manor').partySize[0]}–${loc('manor').partySize[1]} adventurers`) });
+    ok(manorCard === cardOf('manor') && !manorCard.getAttribute('aria-describedby').split(' ').some((part) => document.getElementById(part)?.textContent.includes(loc('manor').flavorText)),
+      'screen readers hear its name, then what it is and how many adventurers (not the whole card)');
     cardOf('manor').focus();
     await user.tab();
     await user.keyboard('{Enter}');
@@ -52,6 +55,7 @@ export default async function ({ gameData: m, load, storage, ok }) {
     choose(mimic({ burnedLocations: [{ id: 'manor', huntsLeft: 2 }] }));
     ok(cardOf('manor').textContent.includes(`🔥 Discovered · +${m.BURN_SUSPICION} starting suspicion`) && cardOf('manor').textContent.includes('lingers for 2 more hunts'), 'a burned ground says so, and for how long');
     ok(screen.getAllByText('🔥 Discovered', { exact: false }).length === 1, '…only that one');
+    ok(screen.getByRole('button', { name: loc('manor').name, description: (d) => d.startsWith('🔥 Discovered') }), '…and screen readers hear that first');
 
     // ---------- All Hallows' Eve ----------
     onDate(storage, '10-31');
@@ -81,6 +85,8 @@ export default async function ({ gameData: m, load, storage, ok }) {
   roomCard.focus();
   await user.keyboard(' ');
   ok(handlers.onConfirm.calls.length === 2 && handlers.onConfirm.calls[1][0] === manor.rooms[2], '…or by keyboard: Space on a room starts there');
+  ok(screen.getByRole('button', { name: manor.rooms[0], description: `Adjacent: ${m.getAdjacentRooms(manor, manor.rooms[0]).join(', ')}` }),
+    'a room is heard by its name, then the rooms next to it');
   await user.click(screen.getByRole('button', { name: '← Back to location select' }));
   ok(handlers.onBack.calls.length === 1, 'Back returns to the grounds');
 }

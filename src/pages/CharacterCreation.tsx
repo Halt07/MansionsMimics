@@ -34,6 +34,8 @@ export default function CharacterCreation() {
   // under the box describes it
   const stepTitleId = useId();
   const nameHintId = useId();
+  // Origin and form cards are named by their heading and described by what matters about them
+  const cardIds = useId();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -182,12 +184,14 @@ export default function CharacterCreation() {
               return (
                 <Card
                   key={type}
-                  {...asButton(() => handleOriginSelect(type), { pressed: isSelected })}
+                  {...asButton(() => handleOriginSelect(type), {
+                    pressed: isSelected, labelledBy: `${cardIds}-${type}-name`, describedBy: [`${cardIds}-${type}-traits`, `${cardIds}-${type}-lore`],
+                  })}
                   className={`cursor-pointer transition-all border-2 ${FOCUS_RING} ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="font-cinzel text-xl text-foreground">{type} Mimic</CardTitle>
+                      <CardTitle id={`${cardIds}-${type}-name`} className="font-cinzel text-xl text-foreground">{type} Mimic</CardTitle>
                       {isSelected && <Check className="w-5 h-5 text-primary" />}
                     </div>
                   </CardHeader>
@@ -203,7 +207,7 @@ export default function CharacterCreation() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-2 font-cinzel uppercase tracking-wide">Traits</p>
-                        <ul className="space-y-1 text-xs text-muted-foreground">
+                        <ul id={`${cardIds}-${type}-traits`} className="space-y-1 text-xs text-muted-foreground">
                           {type === "Minor" ? (
                             <>
                               <li className="flex gap-1"><span className="text-green-400">✓</span> High plausibility — hard to detect</li>
@@ -222,7 +226,7 @@ export default function CharacterCreation() {
                         </ul>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground/70 border-t border-border pt-3 flavor-text italic">
+                    <div id={`${cardIds}-${type}-lore`} className="text-xs text-muted-foreground/70 border-t border-border pt-3 flavor-text italic">
                       {type === "Minor"
                         ? "The patient predator. It has waited in dark corners for centuries, perfecting the art of stillness."
                         : "The hungry predator. It sacrificed subtlety for raw hunger — larger, faster to consume, but cruder in its imitation."}
@@ -276,10 +280,15 @@ export default function CharacterCreation() {
                 const holidayProps = holidayCardProps(form);
                 const myTierIdx = TIER_ORDER.indexOf(startingTier);
                 const tierDiff = formTierIdx - myTierIdx;
+                const id = (part: string) => `${cardIds}-${form.id}-${part}`;
+                const why = blockedByAboveRule && selectedForms.length < STARTING_FORMS;
                 return (
                   <Card
                     key={form.id}
-                    {...asButton(() => toggleForm(form), { disabled, pressed: !!isSelected })}
+                    {...asButton(() => toggleForm(form), {
+                      disabled, pressed: !!isSelected, labelledBy: id("name"),
+                      describedBy: [tierDiff !== 0 && id("tier"), !!form.holiday && id("season"), id("about"), why && id("why")],
+                    })}
                     data-holiday={holidayProps["data-holiday"]}
                     className={`${holidayProps.className} cursor-pointer transition-all border-2 ${FOCUS_RING} ${
                       isSelected ? "border-primary bg-primary/5" :
@@ -290,16 +299,16 @@ export default function CharacterCreation() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-cinzel text-foreground">{form.name}</h3>
-                          {tierDiff === 1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400">–2 Plaus.</span>}
-                          {tierDiff === -1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400">–1 Pat.</span>}
+                          <h3 id={id("name")} className="font-cinzel text-foreground">{form.name}</h3>
+                          {tierDiff === 1 && <span id={id("tier")} className="text-[10px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400"><span aria-hidden>–2 Plaus.</span><span className="sr-only">–2 Plausibility (from the tier above)</span></span>}
+                          {tierDiff === -1 && <span id={id("tier")} className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400"><span aria-hidden>–1 Pat.</span><span className="sr-only">–1 Patience (from the tier below)</span></span>}
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
-                      {form.holiday && <p className="mb-1"><HolidayBadge form={form} /></p>}
-                      <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
-                      {blockedByAboveRule && selectedForms.length < STARTING_FORMS && (
-                        <p className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
+                      {form.holiday && <p id={id("season")} className="mb-1"><HolidayBadge form={form} /></p>}
+                      <p id={id("about")} className="text-xs text-muted-foreground mb-2">{form.description}</p>
+                      {why && (
+                        <p id={id("why")} className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="text-[11px] border-primary/20 text-primary bg-primary/5">

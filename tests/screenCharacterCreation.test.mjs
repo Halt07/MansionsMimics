@@ -44,6 +44,8 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     ok(origin('Minor') && origin('Lesser'), 'two origins to choose from');
     const originCard = (type) => origin(type).closest('[role="button"]');
     ok(originCard('Minor').getAttribute('aria-pressed') === 'false' && originCard('Minor').tabIndex === 0, 'each origin is a button the keyboard can reach, not yet chosen');
+    ok(screen.getByRole('button', { name: 'Minor Mimic', description: (d) => d.includes('High plausibility') && d.includes('The patient predator') }) === originCard('Minor'),
+      '…heard by its name, then its strengths and weaknesses and what it is');
     originCard('Lesser').focus();
     await user.keyboard('{Enter}');
     ok(originCard('Lesser').getAttribute('aria-pressed') === 'true' && !next().disabled, '…Enter chooses one (announced as chosen)');
@@ -72,6 +74,8 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     ok(formCard(lesserA.name).textContent.includes('–2 Plaus.') && !formCard(minorA.name).textContent.includes('–2 Plaus.'), 'a form from the tier above is marked with its penalty');
     await user.click(heading(lesserA.name));
     ok(formCard(lesserB.name).className.includes('cursor-not-allowed') && formCard(lesserB.name).textContent.includes('You already chose a form from the tier above.'), 'one from the tier above: the others there are blocked, saying why');
+    ok(screen.getByRole('button', { name: lesserB.name, description: (d) => d.startsWith('–2 Plausibility (from the tier above)') && d.includes(lesserB.description) && d.endsWith('You already chose a form from the tier above.') }),
+      '…heard by its name, then its penalty in full, what it is, and why it can\'t be chosen');
     await user.click(heading(lesserB.name));
     ok(next().disabled, '…clicking one does nothing (still only one chosen)');
     await user.click(heading(minorA.name));
