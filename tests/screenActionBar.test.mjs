@@ -29,7 +29,7 @@ export default async function ({ load, ok }) {
   ok(actions.every(([label, key, detail]) => button(label).querySelector('kbd')?.textContent === key && button(label).textContent.includes(detail)), 'each shows its key and what it does');
 
   // ---------- pressing them ----------
-  for (const [label, , , , on] of actions) await user.click(button(label));
+  for (const [label] of actions) await user.click(button(label));
   ok(actions.every(([, , , , on]) => all[on].calls.length === 1), 'each one, clicked, asks the game to do it');
 
   // ---------- only when allowed ----------

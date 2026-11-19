@@ -10,7 +10,6 @@ export default async function ({ gameData: m, load, storage, ok }) {
   const s = await setup(load);
   const { default: FormSelector } = await load('/src/components/game/FormSelector.tsx');
   const user = userEvent.setup();
-  const ref = (id) => { const f = m.ALL_FORMS.find((x) => x.id === id); return { formId: id, name: f.name, tier: f.tier, learned: true }; };
   const open = (character, onConfirm = spy(), onSkip = spy()) => s.show(FormSelector, { character, onConfirm, onSkip }).container;
   const has = (t) => screen.queryAllByText(t, { exact: false }).length > 0;
   // A form's card (a button), by the form's name

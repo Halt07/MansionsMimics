@@ -1,5 +1,5 @@
 // Rare locations (opening, expiring, availability) and the Hollow Reliquary's Devotion.
-export default async function ({ gameData: m, ok, log }) {
+export default async function ({ gameData: m, ok }) {
   const { LOCATIONS, ADVENTURER_TEMPLATES: T } = m;
   const reliquary = LOCATIONS.find((l) => l.id === 'hollow_reliquary');
   const manor = LOCATIONS.find((l) => l.id === 'manor');

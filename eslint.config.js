@@ -58,6 +58,25 @@ export default tseslint.config(
     },
   },
   {
+    // The tests: Node scripts (the runner, Vite) that also drive a jsdom page (browser globals)
+    files: ["tests/**/*.mjs"],
+    extends: [pluginJs.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    plugins: { "unused-imports": pluginUnusedImports },
+    rules: {
+      "no-unused-vars": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
+        "warn",
+        { vars: "all", varsIgnorePattern: "^_", args: "after-used", argsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
     // TypeScript files: type-aware syntax rules on top of the shared ones
     files: ["src/**/*.{ts,tsx}"],
     extends: [tseslint.configs.recommended],
