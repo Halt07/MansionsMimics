@@ -54,6 +54,9 @@ export default async function ({ gameData: m, load, storage, ok }) {
 
     await user.click(cardFor(standard[0].name));
     ok(chosen(standard[0].name) && greyed(standard[1].name), 'one form from the tier above: the others there are greyed out');
+    ok(cardFor(standard[0].name).getAttribute('aria-pressed') === 'true' && cardFor(lesser[1].name).getAttribute('aria-pressed') === 'false'
+      && cardFor(standard[1].name).getAttribute('aria-disabled') === 'true' && !cardFor(lesser[1].name).hasAttribute('aria-disabled'),
+      '…and screen readers hear it too: chosen (pressed), not chosen, and unavailable');
     ok(cardFor(standard[1].name).textContent.includes('You already have a form from the tier above.'), '…saying why');
     await user.click(cardFor(standard[1].name));
     ok(!chosen(standard[1].name) && selected() === '2', '…and clicking one does nothing');

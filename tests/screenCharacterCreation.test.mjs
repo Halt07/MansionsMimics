@@ -89,9 +89,11 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     await user.click(button('Pine'));
     await user.click(button('Iron'));
     ok(picked(button('Iron')) && !picked(button('Pine')) && !next().disabled, 'one primary material: a second pick swaps it');
+    ok(button('Iron').getAttribute('aria-pressed') === 'true' && button('Pine').getAttribute('aria-pressed') === 'false', '…announced as pressed (chosen), the others not');
     await user.click(button('Polished'));
     await user.click(button('Smooth'));
     ok(picked(button('Polished')) && !picked(button('Smooth')), 'one surface trait: a second is ignored until the first is taken off');
+    ok(button('Polished').getAttribute('aria-pressed') === 'true' && button('Smooth').getAttribute('aria-pressed') === 'false', '…and traits announce it too');
     await user.click(button('Worn'));
 
     // ---------- changing your mind about the origin ----------

@@ -342,6 +342,7 @@ export default function CharacterCreation() {
                 {STARTING_MATERIALS[origin || "Minor"].map(mat => (
                   <button
                     key={mat}
+                    aria-pressed={appearance.primaryMaterials.includes(mat)}
                     onClick={() => toggleMaterial("primaryMaterials", mat)}
                     className={`px-3 py-1.5 rounded border text-sm transition-all ${
                       appearance.primaryMaterials.includes(mat)
@@ -362,6 +363,7 @@ export default function CharacterCreation() {
                 {STARTING_TRAITS.surface.map(trait => (
                   <button
                     key={trait}
+                    aria-pressed={(appearance.surfaceTraits || []).includes(trait)}
                     onClick={() => toggleTrait("surfaceTraits", trait)}
                     className={`px-3 py-1.5 rounded border text-sm transition-all ${
                       (appearance.surfaceTraits || []).includes(trait)
@@ -382,6 +384,7 @@ export default function CharacterCreation() {
                 {STARTING_TRAITS.condition.map(trait => (
                   <button
                     key={trait}
+                    aria-pressed={(appearance.conditionTraits || []).includes(trait)}
                     onClick={() => toggleTrait("conditionTraits", trait)}
                     className={`px-3 py-1.5 rounded border text-sm transition-all ${
                       (appearance.conditionTraits || []).includes(trait)

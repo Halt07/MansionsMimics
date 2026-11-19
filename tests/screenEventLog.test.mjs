@@ -26,6 +26,8 @@ export default async function ({ load, ok }) {
     ok(document.querySelectorAll('.log-line')[1].className.includes('opacity-100') && document.querySelectorAll('.log-line')[0].className.includes('opacity-70'), 'the newest line stands out');
     ok(scrolled.length === 1 && scrolled[0].el.hasAttribute('data-radix-scroll-area-viewport') && scrolled[0].opts.behavior === 'smooth', 'a new line: the log scrolls its own area down to it');
     ok(!scrolled.some((x) => x.intoView), '…without scrolling the page');
+    const live = screen.getByRole('log', { name: 'Event Log' });
+    ok(live && [...document.querySelectorAll('.log-line')].every((l) => live.contains(l)), 'the lines are a live log, named "Event Log": screen readers announce each new one');
   } finally {
     proto.scrollTo = scrollTo;
     proto.scrollIntoView = scrollIntoView;

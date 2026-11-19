@@ -33,6 +33,7 @@ export default function FormsSection() {
         <button
           key={tier}
           onClick={() => setSelectedTier(tier)}
+          aria-pressed={selectedTier === tier}
           className={`px-3 py-1.5 rounded border text-xs font-cinzel transition-all ${
           selectedTier === tier ?
           "border-primary bg-primary/10 text-primary" :
@@ -45,6 +46,7 @@ export default function FormsSection() {
           {season && (
             <button
               onClick={() => setSelectedTier("season")}
+              aria-pressed={selectedTier === "season"}
               className={`px-3 py-1.5 rounded border text-xs font-cinzel transition-all ${
                 selectedTier === "season"
                   ? "border-primary bg-primary/10 text-primary"

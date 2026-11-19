@@ -78,6 +78,7 @@ export default function Codex() {
             <button
               key={s}
               onClick={() => setActiveSection(s)}
+              aria-current={activeSection === s ? "true" : undefined}
               className={`w-full text-left px-3 py-2 rounded text-sm font-cinzel transition-colors ${
               activeSection === s ?
               "bg-primary/10 text-primary" :

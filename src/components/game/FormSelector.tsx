@@ -77,6 +77,8 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
       <button
         key={form.id}
         onClick={() => !isDisabled && toggle(form)}
+        aria-pressed={isSelected}
+        aria-disabled={isDisabled || undefined}
         data-holiday={holidayProps["data-holiday"]}
         className={`${holidayProps.className} text-left px-3 py-2.5 rounded-lg border transition-all text-xs ${
           isSelected

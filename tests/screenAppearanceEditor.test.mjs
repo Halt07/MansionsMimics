@@ -36,6 +36,7 @@ export default async function ({ gameData: m, load, ok }) {
   ok(has('Primary Material — learned only') && !has('Secondary'), 'Lesser: one primary material slot, and no secondary');
   await user.click(slot('Oak'));
   ok(on(slot('Oak')), 'clicking a material wears it');
+  ok(slot('Oak').getAttribute('aria-pressed') === 'true' && slot('Iron').getAttribute('aria-pressed') === 'false', '…announced as pressed (worn), the rest not');
   await user.click(slot('Iron'));
   ok(on(slot('Iron')) && !on(slot('Oak')), '…a slot of one swaps it for the next one clicked');
   await user.click(slot('Iron'));
@@ -83,6 +84,7 @@ export default async function ({ gameData: m, load, ok }) {
   await user.click(slot('Polished'));
   await user.click(slot('Smooth'));
   ok(on(slot('Polished')) && !on(slot('Smooth')), "Lesser wears one surface trait: a second click doesn't swap, it's ignored");
+  ok(slot('Polished').getAttribute('aria-pressed') === 'true' && slot('Smooth').getAttribute('aria-pressed') === 'false', '…traits announce whether they are worn too');
   ok(has('No scents learned yet.') && !has('Symbolic Traits'), 'no scents learned: says so; and no symbolic traits until Standard');
   open({ tier: 'Standard', mass: 12 });
   ok(has('No symbolic traits learned yet.'), 'Standard: symbolic traits, once learned');

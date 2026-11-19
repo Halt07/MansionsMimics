@@ -79,6 +79,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         key={mat}
         type="button"
         title={title}
+        aria-pressed={selected}
         aria-disabled={blocked}
         onClick={() => { if (!blocked) toggleMat(field, mat, limits[field]); }}
         className={`px-2.5 py-1 rounded border text-xs transition-all ${style}`}
@@ -191,6 +192,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               {TRAITS.surface.filter(known).map(trait => (
                 <button
                   key={trait}
+                  aria-pressed={(appearance.surfaceTraits || []).includes(trait)}
                   onClick={() => toggleTrait("surfaceTraits", trait, limits.surfaceTraits)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all ${
                     (appearance.surfaceTraits || []).includes(trait)
@@ -217,6 +219,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
                 : TRAITS.symbolic.filter(known).map(trait => (
                   <button
                     key={trait}
+                    aria-pressed={(appearance.symbolicTraits || []).includes(trait)}
                     onClick={() => toggleTrait("symbolicTraits", trait, limits.symbolicTraits)}
                     className={`px-2.5 py-1 rounded border text-xs transition-all ${
                       (appearance.symbolicTraits || []).includes(trait)
@@ -242,6 +245,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
               {TRAITS.condition.filter(known).map(trait => (
                 <button
                   key={trait}
+                  aria-pressed={(appearance.conditionTraits || []).includes(trait)}
                   onClick={() => toggleTrait("conditionTraits", trait, limits.conditionTraits)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all ${
                     (appearance.conditionTraits || []).includes(trait)
@@ -268,6 +272,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
                 : TRAITS.scent.filter(known).map(trait => (
                 <button
                   key={trait}
+                  aria-pressed={(appearance.scentTraits || []).includes(trait)}
                   onClick={() => toggleTrait("scentTraits", trait, limits.scentTraits)}
                   className={`px-2.5 py-1 rounded border text-xs transition-all ${
                     (appearance.scentTraits || []).includes(trait)

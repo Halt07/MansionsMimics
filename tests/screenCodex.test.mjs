@@ -40,6 +40,7 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
         opened.push(screen.queryByRole('heading', { level: 2, name: heading }) !== null && section(name).className.includes('bg-primary/10'));
       }
       ok(opened.every(Boolean), 'each of the eight sections opens from the side, marked as the one open');
+      ok(section('Mechanics').getAttribute('aria-current') === 'true' && !section('Overview').hasAttribute('aria-current'), '…and announced as the current one');
 
       // ---------- whose discoveries ----------
       const [a, b] = m.ADVENTURER_TEMPLATES.filter((x) => !x.minTier);
@@ -76,6 +77,7 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     ok(!screen.queryByRole('button', { name: /Current Season/ }), 'out of season: no seasonal tab (the forms stay a surprise)');
     ok(m.MASTER_FORMS.Minor.every((f) => screen.getByRole('heading', { level: 3, name: f.name })), 'Minor forms to begin with');
     await user.click(section('Lesser'));
+    ok(section('Lesser').getAttribute('aria-pressed') === 'true' && section('Minor').getAttribute('aria-pressed') === 'false', 'the tier shown is announced as pressed');
     ok(m.MASTER_FORMS.Lesser.every((f) => screen.getByRole('heading', { level: 3, name: f.name })), 'each tier shows its forms');
     onDate(storage, '10-31');
     await open();

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { GameEvent, GameEventType } from "@/data/vocabulary";
 
@@ -18,6 +18,7 @@ const EVENT_STYLES: Record<GameEventType, { prefix: string; color: string }> = {
 
 export default function EventLogPanel({ events = [] }: { events?: GameEvent[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   // Show the newest line by scrolling the log's own area, not the page: scrollIntoView would
   // also scroll the window (on a phone, pulling you away from the status and map each turn)
@@ -30,10 +31,11 @@ export default function EventLogPanel({ events = [] }: { events?: GameEvent[] })
     <div className="bg-card border border-border rounded-lg overflow-hidden h-full flex flex-col">
       <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-primary animate-subtle-pulse" />
-        <span className="text-xs font-cinzel text-muted-foreground tracking-widest uppercase">Event Log</span>
+        <span id={titleId} className="text-xs font-cinzel text-muted-foreground tracking-widest uppercase">Event Log</span>
       </div>
       <ScrollArea className="flex-1 px-3 py-2">
-        <div className="space-y-1.5">
+        {/* A live log: screen readers announce each new line as it's added (not the whole log) */}
+        <div role="log" aria-labelledby={titleId} className="space-y-1.5">
           {events.length === 0 && (
             <p className="text-xs text-muted-foreground/50 flavor-text italic text-center py-4">
               All is quiet... for now.
