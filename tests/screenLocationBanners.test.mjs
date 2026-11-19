@@ -1,6 +1,7 @@
-// The hunt's status strips (src/components/game/hunt/LocationBanners.tsx), rendered from real
-// hunts: one per thing going on at the location, and the party growing restless.
-import { setup, mimic, text } from './screen.mjs';
+// The hunt's status strips (src/components/game/hunt/LocationBanners.tsx), with React Testing
+// Library from real hunts: one per thing going on at the location, and the party growing restless.
+// Each check reads what the strips say, as the page has it (textContent).
+import { setup, mimic } from './screen.mjs';
 
 export default async function ({ gameData: m, load, ok }) {
   const s = await setup(load);
@@ -9,7 +10,7 @@ export default async function ({ gameData: m, load, ok }) {
   const loc = (id) => m.LOCATIONS.find((l) => l.id === id);
   const start = (id, room = loc(id).rooms[0], character = mimic()) => m.beginHunt(character, loc(id), room, opts).hunt;
   const banners = (hunt, { character = mimic(), huntOver = false } = {}) =>
-    text(s.markupInHunt(LocationBanners, {}, s.huntState(character, hunt, { huntOver })));
+    s.showInHunt(LocationBanners, {}, s.huntState(character, hunt, { huntOver })).container.textContent;
 
   // ---------- an ordinary hunt ----------
   const manor = start('manor');

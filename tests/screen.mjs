@@ -1,20 +1,15 @@
 /**
- * Helpers for screen tests. Two ways to render a component:
- *
- *   show / showInHunt      React Testing Library, onto the test page (jsdom): find things by
- *                          role and text, and click with userEvent. Use this for anything a
- *                          player does (opening, choosing, clicking).
- *   markup / markupInHunt  the HTML as a string (react-dom/server), for checking what a screen
- *                          shows at a glance: classes, data attributes and titles.
+ * Helpers for screen tests. Components render with React Testing Library onto the test page
+ * (jsdom): find things by role, text or title, read data attributes from the elements, and click
+ * with userEvent.
  *
  *   const s = await setup(load);
+ *   s.show(RoomMap, { location, mimicRoom });
  *   s.showInHunt(PartyCard, { onToggle }, s.huntState(character, hunt));
- *   const html = s.markup(RoomMap, { location, mimicRoom });
  *
  * Not a test file itself (the runner only runs *.test.mjs).
  */
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { cleanup, render } from '@testing-library/react';
 
 export async function setup(load) {
@@ -32,8 +27,6 @@ export async function setup(load) {
       cleanup();
       return render(createElement(Component, props), { wrapper: inHunt(hunt) });
     },
-    markup: (Component, props = {}) => renderToStaticMarkup(createElement(Component, props)),
-    markupInHunt: (Component, props, hunt) => renderToStaticMarkup(createElement(inHunt(hunt), null, createElement(Component, props))),
   };
 }
 
@@ -87,34 +80,4 @@ export async function withEmptyDb(storage, fn) {
 export function onDate(storage, monthDay) {
   if (monthDay) storage.set('mm.debugDate', monthDay);
   else storage.delete('mm.debugDate');
-}
-
-/**
- * The visible text, without tags: inline tags (span, b, i…) join their words as the browser would,
- * other tags break them. Entities are decoded for the common few React escapes.
- */
-export function text(html) {
-  return html.replace(/<\/?(span|b|i|em|strong|a)(\s[^>]*)?>/g, '').replace(/<[^>]*>/g, ' ').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
-}
-
-/** How many times `needle` appears. */
-export const count = (html, needle) => html.split(needle).length - 1;
-
-/** Every value of an attribute (e.g. all the `title`s), decoded. */
-export function attrs(html, name) {
-  return [...html.matchAll(new RegExp(`\\s${name}="([^"]*)"`, 'g'))].map((m) => text(m[1]));
-}
-
-/**
- * The room map's cells, by room name: each one's opening tag (its data-* flags) and contents.
- * Relies on RoomMap's markup: every cell starts with `<div class="room-cell"`.
- */
-export function roomCells(html) {
-  const cells = {};
-  for (const chunk of html.split('<div class="room-cell"').slice(1)) {
-    const name = text(chunk.match(/<p class="room-name">([^<]*)<\/p>/)?.[1] ?? '');
-    cells[name] = { tag: chunk.slice(0, chunk.indexOf('>')), html: chunk };
-  }
-  return cells;
 }
