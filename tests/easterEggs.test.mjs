@@ -5,6 +5,8 @@ export default async function ({ gameData: m, ok }) {
   ok(m.nameFlavor('Mimic') === 'Mimic… how original.', 'Mimic');
   ok(m.nameFlavor('Tiny') === 'Tiny, how cute!' && m.nameFlavor('puny') === 'puny, how cute!', 'small names are cute (keeping the player’s spelling)');
   ok(m.nameFlavor('Rex') === "Rex? You're a mimic, not a dog." && m.nameFlavor('Rover') !== null, 'dog names');
+  ok(m.nameFlavor('Wardrobe') === 'Is that a forest in there?', 'Wardrobe: a forest (one question mark, no stray period)');
+  ok(['Spare Oom', 'spare  oom', 'Spareoom', 'Spare Um', 'Sparum'].every((n) => m.nameFlavor(n) === 'Definitely not in Narnia.'), 'Spare Oom, as two words or one (spaces in between are kept, just squeezed to one)');
   ok(m.nameFlavor('Chesty') === null && m.nameFlavor('Tinybox') === null, 'other names get no remark');
   ok(m.RIVAL_SAME_SHAPE_CHANCE === 0.2 && m.RIVAL_SAME_SHAPE_LINE.includes('wearing your shape'), 'the rival wears your shape 20% of the time');
 

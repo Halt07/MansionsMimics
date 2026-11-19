@@ -2,13 +2,18 @@ import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneate
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";
-import { asButton, FOCUS_RING } from "@/lib/asButton";
+import { FOCUS_RING } from "@/lib/asButton";
 import { useHunt, type HuntState } from "./HuntContext";
 
 /** The hunt, once there's a location and a room. */
 type ViewProps = HuntState & { location: HuntLocation; mimicRoom: RoomName };
 
-/** The party as a list (where everyone is, how far, their state) or as the room map. One card, click to switch. */
+/**
+ * The party as a list (where everyone is, how far, their state) or as the room map. Click anywhere
+ * on the card to switch. For the keyboard and screen readers the switch is the small button in the
+ * header (a click on it reaches the card's handler, so it switches once); the list and map stay
+ * ordinary content, read out as such.
+ */
 export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   const hunt = useHunt();
   const { location, mimicRoom, party, activeAdventurers, character } = hunt;
@@ -18,19 +23,17 @@ export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   const consumed = party.filter(a => a.isConsumed).length;
   const counts = `(${activeAdventurers.length} active / ${consumed} consumed)`;
   return (
-    <Card
-      {...asButton(onToggle)}
-      aria-label={showMap ? "Show the party list" : "Show the room map"}
-      className={`sidebar-view-card bg-card border-border fx-shake ${FOCUS_RING}`}
-    >
+    <Card onClick={onToggle} className="sidebar-view-card bg-card border-border fx-shake">
       <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
             {showMap ? <>{location.name} <span className="normal-case tracking-normal">{counts}</span></> : <>Party {counts}</>}
           </CardTitle>
-          {showMap
-            ? <span className="view-toggle-icon" aria-hidden>Aa</span>
-            : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
+          <button type="button" aria-label={showMap ? "Show the party list" : "Show the room map"} className={`view-toggle -m-1 p-1 rounded ${FOCUS_RING}`}>
+            {showMap
+              ? <span className="view-toggle-icon" aria-hidden>Aa</span>
+              : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
+          </button>
         </div>
       </CardHeader>
       {showMap ? <MapView {...props} /> : <ListView {...props} />}

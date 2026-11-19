@@ -47,6 +47,10 @@ export default async function ({ gameData: m, load, ok }) {
   await user.keyboard('{Enter}');
   await user.keyboard(' ');
   ok(onToggle.calls.length === 3, '…so do Enter and Space, with it focused');
+  await user.click(row(first.name));
+  ok(onToggle.calls.length === 4, 'clicking anywhere else on the card switches too');
+  ok(hunt.party.every((a) => !row(a.name).closest('button, [role="button"]')), "the list itself isn't inside a button, so screen readers read who is where");
+  ok(screen.getAllByRole('button').length === 1, '…the switch is one small button of its own');
 
   // ---------- the map ----------
   const mapped = show('map', hunt);

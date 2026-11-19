@@ -546,7 +546,7 @@
   transition: border-color 0.3s ease;
 }
 .sidebar-view-card:hover,
-.sidebar-view-card:focus-visible {
+.sidebar-view-card:has(.view-toggle:focus-visible) {
   border-color: hsl(var(--primary) / 0.4);
   outline: none;
 }
@@ -560,7 +560,7 @@
   transition: color 0.3s ease, text-shadow 0.3s ease, filter 0.3s ease;
 }
 .sidebar-view-card:hover .view-toggle-icon,
-.sidebar-view-card:focus-visible .view-toggle-icon {
+.sidebar-view-card:has(.view-toggle:focus-visible) .view-toggle-icon {
   color: hsl(var(--primary));
   text-shadow: 0 0 6px hsl(var(--primary) / 0.8), 0 0 12px hsl(var(--primary) / 0.4);
 }
@@ -577,7 +577,7 @@
   border-radius: 0.5px;
 }
 .sidebar-view-card:hover .view-toggle-map,
-.sidebar-view-card:focus-visible .view-toggle-map {
+.sidebar-view-card:has(.view-toggle:focus-visible) .view-toggle-map {
   filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.9));
 }
 
