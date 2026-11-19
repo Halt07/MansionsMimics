@@ -56,7 +56,11 @@ export default async function ({ gameData: m, ok }) {
   const book = 'minor_book';
   const outgrown = up(mimic({ mass: top, forms: [ref(book), ref('lesser_chest')], activeFormIndex: 1 }), 'mass');
   ok(outgrown.formsLost && outgrown.changes.forms.map((f) => f.formId).join() === 'lesser_chest', 'Lesser → Standard: a Minor form (two tiers down now) is lost');
-  ok(outgrown.changes.activeFormIndex === 0, '…and the active form resets to the first one left');
+  ok(outgrown.changes.activeFormIndex === 0, '…the form being worn (now first) is still worn');
+  const wearingCrate = up(mimic({ mass: top, forms: [ref('lesser_chest'), ref(book), ref('lesser_crate')], activeFormIndex: 2 }), 'mass');
+  ok(wearingCrate.changes.forms.map((f) => f.formId).join() === 'lesser_chest,lesser_crate' && wearingCrate.changes.activeFormIndex === 1, '…wherever it ends up in the list (still the Crate)');
+  const wearingBook = up(mimic({ mass: top, forms: [ref('lesser_chest'), ref(book)], activeFormIndex: 1 }), 'mass');
+  ok(wearingBook.changes.activeFormIndex === 0, "…and if it's the one lost, the first form left");
   const keeps = up(mimic({ mass: top, forms: [ref('lesser_chest')] }), 'mass');
   ok(!keeps.formsLost && !('forms' in keeps.changes) && !('activeFormIndex' in keeps.changes), 'nothing lost: the forms are left alone');
   const shrunk = up(mimic({ mass: top, forms: [ref(book)], currentAppearance: { primaryMaterials: ['Thimblewood'] } }), 'mass');

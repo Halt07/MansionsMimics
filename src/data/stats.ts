@@ -381,7 +381,9 @@ export function applyUpgrade(
   const formsLost = kept.length < character.forms.length;
   if (formsLost) {
     changes.forms = kept;
-    changes.activeFormIndex = 0;
+    // Keep wearing the same form if it survived (otherwise the first one left)
+    const activeId = character.forms[character.activeFormIndex]?.formId;
+    changes.activeFormIndex = Math.max(0, kept.findIndex(f => f.formId === activeId));
   }
   return { kind: "evolved", tier: nextTier, mass, weakened, hatboxToLegend, formsLost, changes };
 }
