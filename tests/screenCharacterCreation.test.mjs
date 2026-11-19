@@ -53,6 +53,8 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
     // ---------- name ----------
     await user.click(next());
     const nameBox = screen.getByPlaceholderText("Enter your mimic's name...");
+    ok(screen.getByRole('textbox', { name: 'Name', description: 'Adventurers will never know this name. It is yours alone.' }) === nameBox,
+      'the name box is announced as "Name" (the step\'s title), described by the line under it');
     await user.type(nameBox, ' H ');
     ok(next().disabled, 'a name needs two letters (spaces around it do not count)');
     await user.clear(nameBox);

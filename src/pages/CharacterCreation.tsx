@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -29,6 +29,10 @@ const withField = <F extends keyof Appearance>(a: Appearance, field: F, value: A
 export default function CharacterCreation() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  // The step's title labels its field (on the Name step, the name box is "Name"), and the line
+  // under the box describes it
+  const stepTitleId = useId();
+  const nameHintId = useId();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -170,7 +174,7 @@ export default function CharacterCreation() {
             </div>
           ))}
         </div>
-        <p className="text-center text-xs text-muted-foreground font-cinzel tracking-widest uppercase mb-6">{STEPS[step]}</p>
+        <p id={stepTitleId} className="text-center text-xs text-muted-foreground font-cinzel tracking-widest uppercase mb-6">{STEPS[step]}</p>
 
         {/* STEP 0: Origin */}
         {step === 0 && (
@@ -246,10 +250,12 @@ export default function CharacterCreation() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Enter your mimic's name..."
+              aria-labelledby={stepTitleId}
+              aria-describedby={nameHintId}
               className="text-center text-xl font-cinzel bg-card border-border focus:border-primary h-14 text-foreground"
               maxLength={32}
             />
-            <p className="text-xs text-muted-foreground">Adventurers will never know this name. It is yours alone.</p>
+            <p id={nameHintId} className="text-xs text-muted-foreground">Adventurers will never know this name. It is yours alone.</p>
           </div>
         )}
 
