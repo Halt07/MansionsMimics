@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type HuntReport as Report, type UpgradeChoice } from "@/data/gameData";
@@ -7,11 +8,25 @@ import { asButton, FOCUS_RING } from "@/lib/asButton";
 import HuntReport from "../HuntReport";
 import { useHunt } from "./HuntContext";
 
+/**
+ * Brings an end screen into view once, when it appears: the hunt report is what matters now, and
+ * on a phone it opens below the status and party cards. Just once, so it never fights the player
+ * scrolling back up. Smooth scroll unless the player prefers reduced motion.
+ */
+function useScrollIntoViewOnce() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    ref.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, []);
+  return ref;
+}
 
 /** Every adventurer is gone: the hunt's report, then forms or straight back out. */
 export function HuntOverPanel({ report, onChooseForms, onHuntAgain }: { report: Report | null; onChooseForms: () => void; onHuntAgain: () => void }) {
+  const ref = useScrollIntoViewOnce();
   return (
-    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
+    <div ref={ref} className="scroll-mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
       <p className="text-primary font-cinzel mb-3">The hunt is over.</p>
       {report && <div className="mb-4"><HuntReport report={report} /></div>}
       <div className="flex gap-2 justify-center">
@@ -81,8 +96,9 @@ interface GameOverScreenProps {
 /** Found out, or the party gave up and left. */
 export function GameOverScreen({ reason, report, onChooseForms, onHuntAgain }: GameOverScreenProps) {
   const left = reason === "abandoned";
+  const ref = useScrollIntoViewOnce();
   return (
-    <div className="text-center py-12">
+    <div ref={ref} className="scroll-mt-4 text-center py-12">
       <div className="text-6xl mb-4">{left ? "🌫️" : "🔥"}</div>
       <h2 className={`font-cinzel text-3xl mb-2 ${left ? "text-muted-foreground" : "text-destructive"}`}>
         {left ? "They Left" : "Discovered"}

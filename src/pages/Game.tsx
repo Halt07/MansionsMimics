@@ -504,7 +504,7 @@ export default function Game() {
   return (
     <HuntContext.Provider value={huntView}>
     <div
-      className={`hunt-stage min-h-screen bg-background ${phase === "hunt" ? "pb-28 lg:pb-0" : ""}`}
+      className={`hunt-stage min-h-screen bg-background ${phase === "hunt" && !huntOver ? "pb-28 lg:pb-0" : ""}`}
       style={{ "--suspicion": suspicion } as CSSProperties}
       data-suspicion={suspicion}
       data-fx={fx ?? undefined}
@@ -583,21 +583,26 @@ export default function Game() {
                 />
               )}
               {showMovePanel && canRelocate && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
-              <ActionBar
-                canRelocate={canRelocate}
-                canLure={canLure}
-                canStrike={canStrikeNow}
-                canWait={canWait}
-                onRelocate={toggleMovePanel}
-                onLure={doLure}
-                onStrike={doStrike}
-                onWait={doWait}
-              />
-              <MealsHere
-                onEatCreature={c => act((h, ch) => eatCreature(h, ch, c.uid))}
-                onEatStar={doEatStar}
-                onEatFrozen={body => act((h, ch) => eatFrozen(h, ch, body.id))}
-              />
+              {/* Once the hunt is won there's nothing left to do: the report takes their place */}
+              {!huntOver && (
+                <>
+                  <ActionBar
+                    canRelocate={canRelocate}
+                    canLure={canLure}
+                    canStrike={canStrikeNow}
+                    canWait={canWait}
+                    onRelocate={toggleMovePanel}
+                    onLure={doLure}
+                    onStrike={doStrike}
+                    onWait={doWait}
+                  />
+                  <MealsHere
+                    onEatCreature={c => act((h, ch) => eatCreature(h, ch, c.uid))}
+                    onEatStar={doEatStar}
+                    onEatFrozen={body => act((h, ch) => eatFrozen(h, ch, body.id))}
+                  />
+                </>
+              )}
               {huntOver && (
                 <HuntOverPanel report={endReport} onChooseForms={() => { leaveHunt(); startFormSelection("setup"); }} onHuntAgain={backToSetup} />
               )}

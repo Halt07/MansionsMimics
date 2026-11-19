@@ -138,6 +138,7 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       await until(() => has('The hunt is over.'), 'the hunt to be won');
       ok(!has('Select Active Form'), 'once the hunt is won, the open form panel goes');
       ok(screen.getByRole('button', { name: /Change Form/ }).disabled && screen.getByRole('button', { name: /Appearance/ }).disabled, '…and Change Form and Appearance are greyed out');
+      ok(!action('Wait') && !action('Strike!') && !document.querySelector('kbd'), '…the hunt actions are gone, the report in their place');
       const won = await stored(mimic.id);
       const logged = log().length;
       await user.keyboard('w');

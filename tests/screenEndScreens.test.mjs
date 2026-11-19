@@ -51,6 +51,24 @@ export default async function ({ gameData: m, load, ok }) {
   ok(screen.getByRole('heading', { name: 'They Left' }) && has('found nothing of interest'), 'the party gave up: They Left');
   ok(!has('burned'), '…and nothing is burned');
 
+  // ---------- brought into view once, when it appears ----------
+  const proto = window.Element.prototype;
+  const scrollIntoView = proto.scrollIntoView;
+  const scrolls = [];
+  proto.scrollIntoView = function (opts) { scrolls.push({ el: this, opts }); };
+  try {
+    const { rerender } = s.show(HuntOverPanel, { report: won, ...over });
+    ok(scrolls.length === 1 && scrolls[0].el.textContent.startsWith('The hunt is over.') && scrolls[0].opts.block === 'start',
+      'the hunt-over panel scrolls into view when it appears, its top at the top of the screen');
+    rerender(createElement(HuntOverPanel, { report: won, ...over }));
+    ok(scrolls.length === 1, '…once (it never fights the player scrolling back up)');
+    scrolls.length = 0;
+    s.show(Routed, { reason: 'discovered', report: caught, ...lost });
+    ok(scrolls.length === 1 && scrolls[0].el.textContent.includes('Discovered'), 'so does the game-over screen');
+  } finally {
+    proto.scrollIntoView = scrollIntoView;
+  }
+
   // ---------- evolving ----------
   const cfg = m.TIER_CONFIG.Lesser;
   const upgrade = (character) => {
