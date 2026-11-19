@@ -11,13 +11,24 @@ import type { Material, TeachableTrait } from "./vocabulary";
 import type { Form } from "./mimicData";
 import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, AP_REWARDS, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import { calcAllureInterest, consumeSuspicion, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, type CheckResult } from "./gameData";
+import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, type CheckResult } from "./gameData";
 import { RIVAL_STATS, pickTreasurePrize, rivalEscapeRoom, type RivalMimic, type TreasurePrize } from "./events";
 import { TITANIC_FEAST_GIANTS, isTitanicFeastComplete } from "./stats";
 
 const stillHunting = (a: PartyMember) => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared;
 
-// ---------- the checks: adhesion, escaping, AP ----------
+// ---------- the checks: adhesion, escaping, AP, witnesses ----------
+
+/**
+ * Suspicion added when a party member is consumed whole while others remain in the hunt.
+ * A disappearance alone is +1; anyone still in the room may have seen it happen (+2), and a crowd
+ * of 3 or more witnesses raises the alarm further (+3).
+ */
+export function consumeSuspicion(witnesses: number): number {
+  if (witnesses >= 3) return 3;
+  if (witnesses >= 1) return 2;
+  return 1;
+}
 
 /** Extra dice an Elusive adventurer rolls when resisting a Strike (or bite). */
 export const ELUSIVE_EXTRA_DICE = 1;

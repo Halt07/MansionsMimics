@@ -5,8 +5,7 @@
 
 2. Finish splitting gameData.ts (low–medium)
 
-- Down to about 890 lines (the combat checks now live in lure.ts and strike.ts, and the action limit in hunt.ts). Natural homes for what's left:
-  - Behavior reactions (about 155) into behaviors.ts.
+- Down to about 750 lines (the combat checks now live in lure.ts and strike.ts, the action limit in hunt.ts, and the behavior reactions in behaviors.ts). Natural homes for what's left:
   - Easter eggs (about 130) into easterEggs.ts.
   - Party and creature movement (about 155) into movement.ts.
   - Form rules (valid forms, variants, seasonal forms, form-tier penalties; about 225) into forms.ts.

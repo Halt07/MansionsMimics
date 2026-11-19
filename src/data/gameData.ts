@@ -1,7 +1,7 @@
 // ============================================================
 // MANSIONS & MIMICS — Game rules
 // The core rules of a hunt: rooms, dice, which forms a mimic can take, magic, burns, where
-// the party moves, and how adventurers react.
+// the party moves, and the easter eggs.
 // The rest lives alongside it:
 //   ./events     location events (rivals, the Sinking Ship, Devotion, the seasonal twists)
 //   ./stats      effective stats, mass decay, achievements and lifetime stats
@@ -9,6 +9,7 @@
 //   ./mealPrep   setting up a hunt (the party, companions, small creatures, sickness)
 //   ./strike     what happens when the mimic strikes (rivals, bites, swallowing whole), and the adhesion check
 //   ./lure       luring adventurers in, and the stealth and allure checks
+//   ./behaviors  how adventurers with a behavior react to what the mimic does
 //   ./hunt       a hunt in progress (Hunt), and what every turn shares (Turn): suspicion, meals, the end of a turn
 //   ./turns      each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait and eating
 // The data lives in ./vocabulary, ./mimicData, ./adventurerData and ./locationData. This module
@@ -17,18 +18,19 @@
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_MATERIALS, ALL_STARTING_TRAITS, MATERIALS, TIER_ORDER,
-  type GameEventType, type MagicMaterial, type Material, type Tier, type Trait,
+  type MagicMaterial, type Material, type Tier, type Trait,
 } from "./vocabulary";
 import {
   ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type SeasonalForm,
 } from "./mimicData";
-import { BEHAVIORS, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
+import type { PartyMember } from "./adventurerData";
 import {
   LOCATIONS, ROOM_FORM_MODIFIERS, type HuntLocation, type LocationCreature, type LocationId, type RoomModifier,
   type RoomContextMod, type RoomName,
 } from "./locationData";
 import { HOLIDAYS, isInSeason, seasonStart, today } from "./holidays";
 import { answersDoor, claimStar, nextHouse, rivalInRoom, type RivalMimic } from "./events";
+import { isStationary } from "./behaviors";
 
 export * from "./vocabulary";
 export * from "./mimicData";
@@ -43,6 +45,7 @@ export * from "./codex";
 export * from "./mealPrep";
 export * from "./strike";
 export * from "./lure";
+export * from "./behaviors";
 export * from "./hunt";
 export * from "./turns";
 
@@ -82,6 +85,16 @@ export function getRoomDistance(location: HuntLocation, roomA: RoomName, roomB: 
 // Get adjacent rooms (distance 1) from a given room
 export function getAdjacentRooms(location: HuntLocation, room: RoomName): readonly RoomName[] {
   return (location.roomGraph?.[room] || []);
+}
+
+/** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
+export function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
+  if (fromRoom === targetRoom) return fromRoom;
+  const options = getAdjacentRooms(location, fromRoom);
+  if (options.length === 0) return fromRoom;
+  return options.reduce((best, room) =>
+    getRoomDistance(location, room, targetRoom) < getRoomDistance(location, best, targetRoom) ? room : best
+  );
 }
 
 // ============================================================
@@ -736,159 +749,4 @@ export function quirkLine(
 ): string | null {
   if (!adventurer.appliedQuirk || random() >= QUIRK_LINE_CHANCE) return null;
   return adventurer.appliedQuirk.replaceAll("{name}", adventurer.name).replaceAll("{form}", formName);
-}
-
-// ============================================================
-// BEHAVIOR REACTIONS (the behaviors themselves are listed in ./adventurerData)
-// ============================================================
-/** Mimic actions that behaviors can react to. */
-export type BehaviorTrigger = "relocate" | "strike" | "formChange" | "feed";
-
-/** Changes to one party member. suspicionDelta is added to their current suspicion. */
-export interface PartyMemberPatch {
-  location?: RoomName;
-  isAttracted?: boolean;
-  suspicionDelta?: number;
-}
-
-export interface BehaviorReactions {
-  patches: Record<string, PartyMemberPatch>;
-  /** Party-wide suspicion to add. */
-  suspicion: number;
-  events: { type: GameEventType; text: string }[];
-  /** Adventurers who moved into the mimic's room (they need stealth checks). */
-  arrivals: PartyMember[];
-}
-
-export interface BehaviorContext {
-  party: readonly PartyMember[];
-  location: HuntLocation | null | undefined;
-  mimicRoom: RoomName | null | undefined;
-  fromRoom?: RoomName | null;
-  excludeIds?: readonly string[];
-  /** Lets magic materials suppress behaviors. */
-  appearance?: AppearanceLike;
-}
-
-/**
- * Suspicion added when a party member is consumed whole while others remain in the hunt.
- * A disappearance alone is +1; anyone still in the room may have seen it happen (+2), and a crowd
- * of 3 or more witnesses raises the alarm further (+3).
- */
-export function consumeSuspicion(witnesses: number): number {
-  if (witnesses >= 3) return 3;
-  if (witnesses >= 1) return 2;
-  return 1;
-}
-
-/** Hidden behaviors are never revealed to the player (e.g. in the Codex). */
-export function isHiddenBehavior(id: BehaviorId): boolean {
-  const info: BehaviorInfo = BEHAVIORS[id];
-  return !!info.hidden;
-}
-
-/** Adventurers with this behavior never wander on their own. */
-export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean {
-  return adventurer.behavior === "stoneWatch";
-}
-
-const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
-
-/** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
-export function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
-  if (fromRoom === targetRoom) return fromRoom;
-  const options = getAdjacentRooms(location, fromRoom);
-  if (options.length === 0) return fromRoom;
-  return options.reduce((best, room) =>
-    getRoomDistance(location, room, targetRoom) < getRoomDistance(location, best, targetRoom) ? room : best
-  );
-}
-
-/**
- * Work out how party members with behaviors react to a mimic action.
- * Pure: returns changes for the caller to apply.
- *
- * See BehaviorContext and BehaviorReactions for the shapes.
- */
-export function getBehaviorReactions(
-  trigger: BehaviorTrigger,
-  { party, location, mimicRoom, fromRoom, excludeIds = [], appearance = {} }: BehaviorContext,
-): BehaviorReactions {
-  const result: BehaviorReactions = { patches: {}, suspicion: 0, events: [], arrivals: [] };
-  if (!location || !mimicRoom) return result;
-  const dist = (a: RoomName, b: RoomName) => getRoomDistance(location, a, b);
-
-  party.forEach((adv) => {
-    if (!adv.behavior || !isActive(adv) || excludeIds.includes(adv.id)) return;
-
-    switch (adv.behavior) {
-      case "keenHearing": {
-        if (trigger !== "relocate" && trigger !== "strike") return;
-        if (hasMagic(appearance, "Void Marble")) return;
-        if (dist(adv.location, mimicRoom) > 2) return;
-        result.patches[adv.id] = { suspicionDelta: 1 };
-        result.suspicion += 1;
-        result.events.push({ type: "alert", text: `${adv.name}'s head snaps toward the sound from the ${mimicRoom}. (+1 suspicion)` });
-        return;
-      }
-      case "shapeSense": {
-        if (trigger !== "formChange") return;
-        if (hasMagic(appearance, "Feywood")) return;
-        if (dist(adv.location, mimicRoom) > 2) return;
-        result.patches[adv.id] = { suspicionDelta: 2 };
-        result.suspicion += 2;
-        result.events.push({ type: "alert", text: `${adv.name} shivers — something nearby just changed its shape. (+2 suspicion)` });
-        return;
-      }
-      case "stoneWatch": {
-        if (trigger !== "relocate" || !fromRoom) return;
-        const saw = dist(adv.location, fromRoom) <= 1 || dist(adv.location, mimicRoom) <= 1;
-        if (!saw) return;
-        result.patches[adv.id] = { suspicionDelta: 1 };
-        result.suspicion += 2;
-        result.events.push({ type: "alert", text: `${adv.name}'s stone eyes track the change — something in the ${fromRoom} is no longer where it was. (+2 suspicion)` });
-        return;
-      }
-      case "carrionScent":
-      case "bloodScent": {
-        if (trigger !== "feed") return;
-        if (adv.behavior === "bloodScent" && hasMagic(appearance, "Direwolf Pelt")) return;
-        const newRoom = stepToward(location, adv.location, mimicRoom);
-        const arrived = newRoom === mimicRoom;
-        const moved = newRoom !== adv.location;
-        if (adv.behavior === "carrionScent") {
-          result.patches[adv.id] = { location: newRoom, isAttracted: arrived };
-          result.events.push({
-            type: arrived ? "allure" : "info",
-            text: arrived
-              ? `${adv.name} catches the scent of the kill and shambles into the ${mimicRoom}, drawn to the meal.`
-              : `${adv.name} catches the scent of the kill and shambles toward the ${newRoom}.`,
-          });
-        } else {
-          result.patches[adv.id] = { location: newRoom, suspicionDelta: 1 };
-          result.events.push({
-            type: "alert",
-            text: moved
-              ? `${adv.name} smells blood and stalks into the ${newRoom}, hackles raised.`
-              : `${adv.name} smells blood. Its hackles rise.`,
-          });
-        }
-        if (arrived && moved) result.arrivals.push({ ...adv, location: newRoom });
-        return;
-      }
-      case "elusive":
-        // Handled when a Strike is resolved (extra resist die; bolts to another room instead of fleeing)
-        return;
-      case "devotion":
-        // Doesn't react to individual actions; the game checks findDevotee() whenever the party changes
-        return;
-      default: {
-        // Compile-time check that every behavior is handled above
-        const unhandled: never = adv.behavior;
-        return unhandled;
-      }
-    }
-  });
-
-  return result;
 }
