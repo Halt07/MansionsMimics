@@ -120,7 +120,7 @@ export class Turn {
   character: MimicCharacter;
   readonly log: LogLine[] = [];
   changes: Partial<MimicCharacter> = {};
-  evolve = false;
+  readyToEvolve = false;
   chooseForms = false;
   readonly random: () => number;
   readonly now: Date;
@@ -136,6 +136,14 @@ export class Turn {
   say(type: GameEventType, message: string) {
     this.log.push({ type, message });
   }
+
+  // Shorthand for the common kinds of log line (say() for the rest, or when the kind depends on the outcome)
+  alert(message: string) { this.say("alert", message); }
+  info(message: string) { this.say("info", message); }
+  evolve(message: string) { this.say("evolve", message); }
+  consume(message: string) { this.say("consume", message); }
+  escape(message: string) { this.say("escape", message); }
+  system(message: string) { this.say("system", message); }
 
   set(patch: Partial<Hunt>) {
     this.hunt = { ...this.hunt, ...patch };
@@ -181,13 +189,13 @@ export class Turn {
   }
 
   private discovered() {
-    this.say("alert", "🔥 The party has found you out! Torches are lit. You flee into the dark.");
+    this.alert("🔥 The party has found you out! Torches are lit. You flee into the dark.");
     this.record("failed");
     // The survivors spread word of this place and of the shape you wore (see burnAfterDiscovery)
     const { location } = this.hunt;
     const form = this.form;
     this.update(burnAfterDiscovery(this.character, location.id, form?.id ?? null));
-    this.say("alert", `${the(location.name, true)} is burned${form ? `, and the survivors will describe your ${form.name} shape to anyone who listens` : ""}. For the next ${BURN_HUNTS} hunts, returning here${form ? " or wearing that form" : ""} means starting under suspicion.`);
+    this.alert(`${the(location.name, true)} is burned${form ? `, and the survivors will describe your ${form.name} shape to anyone who listens` : ""}. For the next ${BURN_HUNTS} hunts, returning here${form ? " or wearing that form" : ""} means starting under suspicion.`);
     this.set({ ending: "discovered" });
   }
 
@@ -207,9 +215,9 @@ export class Turn {
    */
   feed(ap: number, changes: Partial<MimicCharacter> = {}) {
     this.update({ ...changes, assimilationPoints: (this.character.assimilationPoints || 0) + ap, lastFedAt: this.now.toISOString() });
-    if (!this.evolve && this.character.assimilationPoints >= TIER_CONFIG[this.character.tier].apToEvolve) {
-      this.say("evolve", `Your assimilation has reached the threshold! You may evolve!`);
-      this.evolve = true;
+    if (!this.readyToEvolve && this.character.assimilationPoints >= TIER_CONFIG[this.character.tier].apToEvolve) {
+      this.evolve(`Your assimilation has reached the threshold! You may evolve!`);
+      this.readyToEvolve = true;
     }
   }
 
@@ -230,7 +238,7 @@ export class Turn {
   holdStill(someoneArrived: boolean) {
     const stillTurns = someoneArrived ? 0 : this.hunt.stillTurns + 1;
     this.set({ stillTurns });
-    if (stillTurns === STILLNESS_TURNS) this.say("info", STILLNESS_LINE);
+    if (stillTurns === STILLNESS_TURNS) this.info(STILLNESS_LINE);
   }
 
   /** One more action without a meal; at ACTION_LIMIT the party gets bored and leaves. */
@@ -239,8 +247,8 @@ export class Turn {
     this.set({ actionCount });
     // Snowed in, the party can't wander off: the cold is the only clock
     if (actionCount >= ACTION_LIMIT && !this.hunt.location.snowbound && !this.hunt.ending) {
-      this.say("info", `After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
-      this.say("system", `The party leaves ${the(this.hunt.location.name)} of their own accord. Find new prey.`);
+      this.info(`After ${ACTION_LIMIT} uneventful turns, the adventurers grow bored and depart. Nothing interesting here.`);
+      this.system(`The party leaves ${the(this.hunt.location.name)} of their own accord. Find new prey.`);
       this.set({ ending: "abandoned" });
       this.record("survived");
     }
@@ -262,12 +270,12 @@ export class Turn {
         `Room context: ${roomMod.note} (Plausibility ${roomMod.plausibility > 0 ? "+" : ""}${roomMod.plausibility})`);
     }
     for (const { member, quirk, result } of stealth.checks) {
-      if (quirk) this.say("info", quirk);
+      if (quirk) this.info(quirk);
       result.detectedFlaws.forEach(f => this.say("flaw", `${member.name} notices: "${f}"`));
       this.say(result.success ? "stealth" : "alert", result.narrative);
     }
     if (stealth.duplicateRoom) {
-      this.say("alert", `There is already a ${stealth.duplicateRoom} in this location — a second one raises immediate suspicion! (+${DUPLICATE_ROOM_SUSPICION})`);
+      this.alert(`There is already a ${stealth.duplicateRoom} in this location — a second one raises immediate suspicion! (+${DUPLICATE_ROOM_SUSPICION})`);
     }
     this.raise(stealth.suspicion);
   }
@@ -315,7 +323,7 @@ export class Turn {
     }
     const room = this.pick(location.rooms);
     this.set({ fireworksRoom: room });
-    this.say("alert", `🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
+    this.alert(`🎆 A volley of fireworks bursts over the ${room}! Everyone there and next door is staring at the sky.`);
     const rummage = room === mimicRoom ? fireworksRummage(location, this.form) : null;
     if (rummage === null) return;
     const occupied = [
@@ -323,7 +331,7 @@ export class Turn {
       ...this.hunt.rivals.filter(r => !r.consumed).map(r => r.room),
     ];
     const to = tossRoom(location, mimicRoom, occupied, this.random);
-    this.say("alert", `The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
+    this.alert(`The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
     this.set({ mimicRoom: to });
     this.stir();
     this.raise(rummage);
@@ -337,7 +345,7 @@ export class Turn {
     const room = this.pick(location.rooms);
     this.set({ starFragment: room });
     const landing = location.starfall.landings[room] ?? `comes down in the ${room}`;
-    this.say("alert", room === mimicRoom
+    this.alert(room === mimicRoom
       ? `🌠 The sky splits open, and a fragment of star ${landing}, right beside you. Every head on the hill turns your way.`
       : `🌠 The sky splits open, and a fragment of star ${landing}! Every head turns.`);
   }
@@ -348,21 +356,21 @@ export class Turn {
     const { turn } = this.hunt;
     if (turn > total) return;
     const warning = sinkingWarning(total, turn);
-    if (warning) this.say("alert", warning);
+    if (warning) this.alert(warning);
     if (turn < total) return;
     this.set({ party: this.hunt.party.map(a => stillInHunt(a) ? { ...a, isAlive: false, isAttracted: false, fled: true } : a) });
-    this.say("alert", `🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
-    this.say("system", `You let the current carry you ashore, heavier than you came. The hunt is over.`);
+    this.alert(`🌊 The ship rolls over and slides beneath the waves. Whoever is left scrambles for the lifeboats.`);
+    this.system(`You let the current carry you ashore, heavier than you came. The hunt is over.`);
   }
 
   // The Snowbound Lodge: after each turn, the cold takes its toll (see chillParty)
   private frost() {
     const { party, frozen, numb } = chillParty(this.hunt.party, this.hunt.location);
     this.set({ party });
-    numb.forEach(a => this.say("info", `❄️ ${a.name}'s teeth are chattering. They won't last much longer in this cold.`));
-    frozen.forEach(a => this.say("alert", `🧊 ${a.name} stops moving. Frozen solid, in the ${a.location}.`));
+    numb.forEach(a => this.info(`❄️ ${a.name}'s teeth are chattering. They won't last much longer in this cold.`));
+    frozen.forEach(a => this.alert(`🧊 ${a.name} stops moving. Frozen solid, in the ${a.location}.`));
     if (frozen.length > 0 && this.active.length === 0) {
-      this.say("system", `The lodge falls silent. Nothing moves but you, and whatever the ice has left for you.`);
+      this.system(`The lodge falls silent. Nothing moves but you, and whatever the ice has left for you.`);
     }
   }
 
@@ -375,12 +383,12 @@ export class Turn {
       const staring = hunt.creatures.filter(c =>
         !c.isConsumed && c.location === hunt.mimicRoom && isCat(c) && !hunt.catsThatKnow.includes(c.uid));
       if (staring.length > 0) {
-        staring.forEach(() => this.say("info", CAT_KNOWS_LINE));
+        staring.forEach(() => this.info(CAT_KNOWS_LINE));
         this.set({ catsThatKnow: [...hunt.catsThatKnow, ...staring.map(c => c.uid)] });
       }
     }
     if (huntCleared(this.hunt)) this.record("survived");
-    return { hunt: this.hunt, character: this.character, changes: this.changes, log: this.log, evolve: this.evolve, chooseForms: this.chooseForms };
+    return { hunt: this.hunt, character: this.character, changes: this.changes, log: this.log, evolve: this.readyToEvolve, chooseForms: this.chooseForms };
   }
 }
 
