@@ -18,7 +18,8 @@ Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run type
 ## Where things are
 
 The game's content and rules live in `src/data/`; the screens that show them are in `src/pages/`
-and `src/components/game/` (the hunt's pieces in `hunt/`, the Codex's in `codex/`).
+and `src/components/game/` (the hunt's pieces in `hunt/`, the Codex's in `codex/`). The game page's
+larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotionCeremony` and `useHuntKeys`.
 
 | File | Contains |
 |---|---|
@@ -30,15 +31,15 @@ and `src/components/game/` (the hunt's pieces in `hunt/`, the Codex's in `codex/
 | `holidays.ts` | Holiday seasons and the dates they run |
 | `gameData.ts` | The core rules: rooms, dice, magic materials and what a mimic knows, burns, which locations are open. Re-exports everything in this folder, so the rest of the app imports from here |
 | `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, form-tier penalties |
-| `hunt.ts` | A hunt in progress (`Hunt`) and what every turn shares (`Turn`): suspicion and being found out, meals, the end of a turn, Devotion |
+| `hunt.ts` | A hunt in progress (`Hunt`) and what every turn shares (`Turn`): suspicion and being found out, meals, the end of a turn |
 | `turns.ts` | Each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait, eating, and changing form or look |
 | `lure.ts` | Luring, and the stealth and allure checks |
 | `strike.ts` | Strikes: rival mimics, partial bites, swallowing whole, and the adhesion check |
 | `movement.ts` | Where the party and the small creatures go each Wait |
 | `behaviors.ts` | How adventurers with a behavior react to what the mimic does |
-| `events.ts` | Location events: rival mimics, the Sinking Ship, Devotion, and the seasonal locations' twists |
+| `events.ts` | Location events: rival mimics, the Sinking Ship, Devotion (the whole ceremony), and the seasonal locations' twists |
 | `mealPrep.ts` | Setting up a hunt: the party, companions, small creatures, sickness |
-| `stats.ts` | Effective stats, mass decay, upgrades, achievements and lifetime stats |
+| `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats |
 | `codex.ts` | What the Codex knows: adventurers met and eaten, hunting grounds found |
 | `easterEggs.ts` | Name remarks, the cat that knows, the spiderweb, quirks and other flavor |
 | `huntReportData.ts` | The end-of-hunt report (Guild notices, verses, gossip, and location-specific versions) |

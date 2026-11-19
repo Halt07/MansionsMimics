@@ -13,4 +13,19 @@ export default async function ({ gameData: m, ok }) {
   ok(m.massDecay(3, ago(30), now)?.mass === 1, 'never below 1 mass');
   ok(m.massDecay(1, ago(30), now) === null, 'nothing to lose at mass 1');
   ok(m.massDecay(10, undefined, now) === null, 'a mimic that has never fed doesn\'t decay');
+
+  // ---------- coming back to a mimic (welcomeBack) ----------
+  const ref = (formId) => { const f = m.ALL_FORMS.find((x) => x.id === formId); return { formId, name: f.name, tier: f.tier, learned: true }; };
+  const base = { mass: 7, lastFedAt: ago(1), forms: [ref('lesser_chest')], activeFormIndex: 0 };
+  const day = new Date(2026, 4, 15);
+  const quiet = m.welcomeBack(base, { now, day });
+  ok(Object.keys(quiet.changes).length === 0 && !quiet.massDecayNotice && !quiet.seasonNotice && quiet.character.mass === 7, 'back after a day: nothing has changed');
+  const hungry = m.welcomeBack({ ...base, lastFedAt: ago(7) }, { now, day });
+  ok(hungry.character.mass === 5 && hungry.changes.mass === 5 && hungry.changes.lastFedAt, 'a week away unfed: mass lost, and saved');
+  ok(hungry.massDecayNotice === 'You have been away for 7 days without feeding. Your mass has diminished by 2 (now 5). Hunger gnaws at your form.', '…and the player is told');
+  const lantern = { ...base, forms: [ref('minor_jack_o_lantern'), ref('lesser_chest')], activeFormIndex: 1 };
+  const afterHalloween = m.welcomeBack(lantern, { now, day });
+  ok(afterHalloween.character.forms.map((f) => f.formId).join() === 'lesser_chest' && afterHalloween.character.activeFormIndex === 0, 'back after its season: the seasonal form has slipped away, the one worn still worn');
+  ok(afterHalloween.changes.forms?.length === 1 && afterHalloween.seasonNotice?.includes('is over'), '…saved, and the player is told');
+  ok(!m.welcomeBack(lantern, { now, day: new Date(2026, 9, 31) }).seasonNotice, '…still in season, it stays');
 }

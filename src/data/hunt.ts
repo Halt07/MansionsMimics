@@ -14,10 +14,10 @@ import type { GameEventType } from "./vocabulary";
 import type { HuntEnding } from "./huntReportData";
 import { the } from "./text";
 import {
-  BURN_HUNTS, CAT_KNOWS_LINE, CULT_CONVERSIONS, DOUBTING_SCHOLAR, SCHOLAR_NOTES_LINE, STILLNESS_LINE, STILLNESS_TURNS,
+  BURN_HUNTS, CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS,
   DUPLICATE_ROOM_SUSPICION, RIVAL_STATS, TIER_CONFIG,
-  burnAfterDiscovery, chillParty, distractedRooms, effectiveStats, findDevotee, fireworksDue, fireworksRummage,
-  getActiveForm, getBehaviorReactions, isCat, isNestCleared, resolveStealth, rollOfferings, sinkingWarning,
+  burnAfterDiscovery, chillParty, distractedRooms, effectiveStats, fireworksDue, fireworksRummage,
+  getActiveForm, getBehaviorReactions, isCat, isNestCleared, resolveStealth, sinkingWarning,
   starfallDue, tossRoom, uneatenFrozen, withBiggestMeal,
   type BehaviorContext, type BehaviorTrigger, type RivalMimic, type SmallCreature,
 } from "./gameData";
@@ -427,66 +427,4 @@ export class Turn {
     if (huntCleared(this.hunt)) this.record("survived");
     return { hunt: this.hunt, character: this.character, changes: this.changes, log: this.log, evolve: this.readyToEvolve, chooseForms: this.chooseForms };
   }
-}
-
-// ---------- Devotion (The Hollow Reliquary) ----------
-
-export interface DevotionStep {
-  log: LogLine[];
-  /** AP from an offering accepted in this step. */
-  ap: number;
-}
-
-export interface Devotion {
-  /** The hunt and character the moment the pilgrim kneels: converted, and counted. */
-  start: TurnResult;
-  /** The ceremony, one step at a time. */
-  steps: DevotionStep[];
-  /** Saved when the ceremony ends: the offerings' AP. */
-  changes: Partial<MimicCharacter>;
-  /** The offerings bring enough AP to evolve. */
-  evolve: boolean;
-}
-
-/**
- * Once a devoted pilgrim is the last one left, it recognises the mimic as the shrine's lost god,
- * brings offerings and leaves, ending the hunt. Null if nobody is ready to convert. Check after
- * every action that leaves the hunt going (and when coming back to it from the upgrade screen).
- */
-export function devotion(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): Devotion | null {
-  if (hunt.ending) return null;
-  const devotee = findDevotee(hunt.party);
-  if (!devotee) return null;
-  const t = new Turn(hunt, character, opts);
-  const offerings = rollOfferings(hunt.location, t.random);
-  const apGained = offerings.reduce((sum, c) => sum + c.ap, 0);
-  const zealot = devotee.convertedName ?? devotee.name;
-  t.patchMember(devotee.id, () => ({ name: zealot, isAlive: false, isAttracted: false, isConverted: true }));
-  // Counted straight away, so leaving mid-ceremony can't lose it
-  const conversions = character.conversions + 1;
-  t.update({ conversions });
-  const start = t.finish();
-
-  const line = (type: GameEventType, message: string): DevotionStep => ({ log: [{ type, message }], ap: 0 });
-  const total = character.assimilationPoints + apGained;
-  const evolve = total >= TIER_CONFIG[character.tier].apToEvolve;
-  const steps: DevotionStep[] = [
-    line("evolve", `${devotee.name} stares at the empty places where their companions stood… then falls to their knees before you. "It is real. It has come back."`),
-    ...(zealot !== devotee.name ? [line("evolve", `${devotee.name} is now ${the(zealot)}.`)] : []),
-    line("info", `${the(zealot, true)} hurries out, and returns with offerings, laying them before you one by one.`),
-    ...offerings.map(c => ({ log: [{ type: "consume" as const, message: `You accept the ${c.name}. +${c.ap} AP.` }], ap: c.ap })),
-    line("system", `🕯 ${the(zealot, true)} backs out of the shrine, never once turning away from you. The hunt is over. (+${apGained} AP in offerings)`),
-    // Easter egg: the skeptic's treatise gets an ending
-    ...(hunt.party.some(a => a.name === DOUBTING_SCHOLAR) ? [line("info", SCHOLAR_NOTES_LINE)] : []),
-    {
-      log: [
-        ...(conversions === CULT_CONVERSIONS
-          ? [{ type: "evolve" as const, message: `🕯️ Cult of Personality! ${CULT_CONVERSIONS} souls now worship you. The faithful are growing in number.` }]
-          : []),
-        ...(evolve ? [{ type: "evolve" as const, message: `Your assimilation has reached the threshold! You may evolve!` }] : []),
-      ],
-      ap: 0,
-    },
-  ];
-  return { start, steps, changes: { assimilationPoints: total, lastFedAt: t.now.toISOString() }, evolve };
 }

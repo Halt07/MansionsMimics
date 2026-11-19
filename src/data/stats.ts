@@ -9,7 +9,7 @@ import { ALL_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Si
 import { ADVENTURER_TEMPLATES } from "./adventurerData";
 import { LOCATIONS, type LocationId } from "./locationData";
 import { HOLIDAYS, today, type HolidayId } from "./holidays";
-import { VARIANT_FORMS, effectiveFormTier, formTier, formsStillAllowed, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
+import { VARIANT_FORMS, dropExpiredSeasonalForms, effectiveFormTier, formTier, formsStillAllowed, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
 
 // ============================================================
 // EFFECTIVE STATS
@@ -102,6 +102,26 @@ export function massDecay(
     lastFedAt: new Date(fed + massLost * MASS_DECAY_DAYS * DAY_MS).toISOString(),
     daysAway: Math.floor(daysAway),
   };
+}
+
+/**
+ * What's happened since a mimic was last opened: mass lost while it was away unfed (see
+ * massDecay), and seasonal forms whose season has ended slipping away (see
+ * dropExpiredSeasonalForms). The mimic as it is now, what to save, and the notices to show.
+ */
+export function welcomeBack(
+  character: MimicCharacter, { now = new Date(), day = today() }: { now?: Date; day?: Date } = {},
+): { character: MimicCharacter; changes: Partial<MimicCharacter>; massDecayNotice: string | null; seasonNotice: string | null } {
+  let changes: Partial<MimicCharacter> = {};
+  let massDecayNotice: string | null = null;
+  const decay = massDecay(character.mass, character.lastFedAt, now);
+  if (decay) {
+    changes = { mass: decay.mass, lastFedAt: decay.lastFedAt };
+    massDecayNotice = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
+  }
+  const dropped = dropExpiredSeasonalForms(character.forms, character.activeFormIndex, day);
+  if (dropped) changes = { ...changes, forms: dropped.forms, activeFormIndex: dropped.activeFormIndex };
+  return { character: { ...character, ...changes }, changes, massDecayNotice, seasonNotice: dropped?.message ?? null };
 }
 
 // ============================================================

@@ -46,13 +46,8 @@ export default tseslint.config(
       ],
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off",
-      // React's recommended hooks rules (including the React Compiler checks)…
+      // React's recommended hooks rules (including the React Compiler checks)
       ...pluginReactHooks.configs["recommended-latest"].rules,
-      // …except two that misread Game.tsx: its event handlers (which call Math.random and touch
-      // refs on click) are defined inline in one large component, and these rules flag them as
-      // if they ran during render. They don't, so these are false positives here.
-      "react-hooks/purity": "off",
-      "react-hooks/refs": "off",
       // Apostrophes and quotes in prose render fine; only flag characters that usually mean a JSX typo
       "react/no-unescaped-entities": ["error", { forbid: [">", "}"] }],
     },

@@ -5,9 +5,9 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, STAT_CAP, VARIANT_FORMS, ACHIEVEMENTS,
-  getAdjacentRooms, massDecay, today, dropExpiredSeasonalForms, isVariantUnlocked,
+  getAdjacentRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
   getActiveForm, applyUpgrade, type UpgradeChoice,
-  activeAdventurers, huntCleared, devotion, beginHunt, relocate, lure, strike, canStrike, wait,
+  activeAdventurers, huntCleared, beginHunt, relocate, lure, strike, canStrike, wait,
   eatCreature, eatStar, eatFrozen, changeForm, changeAppearance,
   type Hunt, type LogLine, type TurnResult,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
@@ -32,19 +32,20 @@ import HuntHeader from "../components/game/hunt/HuntHeader";
 import ActionBar from "../components/game/hunt/ActionBar";
 import { FormSwitcher, MealsHere, RelocatePanel } from "../components/game/hunt/HuntPanels";
 import { EvolveScreen, GameOverScreen, HuntOverPanel } from "../components/game/hunt/EndScreens";
+import { CEREMONY_STEP_MS, useDevotionCeremony } from "../components/game/hunt/useDevotionCeremony";
+import { useHuntKeys } from "../components/game/hunt/useHuntKeys";
+import { useLoadedMimic } from "../components/game/useLoadedMimic";
 
 // ── Game-screen state types ──
 type Phase = "setup" | "hunt" | "formSelect" | "evolve" | "gameover";
 
-/** Delay between lines of a multi-step event sequence (e.g. a Devotion ceremony). */
-const CEREMONY_STEP_MS = 2000;
-
-export default function Game() {
+export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
+  /** How long each line of a Devotion ceremony waits (the tests shorten it). */
+  ceremonyStepMs?: number;
+} = {}) {
   const urlParams = new URLSearchParams(window.location.search);
   const characterId = urlParams.get("characterId");
 
-  const [character, setCharacter] = useState<MimicCharacter | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // The hunt in progress (or the last one, until the next begins). Every action takes it to the
   // next one: see src/data/hunt.ts and turns.ts.
   const [hunt, setHunt] = useState<Hunt | null>(null);
@@ -52,8 +53,6 @@ export default function Game() {
   const [pendingLocation, setPendingLocation] = useState<HuntLocation | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [phase, setPhase] = useState<Phase>("setup");
-  // Nothing to load without a character id
-  const [loading, setLoading] = useState(!!characterId);
   const [showSheet, setShowSheet] = useState(false);
   // One purchase per visit to the upgrade screen; reset each time the screen opens
   const upgradeChosenRef = useRef(false);
@@ -70,42 +69,14 @@ export default function Game() {
   // into the hunt when a mid-hunt tier-up forced the selection
   const [formSelectReturnPhase, setFormSelectReturnPhase] = useState<Phase>("setup");
 
-  useEffect(() => {
-    if (!characterId) return;
-    db.entities.MimicCharacter.filter({ id: characterId }).then(res => {
-      if (res[0]) {
-        const char = res[0];
-        // Mass decay: 1 mass per 3 days since last fed. lastFedAt moves forward by the days
-        // charged, so reloading doesn't take the same mass again.
-        let decayMessage: string | null = null;
-        const decay = massDecay(char.mass, char.lastFedAt);
-        if (decay) {
-          char.mass = decay.mass;
-          char.lastFedAt = decay.lastFedAt;
-          db.entities.MimicCharacter.update(char.id, { mass: decay.mass, lastFedAt: decay.lastFedAt })
-            .catch(err => console.error("Failed to save mass decay:", err));
-          decayMessage = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
-        }
-        // Seasonal forms whose season has ended slip away
-        const dropped = dropExpiredSeasonalForms(char.forms, char.activeFormIndex, today());
-        if (dropped) {
-          char.forms = dropped.forms;
-          char.activeFormIndex = dropped.activeFormIndex;
-          db.entities.MimicCharacter.update(char.id, { forms: dropped.forms, activeFormIndex: dropped.activeFormIndex })
-            .catch(err => console.error("Failed to save expired seasonal forms:", err));
-          setSeasonNotice(dropped.message);
-        }
-        setCharacter(char);
-        // With no forms left, choose new ones first
-        setFormSelectReturnPhase("setup");
-        setPhase(char.forms.length ? "setup" : "formSelect");
-        if (decayMessage) setMassDecayNotice(decayMessage);
-      }
-    }).catch(err => {
-      console.error("Failed to load character:", err);
-      setLoadError(err instanceof Error ? err.message : String(err));
-    }).finally(() => setLoading(false));
-  }, [characterId]);
+  // The mimic to play, caught up on what happened while it was away (see useLoadedMimic)
+  const { character, setCharacter, loading, loadError } = useLoadedMimic(characterId, opened => {
+    setFormSelectReturnPhase("setup");
+    // With no forms left (a season ended), choose new ones first
+    setPhase(opened.character.forms.length ? "setup" : "formSelect");
+    setMassDecayNotice(opened.massDecayNotice);
+    if (opened.seasonNotice) setSeasonNotice(opened.seasonNotice);
+  });
 
   // Every event is stamped with the turn it happened in, so the
   // screen effects can react to what the latest turn did. beginTurn() starts a new one.
@@ -130,38 +101,30 @@ export default function Game() {
   };
 
   // Devotion (The Hollow Reliquary): once a devoted pilgrim is the last one left, it recognises
-  // the mimic as the shrine's lost god, brings offerings and leaves (see devotion). Checked after
-  // every action that leaves the hunt going, and on coming back to it from the upgrade or form
-  // screen. The ceremony plays out one line at a time (CEREMONY_STEP_MS apart); actions and the
-  // end-of-hunt panel wait until it finishes.
-  const [ceremonyRunning, setCeremonyRunning] = useState(false);
-  const ceremonyTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => () => ceremonyTimers.current.forEach(clearTimeout), []);
-  const startDevotion = (h: Hunt, c: MimicCharacter) => {
-    const ceremony = devotion(h, c);
-    if (!ceremony) return;
-    beginTurn();
-    setHunt(ceremony.start.hunt);
-    setCharacter(ceremony.start.character);
-    persist(ceremony.start.changes);
-    setCeremonyRunning(true);
-    const last = ceremony.steps.length - 1;
+  // the mimic as the shrine's lost god, brings offerings and leaves. Checked after every action
+  // that leaves the hunt going, and on coming back to it from the upgrade or form screen. The
+  // ceremony plays out a line at a time (see useDevotionCeremony); actions and the end-of-hunt
+  // panel wait until it finishes.
+  const { running: ceremonyRunning, start: startDevotion } = useDevotionCeremony({
+    onBegin: start => {
+      beginTurn();
+      setHunt(start.hunt);
+      setCharacter(start.character);
+      persist(start.changes);
+    },
     // Each offering's AP is saved as it's accepted, like any meal (so leaving mid-ceremony keeps
     // what was given so far, and lifetime AP, which counts every rise, never runs ahead of it)
-    let ap = ceremony.start.character.assimilationPoints;
-    const apAfter = ceremony.steps.map(step => (ap += step.ap));
-    ceremonyTimers.current = ceremony.steps.map((step, i) => setTimeout(() => {
-      addLog(step.log);
-      if (step.ap) {
-        setCharacter(prev => prev ? { ...prev, assimilationPoints: apAfter[i] } : prev);
-        persist({ assimilationPoints: apAfter[i] });
-      }
-      if (i !== last) return;
+    onStep: (log, apNow) => {
+      addLog(log);
+      if (apNow === null) return;
+      setCharacter(prev => prev ? { ...prev, assimilationPoints: apNow } : prev);
+      persist({ assimilationPoints: apNow });
+    },
+    onEnd: ceremony => {
       persist(ceremony.changes);
-      setCeremonyRunning(false);
       if (ceremony.evolve) setPhase("evolve");
-    }, i * CEREMONY_STEP_MS));
-  };
+    },
+  }, ceremonyStepMs);
 
   /** Back to the hunt (from the upgrade or form screen), where a pilgrim may be waiting. */
   const returnToHunt = (c: MimicCharacter) => {
@@ -423,32 +386,16 @@ export default function Game() {
   };
 
   // Keyboard shortcuts during a hunt: R / L / S / W, and 1–9 to pick a room while relocating
-  const onHuntKey = useEffectEvent((e: KeyboardEvent) => {
-    if (phase !== "hunt" || showSheet || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable='true']")) return;
-    const key = e.key.toLowerCase();
-    if (showMovePanel && /^[1-9]$/.test(key)) {
-      const room = relocateRooms[Number(key) - 1];
-      if (room && canRelocate) { e.preventDefault(); doRelocate(room); }
-      return;
-    }
-    if (key === "escape" && showMovePanel) { setShowMovePanel(false); return; }
-    const actions: Record<string, [boolean, () => void]> = {
-      r: [canRelocate, toggleMovePanel],
-      l: [canLure, doLure],
-      s: [canStrikeNow, doStrike],
-      w: [canWait, doWait],
-    };
-    const action = actions[key];
-    if (!action) return;
-    e.preventDefault();
-    if (action[0]) action[1]();
+  useHuntKeys({
+    enabled: phase === "hunt" && !showSheet,
+    actions: {
+      r: { can: canRelocate, run: toggleMovePanel },
+      l: { can: canLure, run: doLure },
+      s: { can: canStrikeNow, run: doStrike },
+      w: { can: canWait, run: doWait },
+    },
+    numbered: showMovePanel ? { choices: relocateRooms, can: canRelocate, choose: doRelocate, close: () => setShowMovePanel(false) } : null,
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => onHuntKey(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   if (loading) {
     return (
