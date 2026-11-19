@@ -156,6 +156,11 @@ export default async function ({ gameData: m, ok }) {
   const farRoom = manorLoc.rooms.find((r) => m.getRoomDistance(manorLoc, 'Library', r) >= 2);
   const lonely = m.lure(hunt({ party: [member('Faraway', { location: farRoom })] }), mimic(), opts());
   ok(said(lonely, 'within lure range (1 room).'), 'nobody in reach of a range-1 lure: "1 room"');
+  const allLured = m.lure(hunt({ party: [member('Keen', { location: 'Library', isAttracted: true }), member('Far', { location: farRoom })] }), mimic(), opts());
+  ok(said(allLured, 'Every adventurer within reach is already interested.') && !said(allLured, 'within lure range'), 'everyone in reach already lured: says so (not that nobody is in range)');
+  const hiding = { id: 'h', kind: 'lone', room: 'Drawing Room', revealed: false, consumed: false, clueGiven: false, disguise: { name: 'Barrel', icon: '🛢️' } };
+  const found = m.relocate(hunt({ party: [], rivals: [hiding] }), mimic(), 'Drawing Room', opts(0.99));
+  ok(found.hunt.rivals[0].revealed && said(found, 'Entering its room has drawn it out: Strike to devour the intruder') && !said(found, 'Use Lure'), 'finding a rival: entering its room drew it out, so Strike (Lure doesn\'t work on rivals)');
 
   // ---------- a found rival is still hungry ----------
   // A rival (found, so revealed) in the Library with you; on a Wait, Walker steps in from next door

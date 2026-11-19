@@ -12,7 +12,7 @@ import type { Form } from "./mimicData";
 import {
   ALL_FORMS, BOUNTY_START_SUSPICION, BURN_SUSPICION, CANNIBAL_MIMICS, COLLAPSE_BONUS_AP, PORTER_SISTER, PORTER_TOKEN_LINE,
   PRANKS, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, RIVAL_STATS, STAR_FRAGMENT, TITANIC_FEAST_GIANTS, VANISHING_LINES, rivalAteFirst,
-  consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, hasMagic, isTheRealThing,
+  consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, getRoomDistance, hasMagic, isTheRealThing,
   lureRange, maxTargetForChance, moveCreatures, moveParty, needsPartialBites, pickStrikeTarget, pickTreasurePrize,
   resolveBite, resolveLure, resolveRivalStrike, resolveSwallow, rivalInRoom, rollDice, startHunt, strikeCandidates,
   strikeDice, strikeWitnesses, today, unmask, withBiggestMeal, withDiscovered, withFormUsed,
@@ -97,7 +97,7 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
       t.alert(`A young mimic is nested here in the ${targetRoom}, gorged and sluggish. It is not the Elder, but it will feed you. Strike!`);
     } else {
       t.alert(`You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
-      t.alert(`This is YOUR hunting ground. Devour the intruder to reclaim it. Use Lure to draw it out, then Strike.`);
+      t.alert(`This is YOUR hunting ground. Entering its room has drawn it out: Strike to devour the intruder and reclaim it.`);
     }
     const sameShape = t.random() < RIVAL_SAME_SHAPE_CHANCE;
     if (sameShape) t.info(RIVAL_SAME_SHAPE_LINE);
@@ -147,8 +147,12 @@ export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
 
   if (outcome.attempts.length === 0) {
     const rivalHere = rivalInRoom(hunt.rivals, mimicRoom);
+    // Nobody new to draw in: everyone in reach is already lured, or nobody is in reach at all
+    const inReach = t.active.some(a => getRoomDistance(location, mimicRoom, a.location) <= range);
     if (rivalHere?.revealed) {
       t.alert(`The ${RIVAL_STATS[rivalHere.kind].name} does not respond to your lure — it knows your tricks. You must Strike directly!`);
+    } else if (inReach) {
+      t.info(`Every adventurer within reach is already interested.`);
     } else {
       t.info(`No adventurers are within lure range (${range} ${plural(range, "room")}). Wait for them to wander closer.`);
     }
