@@ -157,7 +157,10 @@ saved over it.
 
 The character schema is defined with zod in `src/api/schemas/mimicCharacter.ts`, the
 single source of truth for the record's shape. Every create, update and read is validated
-against it, and missing fields are filled with defaults so older saves keep loading.
+against it, and missing fields are filled with defaults so older saves keep loading. Reading is
+forgiving where writing is strict: if a save holds something the game no longer has (a field since
+removed, a renamed form, a place or material taken out), that part is dropped and the console says
+so, rather than the whole character being skipped.
 If you need JSON Schema (e.g. for database tooling), generate it with
 `z.toJSONSchema(MimicCharacterSchema)`.
 

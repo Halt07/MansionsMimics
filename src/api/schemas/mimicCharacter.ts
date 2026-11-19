@@ -4,7 +4,8 @@
  * - `.parse()` validates a record and fills in defaults for missing fields, so saves
  *   made before a field existed still load correctly.
  * - The objects are strict: unknown keys (e.g. a misspelled field name in an
- *   `update()` call) are rejected rather than silently stored or dropped.
+ *   `update()` call) are rejected rather than silently stored or dropped. Reading an older
+ *   save is forgiving instead: what no longer fits is dropped (see fitToSchema in db.ts).
  * - Tiers, materials, traits and form ids must be real game names (from the game
  *   vocabulary and form data), so a save can't hold a misspelled or unknown name.
  * - The TypeScript types below are inferred from the schema; don't write them by hand.
@@ -116,6 +117,24 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   sidebarView: z.enum(["map", "party"]).default("map"),
   isActive: z.boolean().default(true),
 });
+
+/**
+ * Before an older save is fitted to the schema (see fitToSchema in db.ts): forms the game no
+ * longer has are dropped here, keeping the form being worn still worn even if one before it in
+ * the list went (dropping it in the general pass would leave the index pointing at the wrong one).
+ */
+export function keepWornForm(raw: unknown): { record: unknown; dropped: string[] } {
+  if (raw === null || typeof raw !== 'object' || !('forms' in raw) || !Array.isArray(raw.forms)) return { record: raw, dropped: [] };
+  const known = new Set<string>(FORM_IDS);
+  const forms = raw.forms as unknown[];
+  const idOf = (ref: unknown) => (ref !== null && typeof ref === 'object' && 'formId' in ref ? String(ref.formId) : null);
+  const index = 'activeFormIndex' in raw && typeof raw.activeFormIndex === 'number' ? raw.activeFormIndex : 0;
+  const wornId = idOf(forms[index]);
+  const kept = forms.filter((ref) => known.has(idOf(ref) ?? ''));
+  if (kept.length === forms.length) return { record: raw, dropped: [] };
+  const dropped = forms.flatMap((ref, i) => (kept.includes(ref) ? [] : [`forms.${i}`]));
+  return { record: { ...raw, forms: kept, activeFormIndex: Math.max(0, kept.findIndex((ref) => idOf(ref) === wornId)) }, dropped };
+}
 
 /** A stored record: game fields plus the fields the data layer manages. */
 export const MimicCharacterSchema = MimicCharacterFieldsSchema.extend({

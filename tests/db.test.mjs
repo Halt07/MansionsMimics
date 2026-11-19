@@ -58,7 +58,7 @@ async function run(dbModule, storage, ok) {
   const t = new Date().toISOString();
   const recs = JSON.parse(storage.get(KEY));
   recs.push({ id: 'old1', name: 'Oldie', tier: 'Minor', created_date: t, updated_date: t });
-  recs.push({ id: 'bad1', name: 'Broken', tier: 'Nope', created_date: t, updated_date: t });
+  recs.push({ id: 'bad1', tier: 'Minor', created_date: t, updated_date: t }); // no name: can't be fitted
   storage.set(KEY, JSON.stringify(recs));
   const old = await M.get('old1');
   ok(old.mass === 2 && old.forms.length === 0 && old.currentAppearance.surfaceTraits.length === 0, 'record missing fields loads with defaults');
@@ -84,6 +84,40 @@ async function run(dbModule, storage, ok) {
   ]) {
     try { await M.update(b.id, bad); ok(false, label); } catch (e) { ok(e instanceof ValidationError, label); }
   }
+
+  // An older save that no longer quite fits (a field since removed, a form since renamed, a
+  // material or place no longer in the game): what doesn't fit is dropped, the mimic is kept
+  storage.clear();
+  const when = new Date().toISOString();
+  storage.set(KEY, JSON.stringify([{
+    id: 'old', name: 'Old Timer', tier: 'Nope', created_date: when, updated_date: when, retiredField: 7,
+    forms: [{ formId: 'renamed_form', name: 'Gone', tier: 'Lesser' }, { formId: 'lesser_chest', name: 'Chest', tier: 'Lesser' }, { formId: 'lesser_crate', name: 'Crate', tier: 'Lesser' }],
+    activeFormIndex: 2, formsUsed: ['lesser_chest', 'renamed_form'], formHuntCounts: { renamed_form: 2, lesser_chest: 1 },
+    locationHuntCounts: { atlantis: 3, manor: 2 }, learnedMaterials: ['Oak', 'Unobtainium'],
+    currentAppearance: { primaryMaterials: ['Unobtainium'], surfaceTraits: ['Polished'], retiredSlot: [] },
+    burnedForms: [{ formId: 'renamed_form', huntsLeft: 1 }, { formId: 'lesser_chest', huntsLeft: 2 }], rareLocation: { id: 'atlantis', huntsLeft: 2 },
+  }]));
+  const repairWarnings = [];
+  console.warn = (msg) => repairWarnings.push(msg);
+  const [oldSave] = await M.list();
+  ok(oldSave?.name === 'Old Timer', 'an older save that no longer quite fits still loads');
+  ok(oldSave.forms.map((f) => f.formId).join() === 'lesser_chest,lesser_crate' && oldSave.activeFormIndex === 1, '…a renamed form is dropped, and the form being worn stays worn');
+  ok(oldSave.formsUsed.join() === 'lesser_chest' && JSON.stringify(oldSave.formHuntCounts) === '{"lesser_chest":1}' && oldSave.burnedForms.map((b) => b.formId).join() === 'lesser_chest',
+    '…and it\'s dropped from the forms used, the counts and the burns');
+  ok(JSON.stringify(oldSave.locationHuntCounts) === '{"manor":2}' && oldSave.rareLocation === null, '…a place no longer in the game is dropped too');
+  ok(oldSave.learnedMaterials.join() === 'Oak' && oldSave.currentAppearance.primaryMaterials.length === 0 && oldSave.currentAppearance.surfaceTraits.join() === 'Polished',
+    '…and so is a material no longer in the game, wherever it was');
+  ok(oldSave.tier === 'Minor' && !('retiredField' in oldSave) && !('retiredSlot' in oldSave.currentAppearance), '…a field since removed goes; an unknown value goes back to its default');
+  ok(repairWarnings.some((w) => w.includes('MimicCharacter old') && ['forms.0', 'retiredField', 'learnedMaterials.1', 'rareLocation'].every((d) => w.includes(d))), '…and the console says what was dropped');
+  ok((await M.get('old')).forms.length === 2, 'get fits it the same way');
+  const tidied = await M.update('old', { assimilationPoints: 4 });
+  const rawTidied = JSON.parse(storage.get(KEY))[0];
+  ok(tidied.assimilationPoints === 4 && rawTidied.forms.length === 2 && !('retiredField' in rawTidied), 'updating it saves the tidied version');
+  try { await M.update('old', { retiredField: 1 }); ok(false, 'writing stays strict'); } catch (e) { ok(e instanceof ValidationError, 'writing stays strict: a field the game doesn\'t have is still refused'); }
+  console.warn = () => {};
+
+  // limit
+  ok((await M.list(undefined, 0)).length === 0 && (await M.list(undefined, 1)).length === 1 && (await M.list()).length === 1, 'a limit of 0 returns none (not all)');
 
   // Damaged saved data: reads as empty (the game still opens), but is backed up before
   // anything is written over it, so it can be recovered
