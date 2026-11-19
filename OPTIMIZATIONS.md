@@ -6,45 +6,43 @@ From the final review (each checked against the code), most important first.
 
 ## Smaller rule bugs
 
-1. **The fireworks toss leaves a lured adventurer behind,** and Strike then reaches them in the other room (`canStrike`/`strikeCandidates` take any attracted member). Moving rooms should clear attraction.
-2. **A tier-up that drops a form switches you to your first form** (`stats.ts`, `activeFormIndex = 0`) even if the one worn survived. Keep it with `findIndex`, as `changeAppearance` and `dropExpiredSeasonalForms` do.
-3. **Bites never record a biggest meal** (`strikeBite` has no `noteMeal`/`withBiggestMeal`), so a Minor mimic's sheet and report never show a person.
-4. **Eating a star fragment doesn't reset the boredom counter** (`eatStar`); every other meal does.
-5. **The rival hint says "Use Lure to draw it out"** (`turns.ts`), but Lure never works on rivals. Also: Lure says "No adventurers are within lure range" when the only one in range is already lured.
-6. **Frozen bodies left at the Lodge are missing from the end report** (neither survivors nor casualties), which can then say "It never touched us".
-7. **The Spell or Sweet banner's list of door-answering forms leaves out the Goblet** (`LocationBanners.tsx`), one of only two Minor options.
-8. **Leaving mid-ceremony still counts the lost offerings in "Lifetime AP earned"** (saved per step, while AP is only saved at the end).
-9. **Each turn scrolls the whole page to the event log** (`EventLogPanel.tsx`, `scrollIntoView` with the default `block: "start"`); on a phone that pulls you away from the status and map. Scroll only the log's own area (or `block: "nearest"`).
-10. **Text:** "Is that a forest in there?." has a stray period, and the Narnia remark never triggers for "Spare Oom" (the real, two-word spelling) (`easterEggs.ts`).
+1. **Eating a star fragment doesn't reset the boredom counter** (`eatStar`); every other meal does.
+2. **The "found out" notice can say a bitten meal was taken "whole".** Someone eaten in bites (a Minor mimic's meals, or a giant too big to swallow) can now be the biggest meal, and one witness quote in `huntReportData.ts` reads "It took the Bard whole. Just… folded around them." It should only be picked when the meal really was swallowed whole.
+3. **The rival hint says "Use Lure to draw it out"** (`turns.ts`), but Lure never works on rivals. Also: Lure says "No adventurers are within lure range" when the only one in range is already lured.
+4. **Frozen bodies left at the Lodge are missing from the end report** (neither survivors nor casualties), which can then say "It never touched us".
+5. **The Spell or Sweet banner's list of door-answering forms leaves out the Goblet** (`LocationBanners.tsx`), one of only two Minor options.
+6. **Leaving mid-ceremony still counts the lost offerings in "Lifetime AP earned"** (saved per step, while AP is only saved at the end).
+7. **Each turn scrolls the whole page to the event log** (`EventLogPanel.tsx`, `scrollIntoView` with the default `block: "start"`); on a phone that pulls you away from the status and map. Scroll only the log's own area (or `block: "nearest"`).
+8. **Text:** "Is that a forest in there?." has a stray period, and the Narnia remark never triggers for "Spare Oom" (the real, two-word spelling) (`easterEggs.ts`).
 
 ## Accessibility
 
-11. **The party card's contents are hidden from screen readers:** the whole list or map sits inside `role="button"` with a label, so only "Show the room map" is announced. Make only the header the button.
-12. **The character sheet overlay isn't a dialog:** no `role="dialog"`/`aria-modal`, focus doesn't move into it, Tab reaches controls behind it, and Escape doesn't close it.
-13. **The event log isn't announced** (no `role="log"`/`aria-live`), so screen-reader players hear nothing each turn.
-14. **Selection shown by colour only:** FormSelector's form cards (disabled ones are still focusable, with no unavailable state), the AppearanceEditor's traits (materials only have `aria-disabled`), CharacterCreation's materials and traits, and the Codex section buttons (which one is open). `aria-pressed`/`aria-current` cover these.
-15. **CharacterCreation's name field has no label,** only a placeholder.
+9. **The party card's contents are hidden from screen readers:** the whole list or map sits inside `role="button"` with a label, so only "Show the room map" is announced. Make only the header the button.
+10. **The character sheet overlay isn't a dialog:** no `role="dialog"`/`aria-modal`, focus doesn't move into it, Tab reaches controls behind it, and Escape doesn't close it.
+11. **The event log isn't announced** (no `role="log"`/`aria-live`), so screen-reader players hear nothing each turn.
+12. **Selection shown by colour only:** FormSelector's form cards (disabled ones are still focusable, with no unavailable state), the AppearanceEditor's traits (materials only have `aria-disabled`), CharacterCreation's materials and traits, and the Codex section buttons (which one is open). `aria-pressed`/`aria-current` cover these.
+13. **CharacterCreation's name field has no label,** only a placeholder.
 
 ## Robustness
 
-16. **Old saves can vanish if a form id is renamed or a field removed:** the schema (`src/api/schemas/mimicCharacter.ts`) rejects unknown fields and form ids, so `list()` skips the character (with only a console warning) and `update()` throws. Nothing is affected today.
-17. **`db` `limit` of 0 returns everything** (a falsy check). No caller passes 0.
+14. **Old saves can vanish if a form id is renamed or a field removed:** the schema (`src/api/schemas/mimicCharacter.ts`) rejects unknown fields and form ids, so `list()` skips the character (with only a console warning) and `update()` throws. Nothing is affected today.
+15. **`db` `limit` of 0 returns everything** (a falsy check). No caller passes 0.
 
 ## Docs
 
-18. **README is out of date:** it says Node 18+ (Vite 8 and jsdom 31 need Node 22 or newer); its module list predates splitting gameData.ts (missing behaviors, easterEggs, forms, hunt, lure, movement, strike, text, turns); its test table lists 23 of about 60 test files, and the test signature leaves out `load`; and it says a misspelled room name is a compile error, though some room-name fields are plain strings (they're checked by tests instead).
+16. **README is out of date:** it says Node 18+ (Vite 8 and jsdom 31 need Node 22 or newer); its module list predates splitting gameData.ts (missing behaviors, easterEggs, forms, hunt, lure, movement, strike, text, turns); its test table lists 23 of about 60 test files, and the test signature leaves out `load`; and it says a misspelled room name is a compile error, though some room-name fields are plain strings (they're checked by tests instead).
 
 ## Cleanup
 
-19. **Six versions of "still in the hunt":** `stillInHunt` (hunt.ts), `stillHunting` (strike.ts), `isStillHunting` (events.ts), `isActive` (behaviors.ts, which doesn't check `isDisappeared`), and inline copies in `canStrike` and `relocate`. One shared helper.
-20. **Biased shuffles:** `sort(() => random() - 0.5)` in `dressParty`, `placeProcession`, `generateParty`, the stealth flaw draw and `rollLearning`. `placeRivals` already uses a proper (Fisher–Yates) shuffle; share it.
-21. **Soulglass sensing is written twice** (`beginHunt` and `changeAppearance`, worded slightly differently), and `changeAppearance` uses `today()` instead of the turn's `now`.
-22. **Unused:** `ALL_MATERIALS_FLAT` (mimicData.ts, duplicates `ALL_MATERIALS`), `eslint-plugin-react-refresh` (not in the eslint config), `@types/node` (not used by src). `tailwindcss-animate` belongs in devDependencies.
-23. **eslint config:** `src/lib/**` is ignored as "vendored" but is now hand-written app code; the `cmdk-input-wrapper` and `toast-close` exceptions are leftovers.
-24. **Git:** `package-lock.json` is git-ignored while the generated `tsconfig.tsbuildinfo` is tracked. Commit the lockfile (reproducible installs) and ignore the build info.
-25. **Small dead branches in Game.tsx:** `else if (phase === "evolve")` in `handleEvolution` (always true there) and the `character ? … : "Codex"` check on the Codex link (always true). `strike()` also resets the spiderweb count before checking there's anything to strike.
+17. **Six versions of "still in the hunt":** `stillInHunt` (hunt.ts), `stillHunting` (strike.ts), `isStillHunting` (events.ts), `isActive` (behaviors.ts, which doesn't check `isDisappeared`), and inline copies in `canStrike` and `relocate`. One shared helper.
+18. **Biased shuffles:** `sort(() => random() - 0.5)` in `dressParty`, `placeProcession`, `generateParty`, the stealth flaw draw and `rollLearning`. `placeRivals` already uses a proper (Fisher–Yates) shuffle; share it.
+19. **Soulglass sensing is written twice** (`beginHunt` and `changeAppearance`, worded slightly differently), and `changeAppearance` uses `today()` instead of the turn's `now`.
+20. **Unused:** `ALL_MATERIALS_FLAT` (mimicData.ts, duplicates `ALL_MATERIALS`), `eslint-plugin-react-refresh` (not in the eslint config), `@types/node` (not used by src). `tailwindcss-animate` belongs in devDependencies.
+21. **eslint config:** `src/lib/**` is ignored as "vendored" but is now hand-written app code; the `cmdk-input-wrapper` and `toast-close` exceptions are leftovers.
+22. **Git:** `package-lock.json` is git-ignored while the generated `tsconfig.tsbuildinfo` is tracked. Commit the lockfile (reproducible installs) and ignore the build info.
+23. **Small dead branches in Game.tsx:** `else if (phase === "evolve")` in `handleEvolution` (always true there) and the `character ? … : "Codex"` check on the Codex link (always true). `strike()` also resets the spiderweb count before checking there's anything to strike.
 
 ## To decide
 
-26. **The Lantern Festival window is fixed at Jan 20 – Feb 15,** which often misses the real festival (Feb 17 in 2026, Feb 20 in 2027). May be deliberate, like Springtide's fixed window; if so, record it in DECISIONS.md.
-27. **`DiceRollDisplay` is unused,** but its comment says it's kept for showing rolls in the hunt later.
+24. **The Lantern Festival window is fixed at Jan 20 – Feb 15,** which often misses the real festival (Feb 17 in 2026, Feb 20 in 2027). May be deliberate, like Springtide's fixed window; if so, record it in DECISIONS.md.
+25. **`DiceRollDisplay` is unused,** but its comment says it's kept for showing rolls in the hunt later.

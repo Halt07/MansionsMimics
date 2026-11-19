@@ -1334,6 +1334,8 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   isConsumed: boolean;
   isAttracted: boolean;
   hitsTaken?: number;
+  /** AP taken from them in bites so far: the whole meal, if they collapse. */
+  biteAp?: number;
   fled?: boolean;
   isDisappeared?: boolean;
   isCompanion?: boolean;

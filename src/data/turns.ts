@@ -308,6 +308,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
 
   const biteAp = bite.ending === "collapses" ? bite.ap - COLLAPSE_BONUS_AP : bite.ap;
   t.consume(`You tear free with a ${bite.scrap}! +${biteAp} AP. ${target.name} staggers back. (${bite.hits}/${bite.maxHits} hits taken)`);
+  t.patchMember(target.id, a => ({ biteAp: (a.biteAp ?? 0) + biteAp }));
   if (bite.material) t.evolve(`New material absorbed from the bite: ${bite.material}!`);
   t.react("feed", { excludeIds: [target.id] });
   if (bite.loudCry) t.alert(`${target.name}'s cry turns every head in the room. (+${bite.crySuspicion} suspicion)`);
@@ -327,10 +328,14 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
   } else if (bite.ending === "collapses") {
     t.consume(`${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
     revealCostume(t, target);
+    // The whole meal: every bite taken from them, this one's included, and the bonus
+    const meal = (target.biteAp ?? 0) + bite.ap;
+    t.noteMeal(target.name, meal);
     changes = {
       ...changes,
       adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
       partyMembersEaten: character.partyMembersEaten + 1,
+      biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, meal),
     };
     t.patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
   } else {

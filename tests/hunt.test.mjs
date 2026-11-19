@@ -181,6 +181,17 @@ export default async function ({ gameData: m, ok }) {
   ok(idle.hunt.turn === 0 && said(idle, 'No adventurers are close enough'), 'Strike with nobody in reach: no turn taken');
   ok(!m.canStrike(hunt()) && m.canStrike(hunt({ party: [member('Lured', { isAttracted: true })] })), 'canStrike: only with someone lured (or a rival, or the fireworks)');
 
+  // ---------- eaten in bites ----------
+  const minor = mimic({ tier: 'Minor', startingType: 'Minor', mass: 3, adhesion: 6, patience: 6, forms: [ref('minor_book')] });
+  const worn = member('Worn Down', { location: 'Library', isAttracted: true, constitution: 3, hitsTaken: 2, biteAp: 2 });
+  const finished = m.strike(hunt({ party: [worn] }), minor, opts(0));
+  const lastBite = finished.changes.assimilationPoints;
+  ok(said(finished, 'collapses from their wounds') && finished.hunt.party[0].isConsumed, 'a Minor mimic bites someone until they collapse');
+  ok(finished.changes.biggestMeal?.name === 'Worn Down' && finished.changes.biggestMeal.ap === 2 + lastBite, '…and the whole meal (every bite) is its biggest meal');
+  ok(finished.hunt.biggestMeal?.name === 'Worn Down' && finished.hunt.biggestMeal.ap === 2 + lastBite, '…in the hunt\'s report too');
+  const firstBite = m.strike(hunt({ party: [member('Fresh', { location: 'Library', isAttracted: true, constitution: 3 })] }), minor, opts(0));
+  ok(!firstBite.hunt.party[0].isConsumed && firstBite.hunt.party[0].biteAp === firstBite.changes.assimilationPoints && !firstBite.changes.biggestMeal, 'a bite that doesn\'t finish them: counted toward the meal, not a meal yet');
+
   // ---------- meals and evolving ----------
   const mouse = { uid: 'm1', id: 'mouse', name: 'Mouse', ap: 3, discipline: 1, description: '', location: 'Library', isConsumed: false };
   const hungry = mimic({ assimilationPoints: m.TIER_CONFIG.Lesser.apToEvolve - 2 });
