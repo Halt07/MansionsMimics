@@ -21,6 +21,8 @@ export interface ReportPartyMember {
   readonly isDisappeared?: boolean;
   /** Froze to death (snowbound locations); isConsumed too if the mimic ate them after. */
   readonly isFrozen?: boolean;
+  /** AP bitten off them: if they were eaten, it was a bite at a time, not swallowed whole. */
+  readonly biteAp?: number;
   /** In costume, `name` is the costume (all anyone knew them by); the same as trueName for a real monster. */
   readonly costume?: string;
   readonly trueName?: string;
@@ -120,8 +122,10 @@ export function buildHuntReport(input: HuntReportInput): HuntReport {
   const devoured = people.filter(a => a.isConsumed);
   const vanished = people.filter(a => a.isDisappeared);
   const converted = people.filter(a => a.isConverted);
-  const lost = devoured.length + vanished.length;
-  // Anyone not eaten, vanished or converted walked (or ran) out
+  // Frozen solid and left where they fell (eaten after, they count as devoured)
+  const frozen = people.filter(a => a.isFrozen && !a.isConsumed);
+  const lost = devoured.length + vanished.length + frozen.length;
+  // Anyone not eaten, vanished, frozen or converted walked (or ran) out
   const survivors = people.filter(a => !a.isConsumed && !a.isDisappeared && !a.isConverted && !a.isFrozen);
   const witness = survivors.length ? pick(survivors).name : null;
 
@@ -130,12 +134,15 @@ export function buildHuntReport(input: HuntReportInput): HuntReport {
   const tavern = pick(TAVERNS);
   const room = input.lastRoom;
   const meal = input.biggestMeal && input.biggestMeal.ap > 0 ? input.biggestMeal.name : null;
-  const mealWasPerson = !!meal && people.some(a => a.name === meal);
+  const mealPerson = meal ? people.find(a => a.name === meal) : undefined;
+  const mealWasPerson = !!mealPerson;
+  // Eaten a bite at a time (a Minor mimic, or a giant too big to swallow), not swallowed whole
+  const mealBitten = !!mealPerson?.biteAp;
 
   // Costumes that weren't (Spell or Sweet Street): a real werewolf among the party
   const realMonsters = people.filter(a => !!a.costume && a.costume === a.trueName);
 
-  const ctx = { input, rand, pick, people, devoured, vanished, converted, lost, survivors, witness, form, place, tavern, room, meal, mealWasPerson, realMonsters };
+  const ctx = { input, rand, pick, people, devoured, vanished, frozen, converted, lost, survivors, witness, form, place, tavern, room, meal, mealWasPerson, mealBitten, realMonsters };
 
   const tell = (input.locationId && LOCATION_REPORTS[input.locationId]) || GUILD_REPORTS;
   if (input.ending === "discovered") return tell.incident(ctx);
@@ -158,7 +165,10 @@ type Ctx = {
   people: readonly ReportPartyMember[];
   devoured: readonly ReportPartyMember[];
   vanished: readonly ReportPartyMember[];
+  /** Froze to death and were left uneaten. */
+  frozen: readonly ReportPartyMember[];
   converted: readonly ReportPartyMember[];
+  /** Everyone who didn't come back: devoured, vanished or frozen. */
   lost: number;
   survivors: readonly ReportPartyMember[];
   witness: string | null;
@@ -168,21 +178,24 @@ type Ctx = {
   room: string | null;
   meal: string | null;
   mealWasPerson: boolean;
+  /** The biggest meal was a person eaten a bite at a time (not swallowed whole). */
+  mealBitten: boolean;
   /** Party members whose costume was no costume at all. */
   realMonsters: readonly ReportPartyMember[];
 };
 
-function casualtyLine({ devoured, vanished, converted }: Ctx): string {
+function casualtyLine({ devoured, vanished, frozen, converted }: Ctx): string {
   const parts: string[] = [];
   if (devoured.length) parts.push(`${numberWord(devoured.length)} devoured`);
   if (vanished.length) parts.push(`${numberWord(vanished.length)} missing`);
+  if (frozen.length) parts.push(`${numberWord(frozen.length)} frozen solid`);
   if (converted.length) parts.push(`${numberWord(converted.length)} gone strange, praying to the furniture`);
   return parts.length ? listOf(parts.map((p, i) => (i ? lower(p) : p))) : "None, by the grace of the gods";
 }
 
 /** Discovered: the survivors made it to the Guild, and now everyone knows. */
 function incidentNotice(c: Ctx): HuntReport {
-  const { input, pick, form, place, witness, meal, mealWasPerson, survivors, lost } = c;
+  const { input, pick, form, place, witness, meal, mealWasPerson, mealBitten, survivors, lost } = c;
   const noticeNo = 100 + Math.floor(c.rand() * 900);
   const quotes = [
     `I'm telling you, the ${form} breathed.`,
@@ -190,7 +203,9 @@ function incidentNotice(c: Ctx): HuntReport {
     `Don't sit on anything. Don't open anything. Don't trust the ${form}.`,
     `We all looked right at it. Every one of us. It looked back.`,
     `It was warm. Why was it warm?`,
-    ...(meal && mealWasPerson ? [`It took ${the(meal)} whole. Just… folded around them.`] : []),
+    ...(meal && mealWasPerson
+      ? [mealBitten ? `It went at ${the(meal)} a bite at a time. We heard every one.` : `It took ${the(meal)} whole. Just… folded around them.`]
+      : []),
     ...(input.peakSuspicion >= 10 && lost === 0 ? [`It never touched us. It just knew we knew.`] : []),
   ];
   const threat = lost >= 3 || input.tier === "Grand" || input.tier === "Apex" ? "Extreme"
