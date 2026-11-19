@@ -19,8 +19,11 @@ const EVENT_STYLES: Record<GameEventType, { prefix: string; color: string }> = {
 export default function EventLogPanel({ events = [] }: { events?: GameEvent[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Show the newest line by scrolling the log's own area, not the page: scrollIntoView would
+  // also scroll the window (on a phone, pulling you away from the status and map each turn)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const viewport = bottomRef.current?.closest<HTMLElement>("[data-radix-scroll-area-viewport]");
+    viewport?.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
   }, [events]);
 
   return (

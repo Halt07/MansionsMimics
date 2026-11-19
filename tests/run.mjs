@@ -50,6 +50,7 @@ for (const key of Object.getOwnPropertyNames(dom.window)) {
 for (const key of ['Event', 'CustomEvent', 'EventTarget']) globalThis[key] = dom.window[key];
 // jsdom has no layout: scrolling into view does nothing, and nothing ever resizes
 dom.window.Element.prototype.scrollIntoView = function scrollIntoView() {};
+dom.window.Element.prototype.scrollTo = function scrollTo() {};
 dom.window.ResizeObserver ??= class ResizeObserver { observe() {} unobserve() {} disconnect() {} };
 globalThis.ResizeObserver = dom.window.ResizeObserver;
 // React: renders here happen inside act() (Testing Library does that), so say so
