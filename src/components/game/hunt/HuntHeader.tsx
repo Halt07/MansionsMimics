@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Layers, Palette, RefreshCw } from "lucide-react";
+import { plural } from "@/data/gameData";
 import { useHunt } from "./HuntContext";
 
 interface HuntHeaderProps {
@@ -36,13 +37,13 @@ export default function HuntHeader({ canLeave, onNewHunt, onToggleForms, onToggl
         <div>
           <h2 className="font-cinzel text-xl text-foreground">{location?.name}</h2>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-xs text-muted-foreground">{activeAdventurers.length} adventurers remain</p>
+            <p className="text-xs text-muted-foreground">{activeAdventurers.length} {plural(activeAdventurers.length, "adventurer remains", "adventurers remain")}</p>
             {mimicRoom && (
               <>
                 <span className="text-muted-foreground/40">·</span>
                 <span className="text-xs text-primary/80 font-cinzel">You: {mimicRoom}</span>
                 <span className="text-muted-foreground/40">·</span>
-                <span className="text-xs text-yellow-400/70">Lure range: {lureRange} rooms</span>
+                <span className="text-xs text-yellow-400/70">Lure range: {lureRange} {plural(lureRange, "room")}</span>
               </>
             )}
           </div>

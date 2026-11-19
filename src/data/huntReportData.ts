@@ -7,7 +7,7 @@
 // Pure and seeded, so the same hunt always reads the same (and tests can pin it down).
 // ============================================================
 import type { Tier } from "./vocabulary";
-import { the } from "./text";
+import { plural, the } from "./text";
 
 export type HuntEnding = "discovered" | "abandoned" | "cleared";
 
@@ -244,7 +244,7 @@ function missingNotice(c: Ctx): HuntReport {
     kind: "missing",
     postedAt: "Pinned to the door of the Adventurers' Guild",
     heading: "Adventurers' Guild · Notice",
-    title: people.length === 1 ? "Missing" : "Missing Party",
+    title: plural(people.length, "Missing", "Missing Party"),
     subtitle: `Last seen entering ${place}`,
     fields: [
       { label: "Names", value: listOf(people.map(p => the(p.name))) },

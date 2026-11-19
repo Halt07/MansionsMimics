@@ -17,6 +17,7 @@ export default async function ({ gameData: m, load, ok }) {
   const restless = { ...manor, actionCount: m.ACTION_LIMIT - m.ACTION_WARNING };
   ok(banners(restless).includes(`⏳ ${m.ACTION_WARNING} actions remaining`), `${m.ACTION_WARNING} actions from the limit, the party grows restless`);
   ok(banners({ ...manor, actionCount: m.ACTION_LIMIT - m.ACTION_WARNING - 1 }) === '', '…not a moment before');
+  ok(banners({ ...manor, actionCount: m.ACTION_LIMIT - 1 }).includes('⏳ 1 action remaining'), '…down to the last action (singular)');
 
   // ---------- rival mimics ----------
   const rival = (over) => ({ id: 'r', kind: 'lone', room: manor.party[0].location, revealed: false, consumed: false, clueGiven: false, disguise: { name: 'Barrel', icon: '🛢️' }, ...over });

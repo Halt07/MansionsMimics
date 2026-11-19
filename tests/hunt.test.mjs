@@ -132,6 +132,12 @@ export default async function ({ gameData: m, ok }) {
   ok(said(pocketed, 'scoops up the star fragment'), '…someone pockets the one lying about');
   ok(pocketed.hunt.starFragment === null && !said(pocketed, 'The sky splits open'), '…and no new one falls that same turn');
 
+  // ---------- Lure with nobody in reach ----------
+  const manorLoc = loc('manor');
+  const farRoom = manorLoc.rooms.find((r) => m.getRoomDistance(manorLoc, 'Library', r) >= 2);
+  const lonely = m.lure(hunt({ party: [member('Faraway', { location: farRoom })] }), mimic(), opts());
+  ok(said(lonely, 'within lure range (1 room).'), 'nobody in reach of a range-1 lure: "1 room"');
+
   // ---------- Strike ----------
   const idle = m.strike(hunt(), mimic(), opts());
   ok(idle.hunt.turn === 0 && said(idle, 'No adventurers are close enough'), 'Strike with nobody in reach: no turn taken');

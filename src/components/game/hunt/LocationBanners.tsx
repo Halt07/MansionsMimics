@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, turnsUntil,
+  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, turnsUntil,
   type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,7 @@ function Banner({ tone, title, children }: { tone: string; title: ReactNode; chi
   );
 }
 const Note = ({ children }: { children: ReactNode }) => <p className="text-[11px] mt-0.5 opacity-80">{children}</p>;
-const turns = (n: number) => `${n} ${n === 1 ? "turn" : "turns"}`;
+const turns = (n: number) => `${n} ${plural(n, "turn")}`;
 
 /** Each banner reads the hunt, at a location known to be set. */
 type BannerProps = HuntState & { location: HuntLocation };
@@ -45,7 +45,7 @@ export default function LocationBanners() {
       {!location.snowbound && actionsLeft <= ACTION_WARNING && (
         <Banner
           tone={actionsLeft <= ACTION_WARNING / 2 ? "border-destructive/40 bg-destructive/5 text-destructive/80" : "border-yellow-400/30 bg-yellow-400/5 text-yellow-400/80"}
-          title={`⏳ ${actionsLeft} actions remaining`}
+          title={`⏳ ${actionsLeft} ${plural(actionsLeft, "action")} remaining`}
         >
           <p className="text-[11px] mt-0.5 opacity-70">The adventurers grow restless. Strike soon or they will leave.</p>
         </Banner>

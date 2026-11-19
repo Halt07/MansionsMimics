@@ -31,6 +31,15 @@ export default async function ({ gameData: m, load, ok }) {
   const gone = text(card(mimic({ sidebarView: 'party' }), patch(patch(hunt, 0, { isAlive: false, fled: true }), 1, { isAlive: false, isDisappeared: true })));
   ok(gone.includes(`${first.name} Fled`) && gone.includes(`${second.name} Disappeared`), 'fled and vanished adventurers say so');
 
+  // ---------- the header above it: who's left, and how far the lure reaches ----------
+  const { default: HuntHeader } = await load('/src/components/game/hunt/HuntHeader.tsx');
+  const header = (character, h) => text(s.inHunt(HuntHeader, { canLeave: true, onNewHunt() {}, onToggleForms() {}, onToggleAppearance() {} }, s.huntState(character, h)));
+  ok(header(mimic(), hunt).includes(`${hunt.party.length} adventurers remain`), 'the header counts the adventurers left');
+  const lastOne = { ...hunt, party: hunt.party.map((a, i) => (i === 0 ? a : { ...a, isAlive: false, isConsumed: true })) };
+  ok(header(mimic(), lastOne).includes('1 adventurer remains'), '…down to the last one (singular)');
+  ok(header(mimic({ baseAllure: 3 }), hunt).includes('Lure range: 1 room') && !header(mimic({ baseAllure: 3 }), hunt).includes('1 rooms'), 'lure range 1: "1 room"');
+  ok(header(mimic({ baseAllure: 5 }), hunt).includes('Lure range: 2 rooms'), 'lure range 2: "2 rooms"');
+
   // ---------- the map ----------
   const mapped = card(mimic({ sidebarView: 'map' }), hunt);
   ok(text(mapped).includes(`${manor.name} (${hunt.party.length} active / 0 consumed)`), 'the map is headed with the location');

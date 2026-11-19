@@ -37,6 +37,7 @@ export * from "./locationData";
 export * from "./roomLayouts";
 export * from "./huntReportData";
 export * from "./holidays";
+export * from "./text";
 export * from "./events";
 export * from "./stats";
 export * from "./codex";

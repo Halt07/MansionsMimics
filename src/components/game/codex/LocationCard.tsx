@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HOLIDAYS, seasonRange, creatureEmoji, type HuntLocation, type LocationKnowledge } from "@/data/gameData";
+import { HOLIDAYS, plural, seasonRange, creatureEmoji, type HuntLocation, type LocationKnowledge } from "@/data/gameData";
 import RoomMap, { MysteryMap } from "@/components/game/RoomMap";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -46,7 +46,7 @@ export default function LocationCard({ location: loc, knowledge, hunts }: Locati
               </span>
             )}
             <span className={`text-[11px] ${visited ? "text-primary" : "text-muted-foreground/70 italic"}`}>
-              {visited ? `Hunted ${hunts} ${hunts === 1 ? 'time' : 'times'}` : "Not yet hunted"}
+              {visited ? `Hunted ${hunts} ${plural(hunts, "time")}` : "Not yet hunted"}
             </span>
           </span>
           <span className="block text-sm text-muted-foreground mt-1">{loc.description}</span>

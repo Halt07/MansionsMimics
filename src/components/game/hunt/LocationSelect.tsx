@@ -1,6 +1,6 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  HOLIDAYS, LOCATIONS, TIER_ORDER, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, seasonEnd, today,
+  HOLIDAYS, LOCATIONS, TIER_ORDER, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, plural, seasonEnd, today,
   type Holiday, type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,7 +64,7 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
               )}
               {loc.rare && character.rareLocation && (
                 <p className="text-[11px] font-cinzel uppercase tracking-wide text-amber-400 mb-1">
-                  ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {character.rareLocation.huntsLeft === 1 ? "hunt" : "hunts"} elsewhere
+                  ✦ Rare · leaves after {character.rareLocation.huntsLeft} more {plural(character.rareLocation.huntsLeft, "hunt")} elsewhere
                 </p>
               )}
               <h3 className="font-cinzel text-foreground group-hover:text-primary transition-colors mb-1">{loc.name}</h3>

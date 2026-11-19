@@ -9,6 +9,7 @@ import { type Form, type FormId } from "./mimicData";
 import { ADVENTURER_TEMPLATES, type PartyMember, type Treasure } from "./adventurerData";
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
 import { getAdjacentRooms, getApReward, getRoomDistance } from "./gameData";
+import { plural } from "./text";
 
 // ============================================================
 // DOOR TO DOOR (Spell or Sweet Street)
@@ -403,6 +404,6 @@ export function sinkingWarning(totalTurns: number, turn: number): string | null 
   if (left <= 0) return null;
   if (turn === Math.floor(totalTurns / 3)) return "🌊 Water sloshes across the lower decks. The hull groans under the strain.";
   if (turn === Math.floor((totalTurns * 2) / 3)) return "🌊 The ship lists hard. Loose cargo slides, and the hold is half underwater.";
-  if (left <= 2) return `🌊 The deck is awash. ${left === 1 ? "One more turn" : "Two more turns"} before she goes under!`;
+  if (left <= 2) return `🌊 The deck is awash. ${plural(left, "One more turn", "Two more turns")} before she goes under!`;
   return null;
 }

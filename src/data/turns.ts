@@ -19,7 +19,7 @@ import {
   type RivalMimic, type Witnesses,
 } from "./gameData";
 import { Turn, skyward, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
-import { the } from "./text";
+import { plural, the } from "./text";
 
 /** How a devoured rival is named in the "biggest meal" stat. */
 const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
@@ -149,7 +149,7 @@ export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
     if (rivalHere?.revealed) {
       t.alert(`The ${RIVAL_STATS[rivalHere.kind].name} does not respond to your lure — it knows your tricks. You must Strike directly!`);
     } else {
-      t.info(`No adventurers are within lure range (${range} rooms). Wait for them to wander closer.`);
+      t.info(`No adventurers are within lure range (${range} ${plural(range, "room")}). Wait for them to wander closer.`);
     }
   }
   t.set({ party: outcome.party });
@@ -461,7 +461,7 @@ export function wait(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
     moves.knock.callers.forEach(a => t.info(`🍬 ${a.name} knocks: "Spell or sweet!" They lean right up to the ${form?.name ?? "door"} for a sweet.`));
   } else if (moves.knock) {
     const callers = moves.knock.callers;
-    t.alert(`🪄 ${callers.map(a => a.name).join(" and ")} ${callers.length === 1 ? "knocks" : "knock"}: "Spell or sweet!" Nobody answers at the ${mimicRoom}. ${t.pick(PRANKS)} (+1 suspicion)`);
+    t.alert(`🪄 ${callers.map(a => a.name).join(" and ")} ${plural(callers.length, "knocks", "knock")}: "Spell or sweet!" Nobody answers at the ${mimicRoom}. ${t.pick(PRANKS)} (+1 suspicion)`);
     t.raise(1);
   }
   if (moves.claimedStar) {

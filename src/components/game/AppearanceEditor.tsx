@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "@/data/gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, plural, type Material, type Trait } from "@/data/gameData";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
 type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits" | "scentTraits";
@@ -141,7 +141,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {/* Primary Material */}
         <div>
           <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-            Primary Material{limits.primaryMaterials > 1 ? `s (max ${limits.primaryMaterials})` : ""} — learned only
+            Primary {plural(limits.primaryMaterials, "Material")}{limits.primaryMaterials > 1 ? ` (max ${limits.primaryMaterials})` : ""} — learned only
           </p>
           <div className="flex flex-wrap gap-1.5">
             {learned.length === 0 && <span className="text-muted-foreground italic">No materials learned yet.</span>}
@@ -153,7 +153,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
         {limits.secondaryMaterials > 0 && (
           <div>
             <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Secondary Material{limits.secondaryMaterials > 1 ? `s (max ${limits.secondaryMaterials})` : ""}
+              Secondary {plural(limits.secondaryMaterials, "Material")}{limits.secondaryMaterials > 1 ? ` (max ${limits.secondaryMaterials})` : ""}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {learned.map(mat => materialButton("secondaryMaterials", mat))}

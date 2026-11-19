@@ -8,6 +8,7 @@ import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { ALL_MATERIALS, TIER_ORDER, type Material, type Tier, type Trait } from "./vocabulary";
 import { ALL_FORMS, MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type SeasonalForm } from "./mimicData";
 import { HOLIDAYS, isInSeason, seasonStart } from "./holidays";
+import { plural } from "./text";
 import { hasMagic, knowsTrait, type AppearanceLike } from "./gameData";
 
 // ---------- which forms a mimic can take ----------
@@ -152,8 +153,8 @@ export function dropExpiredSeasonalForms<T extends { formId: string }>(
   const kept = forms.filter(f => !lost.some(l => l.id === f.formId));
   const lines = [...new Set(lost.map(f => f.holiday))].map(h => {
     const names = lost.filter(f => f.holiday === h).map(f => f.name);
-    const shapes = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)} shapes slip` : `${names[0]} shape slips`;
-    return `${HOLIDAYS[h].icon} ${HOLIDAYS[h].name} is over. Your ${shapes} away until next ${seasonStart(h)}.`;
+    const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+    return `${HOLIDAYS[h].icon} ${HOLIDAYS[h].name} is over. Your ${list} ${plural(names.length, "shape slips", "shapes slip")} away until next ${seasonStart(h)}.`;
   });
   return {
     forms: kept,
