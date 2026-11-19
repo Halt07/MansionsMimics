@@ -6,8 +6,8 @@ import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@
 import {
   ALL_FORMS, STAT_CAP, VARIANT_FORMS, ACHIEVEMENTS,
   getAdjacentRooms, massDecay, today, dropExpiredSeasonalForms, isVariantUnlocked,
-  getActiveForm, effectiveStats, lureRange, applyUpgrade, type UpgradeChoice,
-  activeAdventurers, huntCleared, skyward, devotion, beginHunt, relocate, lure, strike, canStrike, wait,
+  getActiveForm, applyUpgrade, type UpgradeChoice,
+  activeAdventurers, huntCleared, devotion, beginHunt, relocate, lure, strike, canStrike, wait,
   eatCreature, eatStar, eatFrozen, changeForm, changeAppearance,
   type Hunt, type LogLine, type TurnResult,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
@@ -22,7 +22,7 @@ import AppearanceEditor from "../components/game/AppearanceEditor";
 import FormSelector from "../components/game/FormSelector";
 import { buildHuntReport } from "@/data/huntReportData";
 import { AchievementBanners } from "../components/game/Achievements";
-import { HuntContext, type HuntState } from "../components/game/hunt/HuntContext";
+import { HuntContext, huntState } from "../components/game/hunt/HuntContext";
 import StatusPanel from "../components/game/hunt/StatusPanel";
 import LocationBanners from "../components/game/hunt/LocationBanners";
 import PartyCard from "../components/game/hunt/PartyCard";
@@ -474,15 +474,7 @@ export default function Game() {
   ) : null;
 
   // What the screen's pieces read (see HuntContext); actions are passed to them as props
-  const sickness = hunt?.sickness ?? null;
-  const huntView: HuntState = {
-    character, activeForm, stats: effectiveStats(character, sickness, activeForm), sickness,
-    suspicion, lureRange: lureRange(character),
-    location, mimicRoom, party, activeAdventurers: active, creatures: hunt?.creatures ?? [], rivals: hunt?.rivals ?? [],
-    isBountyHunt: hunt?.bounty ?? false, huntOver, actionCount: hunt?.actionCount ?? 0, acting,
-    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null,
-    skyward: !!hunt && skyward(hunt),
-  };
+  const huntView = huntState(character, hunt, { location: pendingLocation, huntOver, acting });
 
   return (
     <HuntContext.Provider value={huntView}>

@@ -8,10 +8,12 @@
  * Source files are loaded through Vite (same config as the app), so `@/` imports,
  * JSX and extensionless imports work exactly as they do in the browser build.
  *
- * Each test file default-exports `async function ({ gameData, db, storage, ok, log })`:
+ * Each test file default-exports `async function ({ gameData, db, storage, load, ok, log })`:
  *   gameData  the exports of src/data/gameData.ts
  *   db        the exports of src/api/db.ts (backed by an in-memory localStorage)
  *   storage   the Map behind that localStorage, so a test can inspect or reset it
+ *   load(path)  any other source module, e.g. load('/src/components/game/RoomMap.tsx')
+ *              (screen tests render components with it: see tests/screen.mjs)
  *   ok(cond, message)  record a check
  *   log(...)           info output, shown with --verbose
  *
@@ -82,7 +84,7 @@ try {
     console.log(`${file}`);
     const { default: run } = await import(pathToFileURL(path.join(testsDir, file)).href);
     try {
-      await run({ gameData, db, storage, ok, log });
+      await run({ gameData, db, storage, load: (p) => server.ssrLoadModule(p), ok, log });
     } catch (err) {
       failures.push(`threw: ${err?.stack || err}`);
       console.log(`    FAIL  threw: ${err?.stack || err}`);
