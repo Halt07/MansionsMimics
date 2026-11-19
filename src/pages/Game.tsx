@@ -456,7 +456,7 @@ export default function Game() {
           <p className="font-cinzel text-destructive text-xs font-bold mb-0.5">Mass Decay</p>
           <p className="text-xs text-destructive/80">{massDecayNotice}</p>
         </div>
-        <button onClick={() => setMassDecayNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+        <button aria-label="Dismiss" onClick={() => setMassDecayNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
       </div>
     </div>
   ) : null;
@@ -468,7 +468,7 @@ export default function Game() {
           <p className="font-cinzel text-amber-400 text-xs font-bold mb-0.5">The Season Has Passed</p>
           <p className="text-xs text-amber-200/80">{seasonNotice}</p>
         </div>
-        <button onClick={() => setSeasonNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+        <button aria-label="Dismiss" onClick={() => setSeasonNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
       </div>
     </div>
   ) : null;
@@ -491,7 +491,7 @@ export default function Game() {
       {/* Top bar */}
       <div className="border-b border-border bg-card/50 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to={createPageUrl("Home")} className="text-muted-foreground hover:text-foreground transition-colors">
+          <Link to={createPageUrl("Home")} aria-label="Home" className="text-muted-foreground hover:text-foreground transition-colors">
             <Home className="w-4 h-4" />
           </Link>
           <div className="h-4 w-px bg-border" />

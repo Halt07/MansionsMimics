@@ -12,6 +12,7 @@ import {
 import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { asButton, FOCUS_RING } from "@/lib/asButton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
@@ -183,8 +184,8 @@ export default function CharacterCreation() {
               return (
                 <Card
                   key={type}
-                  onClick={() => handleOriginSelect(type)}
-                  className={`cursor-pointer transition-all border-2 ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}
+                  {...asButton(() => handleOriginSelect(type), { pressed: isSelected })}
+                  className={`cursor-pointer transition-all border-2 ${FOCUS_RING} ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -278,9 +279,9 @@ export default function CharacterCreation() {
                 return (
                   <Card
                     key={form.id}
-                    onClick={() => !disabled && toggleForm(form)}
+                    {...asButton(() => toggleForm(form), { disabled, pressed: !!isSelected })}
                     data-holiday={holidayProps["data-holiday"]}
-                    className={`${holidayProps.className} cursor-pointer transition-all border-2 ${
+                    className={`${holidayProps.className} cursor-pointer transition-all border-2 ${FOCUS_RING} ${
                       isSelected ? "border-primary bg-primary/5" :
                       disabled ? "border-border opacity-40 cursor-not-allowed" :
                       "border-border bg-card hover:border-primary/30"
@@ -330,7 +331,7 @@ export default function CharacterCreation() {
                 Choose your starting appearance. You can only use materials you have <em>consumed or observed</em>.
               </p>
               <p className="text-center text-xs text-muted-foreground/60 flavor-text italic mb-4">
-                As a Minor mimic you start with: Oak, Iron, Cotton.
+                As a {origin ?? "Minor"} mimic you start with: {STARTING_MATERIALS[origin ?? "Minor"].join(", ")}.
               </p>
             </div>
 

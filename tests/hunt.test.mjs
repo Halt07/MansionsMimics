@@ -157,6 +157,41 @@ export default async function ({ gameData: m, ok }) {
   ok(stare.log.filter((l) => l.message === m.CAT_KNOWS_LINE).length === 1, 'a cat in your room stares, after any action');
   ok(!said(m.eatStar(stare.hunt, mimic(), opts()), m.CAT_KNOWS_LINE), '…once per hunt');
 
+  // ---------- changing form ----------
+  const twoForms = mimic({ forms: [ref('lesser_chest'), ref('lesser_crate')], formsUsed: ['lesser_chest'] });
+  const shifted = m.changeForm(hunt(), twoForms, 1, opts());
+  ok(shifted.character.activeFormIndex === 1 && shifted.changes.activeFormIndex === 1, 'changing form wears the one picked (and saves it)');
+  ok(shifted.hunt.suspicion === 1 && said(shifted, 'You shift into the form of a Crate'), '…costing a turn of stealth: +1 suspicion');
+  ok(shifted.changes.formsUsed.includes('lesser_crate') && shifted.hunt.turn === 0, '…counted as a form used, without ending the turn');
+  const fey = m.changeForm(hunt(), { ...twoForms, currentAppearance: { primaryMaterials: ['Feywood'] } }, 1, opts());
+  ok(fey.hunt.suspicion === 0 && said(fey, 'the Feywood makes the shift effortless'), 'with Feywood, the shift is free');
+  const sensitive = member('Seer', { location: 'Library', behavior: 'shapeSense' });
+  const sensed = m.changeForm(hunt({ party: [sensitive] }), twoForms, 1, opts());
+  ok(sensed.hunt.suspicion === 3 && said(sensed, 'something nearby just changed its shape'), 'shape sense nearby: they feel it (+2 more)');
+  ok(m.changeForm(hunt({ party: [sensitive] }), { ...twoForms, currentAppearance: { primaryMaterials: ['Feywood'] } }, 1, opts()).hunt.suspicion === 0,
+    '…unless Feywood hides it too');
+
+  // ---------- changing appearance: Thimblewood and Soulglass ----------
+  const look = (mats) => ({ primaryMaterials: mats, secondaryMaterials: [], surfaceTraits: [], symbolicTraits: [], conditionTraits: [], scentTraits: [] });
+  const standardForm = m.getValidForms('Lesser', 6, { learnedMaterials: [], learnedTraits: [] }).find((f) => f.tier === 'Standard' && !f.variantOf);
+  const wide = mimic({ forms: [ref('lesser_chest'), ref(standardForm.id)], activeFormIndex: 1 });
+  const plainLook = m.changeAppearance(hunt(), wide, look(['Oak']), opts());
+  ok(plainLook.changes.currentAppearance.primaryMaterials[0] === 'Oak' && !plainLook.chooseForms && plainLook.hunt.suspicion === 0, 'an ordinary new look: saved, no cost, nothing else to do');
+  const shrunk = m.changeAppearance(hunt(), wide, look(['Thimblewood']), opts());
+  ok(said(shrunk, 'You are one size smaller now') && shrunk.chooseForms, 'putting on Thimblewood shrinks the mimic, and new forms must be chosen');
+  ok(shrunk.character.forms.map((f) => f.formId).join() === 'lesser_chest' && said(shrunk, `no longer fit you and have been lost: ${standardForm.id}`), '…a form two tiers up is dropped, and named');
+  ok(shrunk.character.activeFormIndex === 0, '…and the mimic wears what it has left');
+  const regrown = m.changeAppearance(hunt(), shrunk.character, look(['Oak']), opts());
+  ok(said(regrown, 'swell back to your full size') && regrown.chooseForms && !said(regrown, 'have been lost'), 'taking it off: back to full size, forms to choose, nothing lost');
+  ok(!m.changeAppearance(hunt(), shrunk.character, look(['Thimblewood', 'Oak']), opts()).chooseForms, 'keeping it on: no resize');
+
+  const rival = (id, kind, room, over = {}) => ({ id, kind, room, revealed: false, consumed: false, clueGiven: false, disguise: { name: 'Barrel', icon: '🛢️' }, ...over });
+  const lurking = hunt({ rivals: [rival('a', 'lone', 'Kitchen'), rival('b', 'elder', 'Cellar')] });
+  ok(said(m.changeAppearance(lurking, mimic(), look(['Soulglass']), opts()), 'The Elder hides in the Cellar.'), 'putting on Soulglass senses a hidden rival, the Elder first');
+  ok(said(m.changeAppearance(hunt({ rivals: [rival('a', 'lone', 'Kitchen')] }), mimic(), look(['Soulglass']), opts()), `The ${m.RIVAL_STATS.lone.name} hides in the Kitchen.`), '…or whichever is hiding');
+  ok(!said(m.changeAppearance(lurking, mimic({ currentAppearance: look(['Soulglass']) }), look(['Soulglass', 'Oak']), opts()), 'Soulglass hums'), '…only when first put on');
+  ok(!said(m.changeAppearance(hunt({ rivals: [rival('a', 'lone', 'Kitchen', { revealed: true })] }), mimic(), look(['Soulglass']), opts()), 'Soulglass hums'), '…and not for a rival already exposed');
+
   // ---------- the Sinking Ship ----------
   const ship = loc('sinking_ship');
   const sunk = m.wait(hunt({ location: ship, mimicRoom: ship.rooms[0], party: [member('Sailor', { location: ship.rooms[1] })], turn: ship.sinkingTurns - 1 }), mimic(), opts());

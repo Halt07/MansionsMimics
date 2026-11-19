@@ -81,3 +81,7 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 Not started:
 
 - **Confirm "New Hunt" mid-hunt.** It currently leaves without asking and quietly skips recording the hunt.
+
+## Code
+
+- **Narration in its own file.** The hunt's log lines live with the rules that write them (about 90 in `src/data/turns.ts`, 25 in `src/data/hunt.ts`). A `narration.ts` could hold the wording instead, grouped by action (one entry per line, taking only the values it prints), the way `huntReportData.ts` holds the report text; the rules would pick which line and when. Tried once and reverted: it separates writing from rules, but each line then takes a jump to another file to read. Worth another look only if a lot more text is coming. (The `t.alert(...)` / `t.info(...)` shorthands on `Turn` came out of that try.)

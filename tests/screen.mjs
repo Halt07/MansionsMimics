@@ -1,27 +1,48 @@
 /**
- * Helpers for screen tests: render a component to HTML (react-dom/server, no browser) and look
- * through what came out. Not a test file itself (the runner only runs *.test.mjs).
+ * Helpers for screen tests. Two ways to render a component:
  *
- *   const s = await screen(load);
- *   const html = s.render(RoomMap, { location, mimicRoom });
- *   const html = s.inHunt(PartyCard, { onToggle() {} }, s.huntState(character, hunt));
+ *   show / showInHunt      React Testing Library, onto the test page (jsdom): find things by
+ *                          role and text, and click with userEvent. Use this for anything a
+ *                          player does (opening, choosing, clicking).
+ *   markup / markupInHunt  the HTML as a string (react-dom/server), for checking what a screen
+ *                          shows at a glance: classes, data attributes and titles.
  *
- * Checks are on the markup as text: the classes, data attributes and titles the components set
- * (the same ones index.css styles and the browser shows on hover).
+ *   const s = await setup(load);
+ *   s.showInHunt(PartyCard, { onToggle }, s.huntState(character, hunt));
+ *   const html = s.markup(RoomMap, { location, mimicRoom });
+ *
+ * Not a test file itself (the runner only runs *.test.mjs).
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { cleanup, render } from '@testing-library/react';
 
-export async function screen(load) {
+export async function setup(load) {
   const { HuntContext, huntState } = await load('/src/components/game/hunt/HuntContext.ts');
-  const render = (Component, props = {}) => renderToStaticMarkup(createElement(Component, props));
+  const inHunt = (hunt) => ({ children }) => createElement(HuntContext.Provider, { value: hunt }, children);
   return {
-    render,
     huntState,
-    /** Render inside the game screen's HuntContext (a value from huntState). */
-    inHunt: (Component, props, hunt) =>
-      renderToStaticMarkup(createElement(HuntContext.Provider, { value: hunt }, createElement(Component, props))),
+    /** Render onto the test page (Testing Library). Anything shown before is unmounted first. */
+    show: (Component, props = {}) => {
+      cleanup();
+      return render(createElement(Component, props));
+    },
+    /** The same, inside the game screen's HuntContext (a value from huntState). */
+    showInHunt: (Component, props, hunt) => {
+      cleanup();
+      return render(createElement(Component, props), { wrapper: inHunt(hunt) });
+    },
+    markup: (Component, props = {}) => renderToStaticMarkup(createElement(Component, props)),
+    markupInHunt: (Component, props, hunt) => renderToStaticMarkup(createElement(inHunt(hunt), null, createElement(Component, props))),
   };
+}
+
+/** Records each call's arguments, for checking what a click asked the game to do. */
+export function spy() {
+  const calls = [];
+  const fn = (...args) => { calls.push(args); };
+  fn.calls = calls;
+  return fn;
 }
 
 /** A mimic to render with (a Lesser chest), with any fields replaced. */
@@ -35,6 +56,32 @@ export const mimic = (over = {}) => ({
   sidebarView: 'map',
   ...over,
 });
+
+/**
+ * Save a mimic to the (in-memory) database the way character creation does, with any fields
+ * replaced; returns it as stored (with its id). Saves a moment apart, so "newest first" is defined.
+ */
+export async function saveMimic(db, over = {}) {
+  await new Promise((r) => setTimeout(r, 2));
+  return db.entities.MimicCharacter.create({
+    name: 'Testy', tier: 'Lesser', startingType: 'Lesser', mass: 6, digestiveCapacity: 5, patience: 3, adhesion: 3, plausibility: 3,
+    assimilationPoints: 0, baseAllure: 3, forms: [{ formId: 'lesser_chest', name: 'Chest', tier: 'Lesser', learned: true }, { formId: 'lesser_crate', name: 'Crate', tier: 'Lesser', learned: true }],
+    activeFormIndex: 0, learnedMaterials: ['Oak', 'Iron', 'Cowhide'], learnedTraits: [], currentAppearance: { primaryMaterials: ['Oak'] }, isActive: true,
+    ...over,
+  });
+}
+
+/** Run `fn` with the database emptied, then put back whatever was there. */
+export async function withEmptyDb(storage, fn) {
+  const saved = new Map(storage);
+  storage.clear();
+  try {
+    return await fn();
+  } finally {
+    storage.clear();
+    for (const [k, v] of saved) storage.set(k, v);
+  }
+}
 
 /** Pin the game's date (as the dev build's mm.debugDate does) to "month-day", or clear it. */
 export function onDate(storage, monthDay) {

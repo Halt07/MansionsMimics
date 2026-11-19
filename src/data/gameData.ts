@@ -120,14 +120,6 @@ export function maxTargetForChance(numDice: number, minChance: number): number {
   return target;
 }
 
-export function rollDiceVerbose(numDice: number): { total: number; rolls: number[] } {
-  const rolls: number[] = [];
-  for (let i = 0; i < numDice; i++) {
-    rolls.push(Math.floor(Math.random() * 6) + 1);
-  }
-  return { total: rolls.reduce((a, b) => a + b, 0), rolls };
-}
-
 // ============================================================
 // MAGIC AND KNOWLEDGE
 // What the mimic is wearing (magic materials have effects all over the rules) and what it knows.

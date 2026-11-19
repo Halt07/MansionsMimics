@@ -132,7 +132,7 @@ export default function AppearanceEditor({ character, onSave, onClose }: Appeara
     <Card className="bg-card border-border">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="font-cinzel text-sm text-foreground">Adjust Appearance</CardTitle>
-        <Button variant="ghost" size="icon" onClick={onClose} className="w-6 h-6 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" className="w-6 h-6 text-muted-foreground hover:text-foreground">
           <X className="w-3 h-3" />
         </Button>
       </CardHeader>

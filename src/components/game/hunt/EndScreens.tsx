@@ -3,6 +3,7 @@ import { createPageUrl } from "@/utils";
 import { BURN_HUNTS, BURN_SUSPICION, STAT_CAP, TIER_CONFIG, type HuntReport as Report, type UpgradeChoice } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { asButton, FOCUS_RING } from "@/lib/asButton";
 import HuntReport from "../HuntReport";
 import { useHunt } from "./HuntContext";
 
@@ -48,8 +49,8 @@ export function EvolveScreen({ onChoose, onSkip }: { onChoose: (choice: UpgradeC
         {options.map(opt => (
           <Card
             key={opt.key}
-            onClick={() => !opt.capped && onChoose(opt.key)}
-            className={`border-border bg-card transition-all group ${opt.capped ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
+            {...asButton(() => onChoose(opt.key), { disabled: opt.capped })}
+            className={`border-border bg-card transition-all group ${FOCUS_RING} ${opt.capped ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-primary/40"}`}
           >
             <CardContent className="p-4 text-center">
               <div className="text-2xl mb-2">{opt.icon}</div>

@@ -4,6 +4,7 @@ import {
   type Holiday, type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
+import { asButton, FOCUS_RING } from "@/lib/asButton";
 import BurnBadge from "../BurnBadge";
 import { useHunt } from "./HuntContext";
 
@@ -49,9 +50,9 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
         {sorted.map(loc => (
           <Card
             key={loc.id}
-            onClick={() => onChoose(loc)}
+            {...asButton(() => onChoose(loc))}
             data-holiday={loc.holiday}
-            className={`cursor-pointer bg-card transition-all group ${loc.holiday ? "holiday-card border-border" : loc.rare
+            className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.holiday ? "holiday-card border-border" : loc.rare
               ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
               : "border-border hover:border-primary/40"}`}
           >
@@ -104,8 +105,8 @@ export function RoomSelect({ onConfirm, onBack }: RoomSelectProps) {
         {location.rooms.map(room => (
           <Card
             key={room}
-            onClick={() => onConfirm(room, location)}
-            className="cursor-pointer border-border hover:border-primary/40 bg-card transition-all group"
+            {...asButton(() => onConfirm(room, location))}
+            className={`cursor-pointer border-border hover:border-primary/40 bg-card transition-all group ${FOCUS_RING}`}
           >
             <CardContent className="p-4">
               <h3 className="font-cinzel text-sm text-foreground group-hover:text-primary transition-colors mb-1">{room}</h3>

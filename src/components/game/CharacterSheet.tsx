@@ -33,7 +33,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
           <p className="text-xs text-muted-foreground">{character.startingType} Origin · {character.tier} Tier</p>
         </div>
         {onClose && (
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </Button>
         )}
@@ -143,7 +143,13 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
                 <p>Secondary: <span className="text-foreground">{character.currentAppearance.secondaryMaterials.join(", ")}</span></p>
               )}
               {(character.currentAppearance.surfaceTraits || []).length > 0 && (
-                <p>Traits: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>
+                <p>Surface: <span className="text-foreground">{character.currentAppearance.surfaceTraits.join(", ")}</span></p>
+              )}
+              {(character.currentAppearance.symbolicTraits || []).length > 0 && (
+                <p>Symbolic: <span className="text-foreground">{character.currentAppearance.symbolicTraits.join(", ")}</span></p>
+              )}
+              {(character.currentAppearance.conditionTraits || []).length > 0 && (
+                <p>Condition: <span className="text-foreground">{character.currentAppearance.conditionTraits.join(", ")}</span></p>
               )}
               {(character.currentAppearance.scentTraits || []).length > 0 && (
                 <p>Scent: <span className="text-foreground">{character.currentAppearance.scentTraits.join(", ")}</span></p>

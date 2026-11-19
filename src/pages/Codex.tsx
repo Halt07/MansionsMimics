@@ -49,7 +49,7 @@ export default function Codex() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card/50 px-4 py-3 flex items-center gap-3">
-        <Link to={createPageUrl("Home")} className="text-muted-foreground hover:text-foreground transition-colors">
+        <Link to={createPageUrl("Home")} aria-label="Home" className="text-muted-foreground hover:text-foreground transition-colors">
           <Home className="w-4 h-4" />
         </Link>
         <div className="h-4 w-px bg-border" />

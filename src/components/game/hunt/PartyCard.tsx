@@ -2,6 +2,7 @@ import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneate
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";
+import { asButton, FOCUS_RING } from "@/lib/asButton";
 import { useHunt, type HuntState } from "./HuntContext";
 
 /** The hunt, once there's a location and a room. */
@@ -18,14 +19,9 @@ export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   const counts = `(${activeAdventurers.length} active / ${consumed} consumed)`;
   return (
     <Card
-      role="button"
-      tabIndex={0}
+      {...asButton(onToggle)}
       aria-label={showMap ? "Show the party list" : "Show the room map"}
-      onClick={onToggle}
-      onKeyDown={e => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }
-      }}
-      className={"sidebar-view-card bg-card border-border fx-shake"}
+      className={`sidebar-view-card bg-card border-border fx-shake ${FOCUS_RING}`}
     >
       <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
         <div className="flex items-start justify-between gap-2">

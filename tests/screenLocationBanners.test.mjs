@@ -1,15 +1,15 @@
 // The hunt's status strips (src/components/game/hunt/LocationBanners.tsx), rendered from real
 // hunts: one per thing going on at the location, and the party growing restless.
-import { screen, mimic, text } from './screen.mjs';
+import { setup, mimic, text } from './screen.mjs';
 
 export default async function ({ gameData: m, load, ok }) {
-  const s = await screen(load);
+  const s = await setup(load);
   const { default: LocationBanners } = await load('/src/components/game/hunt/LocationBanners.tsx');
   const opts = { random: () => 0.5, now: new Date('2026-05-15T12:00:00Z') };
   const loc = (id) => m.LOCATIONS.find((l) => l.id === id);
   const start = (id, room = loc(id).rooms[0], character = mimic()) => m.beginHunt(character, loc(id), room, opts).hunt;
   const banners = (hunt, { character = mimic(), huntOver = false } = {}) =>
-    text(s.inHunt(LocationBanners, {}, s.huntState(character, hunt, { huntOver })));
+    text(s.markupInHunt(LocationBanners, {}, s.huntState(character, hunt, { huntOver })));
 
   // ---------- an ordinary hunt ----------
   const manor = start('manor');
