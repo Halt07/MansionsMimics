@@ -23,6 +23,15 @@ async function run(dbModule, storage, ok) {
     currentAppearance: { primaryMaterials: ['Oak'], secondaryMaterials: [], surfaceTraits: [], symbolicTraits: [], conditionTraits: [] },
   });
   ok(a.id && a.created_date && a.mass === 2 && a.isActive === true && a.name === 'Chesty', 'create applies defaults, trims name, adds id/dates');
+  const spaced = await M.create({ name: '  Old   Hatbox\t the  Third ' });
+  ok(spaced.name === 'Old Hatbox the Third' && JSON.parse(storage.get(KEY)).find((r) => r.id === spaced.id).name === 'Old Hatbox the Third',
+    'a name is saved with every run of spaces inside squeezed to one (and none at the ends)');
+  ok((await M.update(spaced.id, { name: 'Gristle    Jr' })).name === 'Gristle Jr', '…renaming too');
+  const recs0 = JSON.parse(storage.get(KEY));
+  recs0.find((r) => r.id === spaced.id).name = 'From  An   Older Save';
+  storage.set(KEY, JSON.stringify(recs0));
+  ok((await M.get(spaced.id)).name === 'From An Older Save', '…and an older save with doubled spaces reads back tidied');
+  await M.delete(spaced.id);
   const b = await M.create({ name: 'Second' });
   ok(b.currentAppearance.primaryMaterials.length === 0 && b.currentAppearance.secondaryMaterials.length === 0 && Array.isArray(b.learnedTraits), 'nested defaults filled');
 

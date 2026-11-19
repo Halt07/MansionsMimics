@@ -40,7 +40,8 @@ const AppearanceSchema = z.strictObject({
 
 /** Fields the game controls. Used to validate `create()` input. */
 export const MimicCharacterFieldsSchema = z.strictObject({
-  name: z.string().trim().min(1, 'Name is required'),
+  // Spaces at either end are trimmed, and any run of spaces inside becomes one: "  Old   Hatbox " is "Old Hatbox"
+  name: z.string().trim().min(1, 'Name is required').transform(name => name.replace(/\s+/g, ' ')),
   tier: TierSchema.default('Minor'),
   startingType: z.enum(STARTING_TYPES).optional(),
   mass: z.number().default(2),
