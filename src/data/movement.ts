@@ -1,7 +1,7 @@
 // ============================================================
 // MANSIONS & MIMICS — Movement
 // Where everyone goes each turn the mimic Waits: the party (wandering, heading for a fallen
-// star, walking the door-to-door loop, or walking into a hidden rival), and the small
+// star, walking the door-to-door loop, or walking into a rival), and the small
 // creatures (with Honeyamber drawing them toward the mimic). Pure: each returns where they
 // ended up, and the turn logs and applies it. Re-exported from ./gameData.
 // ============================================================
@@ -10,12 +10,14 @@ import type { PartyMember } from "./adventurerData";
 import type { HuntLocation, LocationCreature, RoomName } from "./locationData";
 import { getAdjacentRooms, getRoomDistance } from "./gameData";
 import { answersDoor, claimStar, nextHouse, rivalInRoom, type RivalMimic } from "./events";
+import { the } from "./text";
 
 // ---------- the party ----------
 // Where everyone goes when the mimic Waits. Each adventurer still in the hunt usually wanders
 // to a neighboring room (half the time they stay put), unless the location says otherwise: a
 // fallen star draws everyone toward it, and a door-to-door procession walks the loop. Walking
-// into a hidden rival's room is the end of them.
+// into a rival mimic's room is the end of them, whether it's hidden or has been found (a found
+// rival is still hungry: see DECISIONS.md).
 
 /** Adventurers with this behavior never wander on their own. */
 export function isStationary(adventurer: Pick<PartyMember, "behavior">): boolean {
@@ -40,7 +42,7 @@ export interface PartyStep {
   member: PartyMember;
   from: RoomName;
   to: RoomName;
-  /** Walked into a hidden rival mimic's room and vanished (that rival's id). */
+  /** Walked into a rival mimic's room and vanished (that rival's id). */
   vanishedInto?: string;
 }
 
@@ -123,7 +125,7 @@ export function moveParty(
   return { party: result, steps, arrivals, claimedStar: claimed.claimedBy, knock };
 }
 
-/** The log line when someone walks into a hidden rival's room and doesn't come out. */
+/** The log line when someone walks into a rival's room out of sight, and doesn't come out. */
 export const VANISHING_LINES: readonly ((name: string, room: RoomName) => string)[] = [
   (n, r) => `${n} heads toward the ${r}... and does not emerge.`,
   (n, r) => `A muffled sound comes from the ${r}. ${n} never reappears.`,
@@ -131,6 +133,10 @@ export const VANISHING_LINES: readonly ((name: string, room: RoomName) => string
   (n, r) => `You hear ${n}'s footsteps enter the ${r} — then stop abruptly.`,
   (n, r) => `Something in the ${r} has ${n}'s attention. They do not return.`,
 ];
+
+/** The log line when a rival in the mimic's own room gets to an adventurer first (walking or lured in). */
+export const rivalAteFirst = (rivalName: string, name: string): string =>
+  `${the(rivalName, true)} snatched up ${the(name)} before you could get to them.`;
 
 /**
  * The small creatures' turn: each may wander (toward the mimic, sometimes, with Honeyamber; see

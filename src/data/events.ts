@@ -366,7 +366,7 @@ export function rivalEscapeRoom(
   return options.length > 0 ? options[Math.floor(random() * options.length)] : escapee.room;
 }
 
-/** The uneaten rival hiding in a room, if any. */
+/** The uneaten rival in a room, hidden or found, if any. */
 export function rivalInRoom(rivals: readonly RivalMimic[], room: RoomName | null | undefined): RivalMimic | undefined {
   return rivals.find(r => !r.consumed && r.room === room);
 }

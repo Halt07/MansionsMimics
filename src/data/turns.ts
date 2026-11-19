@@ -11,7 +11,7 @@ import type { HuntLocation, RoomName } from "./locationData";
 import type { Form } from "./mimicData";
 import {
   ALL_FORMS, BOUNTY_START_SUSPICION, BURN_SUSPICION, CANNIBAL_MIMICS, COLLAPSE_BONUS_AP, PORTER_SISTER, PORTER_TOKEN_LINE,
-  PRANKS, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, RIVAL_STATS, STAR_FRAGMENT, TITANIC_FEAST_GIANTS, VANISHING_LINES,
+  PRANKS, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE, RIVAL_STATS, STAR_FRAGMENT, TITANIC_FEAST_GIANTS, VANISHING_LINES, rivalAteFirst,
   consumeSuspicion, disguiseOf, escapeRoom, formTier, formsStillAllowed, frozenMealAp, hasMagic, isTheRealThing,
   lureRange, maxTargetForChance, moveCreatures, moveParty, needsPartialBites, pickStrikeTarget, pickTreasurePrize,
   resolveBite, resolveLure, resolveRivalStrike, resolveSwallow, rivalInRoom, rollDice, startHunt, strikeCandidates,
@@ -153,11 +153,20 @@ export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
       t.info(`No adventurers are within lure range (${range} ${plural(range, "room")}). Wait for them to wander closer.`);
     }
   }
-  t.set({ party: outcome.party });
+  // A rival found in your room is still hungry: whoever you draw in, it gets to first
+  let { party, arrivals } = outcome;
+  const rivalHere = rivalInRoom(hunt.rivals, mimicRoom);
+  if (rivalHere?.revealed && arrivals.length > 0) {
+    const eaten = new Set(arrivals.map(a => a.id));
+    party = party.map(a => eaten.has(a.id) ? { ...a, isAlive: false, isAttracted: false, isDisappeared: true } : a);
+    arrivals.forEach(a => t.alert(rivalAteFirst(RIVAL_STATS[rivalHere.kind].name, a.name)));
+    arrivals = [];
+  }
+  t.set({ party });
   // A Lure that draws nobody into the room still counts as holding still (the spiderweb)
-  t.holdStill(outcome.arrivals.length > 0);
+  t.holdStill(arrivals.length > 0);
   // Whoever came in faces a stealth check
-  t.stealth(outcome.arrivals);
+  t.stealth(arrivals);
   t.endTurn();
   return t.finish();
 }
@@ -452,8 +461,12 @@ export function wait(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
   const moves = moveParty(t.hunt.party, location, { mimicRoom, rivals: hunt.rivals, starFragment: hunt.starFragment, form }, t.random);
   for (const step of moves.steps) {
     if (step.vanishedInto) {
-      // Walked into a hidden rival: it eats them, and all you hear is the silence
-      t.alert(t.pick(VANISHING_LINES)(step.member.name, step.to));
+      // Walked into a rival: it eats them. Out of sight, all you hear is the silence; in your own
+      // room, you watch it happen
+      const rival = hunt.rivals.find(r => r.id === step.vanishedInto);
+      t.alert(step.to === mimicRoom && rival
+        ? rivalAteFirst(RIVAL_STATS[rival.kind].name, step.member.name)
+        : t.pick(VANISHING_LINES)(step.member.name, step.to));
       t.patchRival(step.vanishedInto, { clueGiven: true });
     } else {
       t.info(`${step.member.name} moves from the ${step.from} to the ${step.to}.`);

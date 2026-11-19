@@ -151,6 +151,25 @@ export default async function ({ gameData: m, ok }) {
   const lonely = m.lure(hunt({ party: [member('Faraway', { location: farRoom })] }), mimic(), opts());
   ok(said(lonely, 'within lure range (1 room).'), 'nobody in reach of a range-1 lure: "1 room"');
 
+  // ---------- a found rival is still hungry ----------
+  // A rival (found, so revealed) in the Library with you; on a Wait, Walker steps in from next door
+  const libRival = { id: 'r', kind: 'lone', room: 'Library', revealed: true, consumed: false, clueGiven: false, disguise: { name: 'Barrel', icon: '🛢️' } };
+  // The pinned roll that walks someone from `room` into the Library (a move, not a stay, and the Library picked)
+  const stepIn = (room) => { const next = m.getAdjacentRooms(loc('manor'), room); return (next.indexOf('Library') + 0.5) / next.length; };
+  const besideRoom = m.getAdjacentRooms(loc('manor'), 'Library').find((r) => stepIn(r) >= m.STAY_CHANCE);
+  const roll = stepIn(besideRoom);
+  const walkedIn = m.wait(hunt({ party: [member('Walker', { location: besideRoom })], rivals: [libRival] }), mimic(), opts(roll));
+  ok(walkedIn.hunt.party[0].isDisappeared && !walkedIn.hunt.party[0].isAlive, 'walking into your room with a found rival there: the rival eats them');
+  ok(said(walkedIn, 'The rival mimic snatched up the Walker before you could get to them.') && !said(walkedIn, 'does not emerge'), '…and you see it happen');
+  const elsewhere = m.wait(hunt({ mimicRoom: 'Kitchen', party: [member('Walker', { location: besideRoom })], rivals: [libRival] }), mimic(), opts(roll));
+  ok(elsewhere.hunt.party[0].isDisappeared && !said(elsewhere, 'before you could get to them'), 'a rival in another room: still eaten, but out of sight');
+
+  const drawn = m.lure(hunt({ party: [member('Drawn', { location: besideRoom }), member('Already', { location: 'Library' })], rivals: [libRival] }), mimic({ baseAllure: 6 }), opts(0));
+  const [drawnIn, already] = drawn.hunt.party;
+  ok(said(drawn, 'Drawn is drawn into the Library') && said(drawn, 'The rival mimic snatched up the Drawn before you could get to them.'), 'luring someone into a room with a found rival: drawn in, then eaten by it');
+  ok(drawnIn.isDisappeared && !drawnIn.isAttracted && !said(drawn, 'Drawn glances') && !said(drawn, 'Drawn pauses'), '…before they reach you (so no stealth check)');
+  ok(already.isAttracted && !already.isDisappeared, 'someone already in the room is lured where they stand, as usual');
+
   // ---------- Strike ----------
   const idle = m.strike(hunt(), mimic(), opts());
   ok(idle.hunt.turn === 0 && said(idle, 'No adventurers are close enough'), 'Strike with nobody in reach: no turn taken');

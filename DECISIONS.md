@@ -11,6 +11,7 @@ entries as decisions are made, with the reason if one was given.
 - **Stealth: spotted flaws only add suspicion when the check fails.** A passed check that noticed a flaw costs nothing. Something not looking quite right for a moment doesn't mean someone actually grows suspicious. (Pinned by tests/lure.test.mjs.)
 - **A missed lunge costs the full penalty, even under the fireworks.** The fireworks hide a meal from onlookers, not from the one you lunged at: they saw you.
 - **Starfall waits a turn after a star is claimed.** If a star fragment was lying about when the turn began, no new one falls that turn, even if it's due and someone pockets the old one mid-turn. (Pinned by tests/hunt.test.mjs.)
+- **A rival mimic that has been found is still hungry.** Revealing it doesn't stop it hunting: anyone who walks into its room on a Wait is eaten, and so is anyone you Lure into your room while it's there with you. They never reach you. In your own room you see it happen ("The rival mimic snatched up the Bard before you could get to them."); in another room they just don't come out. (Pinned by tests/hunt.test.mjs.)
 
 ## Seasonal locations
 
