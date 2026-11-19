@@ -41,6 +41,8 @@ export default async function ({ gameData: m, load, ok }) {
   const crate = mimic({ forms: [{ formId: 'lesser_crate', name: 'Crate', tier: 'Lesser', learned: true }] });
   const asCrate = banners(start('spell_or_sweet_street', house, crate), { character: crate });
   ok(asCrate.includes("Nobody's answering at your house"), "…a Crate doesn't, and gets pranked");
+  const answerers = street.procession.sweets.map((id) => m.ALL_FORMS.find((f) => f.id === id).name);
+  ok(answerers.every((name) => asCrate.includes(name)), `…and it names every form that does answer (${answerers.join(', ')})`);
   const green = street.rooms.find((r) => !street.procession.order.includes(r));
   ok(banners(start('spell_or_sweet_street', green)).includes(`You're out on the ${green}: nobody knocks here`), 'out on the green, nobody knocks');
 

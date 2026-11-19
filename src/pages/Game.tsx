@@ -145,9 +145,16 @@ export default function Game() {
     persist(ceremony.start.changes);
     setCeremonyRunning(true);
     const last = ceremony.steps.length - 1;
+    // Each offering's AP is saved as it's accepted, like any meal (so leaving mid-ceremony keeps
+    // what was given so far, and lifetime AP, which counts every rise, never runs ahead of it)
+    let ap = ceremony.start.character.assimilationPoints;
+    const apAfter = ceremony.steps.map(step => (ap += step.ap));
     ceremonyTimers.current = ceremony.steps.map((step, i) => setTimeout(() => {
       addLog(step.log);
-      if (step.ap) setCharacter(prev => prev ? { ...prev, assimilationPoints: prev.assimilationPoints + step.ap } : prev);
+      if (step.ap) {
+        setCharacter(prev => prev ? { ...prev, assimilationPoints: apAfter[i] } : prev);
+        persist({ assimilationPoints: apAfter[i] });
+      }
       if (i !== last) return;
       persist(ceremony.changes);
       setCeremonyRunning(false);

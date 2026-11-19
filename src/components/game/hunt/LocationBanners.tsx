@@ -116,7 +116,7 @@ function ProcessionBanner({ location, mimicRoom, activeForm, activeAdventurers }
           ? `You're out on the ${mimicRoom}: nobody knocks here, so lure them over.`
           : sweet
           ? `As a ${activeForm?.name}, you've got sweets: whoever knocks comes right up to you.`
-          : "Nobody's answering at your house: whoever knocks will prank it (+1 suspicion). A Door, Chest, Jack-o'-Lantern, Gargoyle or Haunted Mansion hands out sweets."}
+          : "Nobody's answering at your house: whoever knocks will prank it (+1 suspicion). A Door, Goblet, Chest, Jack-o'-Lantern, Gargoyle or Haunted Mansion hands out sweets."}
         {nextUp.length > 0 && ` Next at your door: ${nextUp.map(x => x.a.name).join(" and ")}, ${nextUp[0].away === 1 ? "next turn" : `in ${nextUp[0].away} houses`}.`}
       </Note>
     </Banner>
