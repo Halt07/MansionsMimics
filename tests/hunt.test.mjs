@@ -176,6 +176,11 @@ export default async function ({ gameData: m, ok }) {
   ok(drawnIn.isDisappeared && !drawnIn.isAttracted && !said(drawn, 'Drawn glances') && !said(drawn, 'Drawn pauses'), '…before they reach you (so no stealth check)');
   ok(already.isAttracted && !already.isDisappeared, 'someone already in the room is lured where they stand, as usual');
 
+  // A star isn't a meal that keeps the party interested (see DECISIONS.md)
+  const starHere = hunt({ location: hill, mimicRoom: hillMimic, starFragment: hillMimic, actionCount: 30 });
+  const swallowed = m.eatStar(starHere, mimic(), opts());
+  ok(swallowed.hunt.starFragment === null && swallowed.hunt.actionCount === 30, 'swallowing a star: the party\'s boredom count carries on');
+
   // ---------- Strike ----------
   const idle = m.strike(hunt(), mimic(), opts());
   ok(idle.hunt.turn === 0 && said(idle, 'No adventurers are close enough'), 'Strike with nobody in reach: no turn taken');

@@ -41,7 +41,7 @@ export interface Hunt {
   bounty: boolean;
   /** Afflicting the mimic for this hunt only. */
   sickness: Sickness | null;
-  /** Actions since the last Strike or meal (the party leaves at ACTION_LIMIT). */
+  /** Actions since the last Strike or meal (the party leaves at ACTION_LIMIT). A star fragment isn't a meal here: see DECISIONS.md. */
   actionCount: number;
   /** Full turns taken (Relocate, Lure, Strike or Wait); the location's twist runs off it. */
   turn: number;
