@@ -133,6 +133,12 @@ export default async function ({ gameData: m, ok }) {
   ok(m.skyward({ ...tossed.hunt, mimicRoom: gate }), 'skyward: everyone under the volley is looking up');
   const slipped = m.relocate(hunt({ location: fair, mimicRoom: gate, party: [], turn: fair.fireworks.every - 1 }), crate, nextToGate, opts(0));
   ok(slipped.hunt.fireworksRoom === gate && slipped.hunt.mimicRoom === nextToGate && slipped.hunt.suspicion === 1, '…but one that just slipped out from under it isn\'t');
+  const luredAtGate = member('Lured', { location: gate, isAttracted: true });
+  const thrownOut = m.wait(hunt({ location: fair, mimicRoom: gate, party: [luredAtGate], turn: fair.fireworks.every - 1 }), crate, opts(0));
+  ok(said(thrownOut, 'heave you out') && thrownOut.hunt.party[0].location === gate && !thrownOut.hunt.party[0].isAttracted, 'thrown out: whoever you had lured stays behind, no longer lured');
+  ok(!m.canStrike(thrownOut.hunt) && said(m.strike(thrownOut.hunt, crate, opts(0)), 'No adventurers are close enough'), '…so a Strike from the next room can\'t reach them');
+  const movedOff = m.relocate(hunt({ party: [member('Fan', { location: 'Library', isAttracted: true })] }), mimic(), 'Drawing Room', opts());
+  ok(!movedOff.hunt.party[0].isAttracted, 'moving rooms yourself does the same');
 
   // ---------- Stargazers' Hill (a star claimed this turn: the sky waits for the next one) ----------
   const hill = loc('stargazers_hill');

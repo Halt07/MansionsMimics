@@ -85,7 +85,7 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
   const fromRoom = hunt.mimicRoom;
   t.stir();
   t.info(`You silently flow toward the ${targetRoom}... (+1 suspicion)`);
-  t.set({ mimicRoom: targetRoom });
+  t.moveTo(targetRoom);
 
   // Rival mimic reveal: entering a rival's room exposes it
   const found = rivalInRoom(hunt.rivals, targetRoom);

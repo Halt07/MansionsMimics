@@ -149,6 +149,14 @@ export class Turn {
     this.hunt = { ...this.hunt, ...patch };
   }
 
+  /**
+   * The mimic moves (or is moved) to another room. Whoever it had lured was drawn to where it
+   * was, so they aren't lured any more: a Strike only reaches someone lured to where it is.
+   */
+  moveTo(room: RoomName) {
+    this.set({ mimicRoom: room, party: this.hunt.party.map(a => a.isAttracted ? { ...a, isAttracted: false } : a) });
+  }
+
   /** Change the character (and save the change). */
   update(changes: Partial<MimicCharacter>) {
     this.character = { ...this.character, ...changes };
@@ -343,7 +351,7 @@ export class Turn {
     ];
     const to = tossRoom(location, mimicRoom, occupied, this.random);
     this.alert(`The fireworks crew pries your lid open, looking for more rockets. "Empty! Who left this here?" They heave you out into the ${to}. (+${rummage} suspicion)`);
-    this.set({ mimicRoom: to });
+    this.moveTo(to);
     this.stir();
     this.raise(rummage);
   }
