@@ -168,7 +168,9 @@ export default function Game() {
     setHunt(result.hunt);
     setCharacter(result.character);
     persist(result.changes);
-    if (result.hunt.mimicRoom !== hunt?.mimicRoom) setShowMovePanel(false);
+    // The move panel closes once you've moved, or once someone is in the room with you
+    const crowded = activeAdventurers(result.hunt).some(a => a.location === result.hunt.mimicRoom);
+    if (result.hunt.mimicRoom !== hunt?.mimicRoom || crowded) setShowMovePanel(false);
     if (result.hunt.ending) setPhase("gameover");
     else if (result.chooseForms) startFormSelection("hunt");
     else if (result.evolve) setPhase("evolve");
@@ -176,8 +178,10 @@ export default function Game() {
   };
 
   /** Take a hunt action (see turns.ts). */
+  // Only while the hunt is on: not once it's won or over, and not while a ceremony plays out
   const act = (action: (h: Hunt, c: MimicCharacter) => TurnResult) => {
-    if (hunt && character) apply(action(hunt, character));
+    if (!hunt || !character || hunt.ending || huntCleared(hunt) || ceremonyRunning) return;
+    apply(action(hunt, character));
   };
 
   const chooseLocation = (loc: HuntLocation) => {
@@ -221,11 +225,23 @@ export default function Game() {
   });
   useEffect(() => trackLifetimeAp(), [character?.assimilationPoints]);
 
-  const doRelocate = (room: RoomName) => act((h, c) => relocate(h, c, room));
+  const doRelocate = (room: RoomName) => { if (canRelocate) act((h, c) => relocate(h, c, room)); };
   const doLure = () => act(lure);
   const doStrike = () => act(strike);
   const doWait = () => act(wait);
   const doEatStar = () => act(eatStar);
+
+  // Done with this hunt (it's over, or abandoned): its suspicion, sickness and panels go with it
+  const leaveHunt = () => {
+    setHunt(null);
+    setShowMovePanel(false);
+    setShowFormPanel(false);
+    setShowAppearancePanel(false);
+  };
+  const backToSetup = () => {
+    leaveHunt();
+    setPhase("setup");
+  };
 
   // Open form selection. returnTo is where confirming or skipping goes afterwards.
   const startFormSelection = (returnTo: Phase = "setup") => {
@@ -385,6 +401,8 @@ export default function Game() {
   const canLure = !acting && !huntOver && active.length > 0;
   const canStrikeNow = !acting && !huntOver && !!hunt && canStrike(hunt);
   const canWait = !acting && !huntOver;
+  // Changing form or look takes a turn too
+  const canChange = !acting && !huntOver;
   // Empty rooms next door, in the order the Relocate panel lists (and numbers) them
   const relocateRooms = location && mimicRoom
     ? getAdjacentRooms(location, mimicRoom).filter(room => !active.some(a => a.location === room))
@@ -544,19 +562,20 @@ export default function Game() {
             <div className="space-y-4">
               <HuntHeader
                 canLeave={!ceremonyRunning}
-                onNewHunt={() => setPhase("setup")}
+                canChange={canChange}
+                onNewHunt={backToSetup}
                 onToggleForms={() => { setShowFormPanel(!showFormPanel); setShowAppearancePanel(false); setShowMovePanel(false); }}
                 onToggleAppearance={() => { setShowAppearancePanel(!showAppearancePanel); setShowFormPanel(false); setShowMovePanel(false); }}
               />
-              {showFormPanel && <FormSwitcher onChange={doChangeForm} />}
-              {showAppearancePanel && (
+              {showFormPanel && canChange && <FormSwitcher onChange={doChangeForm} />}
+              {showAppearancePanel && canChange && (
                 <AppearanceEditor
                   character={character}
                   onSave={doUpdateAppearance}
                   onClose={() => setShowAppearancePanel(false)}
                 />
               )}
-              {showMovePanel && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
+              {showMovePanel && canRelocate && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
               <ActionBar
                 canRelocate={canRelocate}
                 canLure={canLure}
@@ -573,7 +592,7 @@ export default function Game() {
                 onEatFrozen={body => act((h, ch) => eatFrozen(h, ch, body.id))}
               />
               {huntOver && (
-                <HuntOverPanel report={endReport} onChooseForms={() => startFormSelection("setup")} onHuntAgain={() => setPhase("setup")} />
+                <HuntOverPanel report={endReport} onChooseForms={() => { leaveHunt(); startFormSelection("setup"); }} onHuntAgain={backToSetup} />
               )}
             </div>
           )}
@@ -597,8 +616,8 @@ export default function Game() {
             <GameOverScreen
               reason={gameoverReason}
               report={endReport}
-              onChooseForms={() => startFormSelection("setup")}
-              onHuntAgain={() => setPhase("setup")}
+              onChooseForms={() => { leaveHunt(); startFormSelection("setup"); }}
+              onHuntAgain={backToSetup}
             />
           )}
 

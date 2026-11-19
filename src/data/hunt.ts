@@ -159,6 +159,14 @@ export class Turn {
     return list[Math.floor(this.random() * list.length)];
   }
 
+  /**
+   * The hunt has ended (found out, or the party left): nothing more happens this turn. Raising
+   * suspicion, stealth checks, reactions and the end of the turn all stop here.
+   */
+  get over(): boolean {
+    return !!this.hunt.ending;
+  }
+
   get form() {
     return getActiveForm(this.character);
   }
@@ -182,7 +190,7 @@ export class Turn {
 
   /** Raise suspicion (up to MAX_SUSPICION). Reaching it ends the hunt: you've been found out. */
   raise(amount: number) {
-    if (amount <= 0) return;
+    if (amount <= 0 || this.over) return;
     const suspicion = Math.min(this.hunt.suspicion + amount, MAX_SUSPICION);
     this.set({ suspicion });
     if (suspicion >= MAX_SUSPICION && !this.hunt.ending) this.discovered();
@@ -260,7 +268,7 @@ export class Turn {
    */
   stealth(arrivals: readonly PartyMember[]) {
     const form = this.form;
-    if (!form || arrivals.length === 0) return;
+    if (!form || arrivals.length === 0 || this.over) return;
     const { plausibility, patience } = this.stats;
     const { location, mimicRoom } = this.hunt;
     const stealth = resolveStealth(arrivals, { location, mimicRoom, form, mimic: this.character, plausibility, patience }, this.random);
@@ -282,6 +290,7 @@ export class Turn {
 
   /** Adventurers with special behaviors (see BEHAVIORS) react to what the mimic just did. */
   react(trigger: BehaviorTrigger, ctx: Pick<BehaviorContext, "fromRoom" | "excludeIds"> = {}) {
+    if (this.over) return;
     const { party, location, mimicRoom } = this.hunt;
     const reactions = getBehaviorReactions(trigger, { party, location, mimicRoom, appearance: this.character.currentAppearance, ...ctx });
     reactions.events.forEach(e => this.say(e.type, e.text));
@@ -304,13 +313,15 @@ export class Turn {
    * location's twist, if it has one, takes its turn, and then the cold (once everyone has moved).
    */
   endTurn() {
+    if (this.over) return;
     const turn = this.hunt.turn + 1;
     this.set({ turn });
     const { location } = this.hunt;
+    // Each twist can end the hunt (the fireworks crew finding you out): the rest then don't happen
     if (location.fireworks) this.fireworks();
-    if (location.starfall) this.starfall();
-    if (location.sinkingTurns) this.sinking(location.sinkingTurns);
-    if (location.snowbound) this.frost();
+    if (location.starfall && !this.over) this.starfall();
+    if (location.sinkingTurns && !this.over) this.sinking(location.sinkingTurns);
+    if (location.snowbound && !this.over) this.frost();
   }
 
   // The Founders' Fair: a volley over a random room every few turns, distracting it and the rooms

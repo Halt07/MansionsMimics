@@ -15,7 +15,7 @@ export default async function ({ gameData: m, load, ok }) {
   const has = (t) => screen.queryAllByText(t, { exact: false }).length > 0;
   const show = (character, h, extra = {}) => {
     const handlers = { onNewHunt: spy(), onToggleForms: spy(), onToggleAppearance: spy() };
-    s.showInHunt(HuntHeader, { canLeave: true, ...handlers, ...extra }, s.huntState(character, h));
+    s.showInHunt(HuntHeader, { canLeave: true, canChange: true, ...handlers, ...extra }, s.huntState(character, h));
     return handlers;
   };
 
@@ -46,6 +46,9 @@ export default async function ({ gameData: m, load, ok }) {
   await user.click(screen.getByRole('button', { name: /Change Form/ }));
   await user.click(screen.getByRole('button', { name: /Appearance/ }));
   ok(handlers.onNewHunt.calls.length === 1 && handlers.onToggleForms.calls.length === 1 && handlers.onToggleAppearance.calls.length === 1, 'each button does its job');
+  show(mimic(), hunt, { canChange: false });
+  ok(screen.getByRole('button', { name: /Change Form/ }).disabled && screen.getByRole('button', { name: /Appearance/ }).disabled && !screen.getByRole('button', { name: /New Hunt/ }).disabled,
+    'once the hunt is won or mid-ceremony: Change Form and Appearance are greyed out (New Hunt is not)');
   const stuck = show(mimic(), hunt, { canLeave: false });
   ok(screen.getByRole('button', { name: /New Hunt/ }).disabled, "mid-ceremony, New Hunt can't be pressed");
   await user.click(screen.getByRole('button', { name: /New Hunt/ }));

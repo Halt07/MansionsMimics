@@ -118,6 +118,38 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       ok(screen.getByRole('heading', { name: 'Choose Your Hunting Ground' }), 'Hunt Again goes back to choosing where');
     });
 
+    // ---------- winning: nothing more to do in this hunt ----------
+    // At 0 the Cursed Chapel's party starts in the Narthex; a mimic with every stat at 6 lures
+    // them all from the Cemetery next door and eats them one by one, unseen enough to win
+    await withEmptyDb(storage, async () => {
+      const chapel = m.LOCATIONS.find((l) => l.id === 'cursed_chapel');
+      const mimic = await saveMimic(db, { name: 'Victor', plausibility: 6, adhesion: 6, patience: 6, baseAllure: 6 });
+      await play(mimic.id);
+      await huntAt(chapel.name, 'Cemetery');
+      await user.keyboard('r');
+      ok(has('Relocate — Choose Destination'), 'alone in the Cemetery: the move panel opens');
+      await user.click(action('Lure'));
+      await until(() => !has('Relocate — Choose Destination'), 'the panel to close');
+      ok(action('Relocate').disabled, 'the party drawn into the room: Relocate greys out, and its open panel closes with it');
+
+      await user.click(screen.getByRole('button', { name: /Change Form/ }));
+      ok(has('Select Active Form'), 'Change Form opens its panel mid-hunt');
+      for (let i = 0; i < 6 && !has('The hunt is over.'); i++) await user.click(action('Strike!'));
+      await until(() => has('The hunt is over.'), 'the hunt to be won');
+      ok(!has('Select Active Form'), 'once the hunt is won, the open form panel goes');
+      ok(screen.getByRole('button', { name: /Change Form/ }).disabled && screen.getByRole('button', { name: /Appearance/ }).disabled, '…and Change Form and Appearance are greyed out');
+      const won = await stored(mimic.id);
+      const logged = log().length;
+      await user.keyboard('w');
+      await user.keyboard('l');
+      ok(log().length === logged && (await stored(mimic.id)).huntsFailed === 0, '…and nothing else can happen in this hunt');
+      ok(won.huntsSurvived === 1, '(the win itself is saved)');
+
+      // Back to choosing a ground: the last hunt's suspicion doesn't come too
+      await user.click(screen.getByRole('button', { name: 'Hunt Again (Keep Forms)' }));
+      ok(screen.getByRole('heading', { name: 'Choose Your Hunting Ground' }) && has('Unsuspecting') && has('0/10'), 'Hunt Again: suspicion back to nothing');
+    });
+
     // ---------- coming back hungry, and a mimic that isn't there ----------
     await withEmptyDb(storage, async () => {
       const lastFedAt = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();

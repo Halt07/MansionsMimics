@@ -75,4 +75,28 @@ async function run(dbModule, storage, ok) {
   ]) {
     try { await M.update(b.id, bad); ok(false, label); } catch (e) { ok(e instanceof ValidationError, label); }
   }
+
+  // Damaged saved data: reads as empty (the game still opens), but is backed up before
+  // anything is written over it, so it can be recovered
+  for (const [damaged, label] of [['{"name": "Gristle", "mass": 9', 'unparseable'], ['{"not": "a list"}', 'not a list']]) {
+    storage.clear();
+    storage.set(KEY, damaged);
+    const logError = console.error;
+    const logged = [];
+    console.error = (msg) => logged.push(msg);
+    try {
+      ok((await M.list()).length === 0, `${label}: reads as no mimics`);
+      ok(storage.get(KEY) === damaged, `${label}: …and reading leaves it alone`);
+      await M.create({ name: 'Fresh' });
+      const backups = [...storage.keys()].filter((k) => k.startsWith(`${KEY}.unreadable-`));
+      ok(backups.length === 1 && storage.get(backups[0]) === damaged, `${label}: saving a new mimic first keeps the old data under a backup key`);
+      ok(logged.length === 1 && logged[0].includes(backups[0]), `${label}: …and says where it went`);
+      ok((await M.list()).map((c) => c.name).join() === 'Fresh', `${label}: then saves normally`);
+      await M.create({ name: 'Another' });
+      ok([...storage.keys()].filter((k) => k.startsWith(`${KEY}.unreadable-`)).length === 1, `${label}: (once: later saves don't back up again)`);
+    } finally {
+      console.error = logError;
+    }
+  }
+  storage.clear();
 }

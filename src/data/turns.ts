@@ -126,6 +126,7 @@ export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
     return t.finish();
   }
   t.countAction();
+  if (t.over) return t.finish();
   const { location, mimicRoom } = hunt;
   const range = lureRange(character);
   const outcome = resolveLure(hunt.party, { location, mimicRoom, range, form, mimic: character, plausibility: t.stats.plausibility }, t.random);
@@ -204,6 +205,8 @@ export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions 
   if (!target.isAttracted) t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
   const seen = strikeWitnesses(hunt.party, target, mimicRoom, looking);
   t.react("strike", { excludeIds: [target.id] });
+  // Heard lunging and found out: you flee before the attack lands
+  if (t.over) return t.finish();
 
   // Minor mimics always bite; so does anyone facing a giant too big to swallow yet
   if (needsPartialBites(character, target)) strikeBite(t, target, form, dice, seen);
@@ -436,6 +439,7 @@ export function wait(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
   const t = new Turn(hunt, character, opts);
   const { location, mimicRoom } = hunt;
   t.countAction();
+  if (t.over) return t.finish();
   if (waitSettles(character, t.stats.patience, t.random)) {
     t.set({ suspicion: Math.max(0, t.hunt.suspicion - 1) });
     t.say("stealth", `You wait in perfect stillness. Suspicion decreases.`);

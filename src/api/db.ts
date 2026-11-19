@@ -44,18 +44,32 @@ export type SortKey<T> = Extract<keyof T, string> | `-${Extract<keyof T, string>
 
 const STORAGE_PREFIX = 'mm_entity_';
 
+/** The stored list, or null if what's stored isn't a readable list (damaged, or not ours). */
+const parseList = (raw: string | null): unknown[] | null => {
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const localStorageAdapter: StorageAdapter = {
+  // Unreadable data reads as empty, so the game still opens...
   readAll(entityName) {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_PREFIX + entityName);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+    return parseList(window.localStorage.getItem(STORAGE_PREFIX + entityName)) ?? [];
   },
+  // ...but is never written over: it's kept under a backup key first, so it can be recovered
   writeAll(entityName, records) {
-    window.localStorage.setItem(STORAGE_PREFIX + entityName, JSON.stringify(records));
+    const key = STORAGE_PREFIX + entityName;
+    const current = window.localStorage.getItem(key);
+    if (parseList(current) === null) {
+      const backup = `${key}.unreadable-${new Date().toISOString()}`;
+      window.localStorage.setItem(backup, current as string);
+      console.error(`Saved ${entityName} data couldn't be read; kept it under "${backup}" before saving anew.`);
+    }
+    window.localStorage.setItem(key, JSON.stringify(records));
   },
   clear(entityName) {
     window.localStorage.removeItem(STORAGE_PREFIX + entityName);

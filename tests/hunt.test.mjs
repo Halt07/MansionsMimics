@@ -94,6 +94,19 @@ export default async function ({ gameData: m, ok }) {
   const snowedIn = m.wait(hunt({ ...nobody, location: loc('snowbound_lodge'), mimicRoom: loc('snowbound_lodge').rooms[0], actionCount: m.ACTION_LIMIT - 1 }), mimic(), opts());
   ok(!snowedIn.hunt.ending, '…but nobody can leave the snowed-in lodge');
 
+  // ---------- once the hunt ends, nothing more happens that turn ----------
+  const walker = member('Walker', { location: 'Kitchen' });
+  const leftOnWait = m.wait(hunt({ party: [walker], actionCount: m.ACTION_LIMIT - 1 }), mimic(), opts(m.STAY_CHANCE));
+  ok(leftOnWait.hunt.ending === 'abandoned' && !said(leftOnWait, 'You wait') && !said(leftOnWait, 'moves from'), 'the party leaves on a Wait: the Wait itself goes no further (no settling, nobody moves)');
+  const lurable = member('Lurable', { location: 'Library' });
+  const leftOnLure = m.lure(hunt({ party: [lurable], actionCount: m.ACTION_LIMIT - 1 }), mimic(), opts(0));
+  ok(leftOnLure.hunt.ending === 'abandoned' && !leftOnLure.hunt.party[0].isAttracted && !said(leftOnLure, 'drawn toward'), '…nor a Lure (nobody is drawn in)');
+  const prey = member('Prey', { location: 'Library', isAttracted: true });
+  const listener = member('Listener', { location: 'Library', behavior: 'keenHearing' });
+  const heard = m.strike(hunt({ party: [prey, listener], suspicion: m.MAX_SUSPICION - 1 }), mimic({ adhesion: 6 }), opts(0));
+  ok(heard.hunt.ending === 'discovered' && said(heard, 'found you out'), 'heard lunging at 9 suspicion: found out');
+  ok(!heard.hunt.party[0].isConsumed && heard.character.partyMembersEaten === 0 && !heard.changes.assimilationPoints, '…and you flee before the attack lands: nobody eaten, nothing gained');
+
   // ---------- the cold (no more waiting for an effect) ----------
   const lodge = loc('snowbound_lodge');
   const quiet = lodge.rooms.find((r) => r !== lodge.snowbound.hearth && !lodge.snowbound.cold.includes(r));
@@ -197,6 +210,9 @@ export default async function ({ gameData: m, ok }) {
   const sunk = m.wait(hunt({ location: ship, mimicRoom: ship.rooms[0], party: [member('Sailor', { location: ship.rooms[1] })], turn: ship.sinkingTurns - 1 }), mimic(), opts());
   ok(sunk.hunt.party[0].fled && said(sunk, 'slides beneath the waves'), 'the last turn of the ship: everyone left takes to the lifeboats');
   ok(sunk.hunt.recorded && sunk.character.huntsSurvived === 1, '…and the hunt is over, survived');
+  const caughtAboard = m.relocate(hunt({ location: ship, mimicRoom: ship.rooms[0], party: [], suspicion: m.MAX_SUSPICION - 1, turn: ship.sinkingTurns - 1 }), mimic(), m.getAdjacentRooms(ship, ship.rooms[0])[0], opts());
+  ok(caughtAboard.hunt.ending === 'discovered' && !said(caughtAboard, 'slides beneath the waves') && caughtAboard.character.huntsSurvived === 0,
+    'found out on the last turn: you flee, and the ship does not then sink with you swimming ashore');
 
   // ---------- Devotion ----------
   const shrine = loc('hollow_reliquary');

@@ -6,13 +6,15 @@ import { useHunt } from "./HuntContext";
 interface HuntHeaderProps {
   /** New Hunt is disabled while a ceremony plays out. */
   canLeave: boolean;
+  /** Change Form and Appearance take a turn: not once the hunt is won, nor mid-ceremony. */
+  canChange: boolean;
   onNewHunt: () => void;
   onToggleForms: () => void;
   onToggleAppearance: () => void;
 }
 
 /** Top of the hunt: any bounty or sickness notice, where you are, New Hunt, and the form/appearance buttons. */
-export default function HuntHeader({ canLeave, onNewHunt, onToggleForms, onToggleAppearance }: HuntHeaderProps) {
+export default function HuntHeader({ canLeave, canChange, onNewHunt, onToggleForms, onToggleAppearance }: HuntHeaderProps) {
   const { location, character, mimicRoom, activeAdventurers, lureRange, isBountyHunt, sickness } = useHunt();
   return (
     <>
@@ -55,10 +57,10 @@ export default function HuntHeader({ canLeave, onNewHunt, onToggleForms, onToggl
 
       {/* Form & Appearance quick-change */}
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onToggleForms} className="text-xs border-border gap-1 flex-1">
+        <Button variant="outline" size="sm" onClick={onToggleForms} disabled={!canChange} className="text-xs border-border gap-1 flex-1">
           <Layers className="w-3 h-3" /> Change Form
         </Button>
-        <Button variant="outline" size="sm" onClick={onToggleAppearance} className="text-xs border-border gap-1 flex-1">
+        <Button variant="outline" size="sm" onClick={onToggleAppearance} disabled={!canChange} className="text-xs border-border gap-1 flex-1">
           <Palette className="w-3 h-3" /> Appearance
         </Button>
       </div>
