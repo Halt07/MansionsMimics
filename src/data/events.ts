@@ -8,7 +8,7 @@ import { TIER_ORDER, type Material, type TeachableTrait, type Tier, type Trait }
 import { type Form, type FormId } from "./mimicData";
 import { ADVENTURER_TEMPLATES, type PartyMember, type Treasure } from "./adventurerData";
 import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
-import { getAdjacentRooms, getApReward, getRoomDistance, shuffle } from "./gameData";
+import { getAdjacentRooms, getApReward, getRoomDistance, shuffle, stillInHunt } from "./gameData";
 import { plural } from "./text";
 
 // ============================================================
@@ -180,7 +180,7 @@ export function starfallDue(location: HuntLocation, turn: number): boolean {
 
 /** Whoever is in the fragment's room picks it up (the first one listed), carrying it as treasure. */
 export function claimStar(party: readonly PartyMember[], star: RoomName): { party: PartyMember[]; claimedBy: PartyMember | null } {
-  const claimer = party.find(a => isStillHunting(a) && a.location === star && !a.treasure);
+  const claimer = party.find(a => stillInHunt(a) && a.location === star && !a.treasure);
   if (!claimer) return { party: [...party], claimedBy: null };
   const claimedBy = { ...claimer, treasure: STAR_FRAGMENT };
   return { party: party.map(a => a.id === claimer.id ? claimedBy : a), claimedBy };
@@ -228,7 +228,7 @@ export function chillParty(party: readonly PartyMember[], location: HuntLocation
   const snow = location.snowbound;
   if (!snow) return { party: [...party], frozen, numb };
   const next = party.map(a => {
-    if (!isStillHunting(a) || a.warmth === undefined) return a;
+    if (!stillInHunt(a) || a.warmth === undefined) return a;
     const max = a.maxWarmth ?? a.warmth;
     let warmth = a.warmth;
     if (a.location !== a.warmthRoom) {
@@ -265,12 +265,10 @@ export function uneatenFrozen(party: readonly PartyMember[]): PartyMember[] {
 // ============================================================
 export const OFFERING_COUNT: readonly [number, number] = [4, 5];
 
-const isStillHunting = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted;
 
 /** The devoted adventurer ready to convert: the only party member left, or null. */
 export function findDevotee(party: readonly PartyMember[]): PartyMember | null {
-  const remaining = party.filter(isStillHunting);
+  const remaining = party.filter(stillInHunt);
   if (party.length < 2 || remaining.length !== 1) return null;
   return remaining[0].behavior === "devotion" ? remaining[0] : null;
 }

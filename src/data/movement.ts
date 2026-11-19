@@ -8,7 +8,7 @@
 import type { Form } from "./mimicData";
 import type { PartyMember } from "./adventurerData";
 import type { HuntLocation, LocationCreature, RoomName } from "./locationData";
-import { getAdjacentRooms, getRoomDistance } from "./gameData";
+import { getAdjacentRooms, getRoomDistance, stillInHunt } from "./gameData";
 import { answersDoor, claimStar, nextHouse, rivalInRoom, type RivalMimic } from "./events";
 import { the } from "./text";
 
@@ -71,7 +71,7 @@ export interface MoveContext {
 function destination(
   adv: PartyMember, location: HuntLocation, star: RoomName | null, random: () => number,
 ): RoomName | null {
-  if (!adv.isAlive || adv.isConsumed || isStationary(adv)) return null;
+  if (!stillInHunt(adv) || isStationary(adv)) return null;
   if (star) return adv.location === star ? null : stepToward(location, adv.location, star);
   if (location.procession) return nextHouse(location, adv.location, random);
   if (random() < STAY_CHANCE) return null;

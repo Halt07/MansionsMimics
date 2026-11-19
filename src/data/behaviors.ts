@@ -8,7 +8,7 @@
 import type { GameEventType } from "./vocabulary";
 import { BEHAVIORS, type BehaviorId, type BehaviorInfo, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import { getRoomDistance, hasMagic, type AppearanceLike } from "./gameData";
+import { getRoomDistance, hasMagic, stillInHunt, type AppearanceLike } from "./gameData";
 import { stepToward } from "./movement";
 
 /** Mimic actions that behaviors can react to. */
@@ -46,7 +46,6 @@ export function isHiddenBehavior(id: BehaviorId): boolean {
   return !!info.hidden;
 }
 
-const isActive = (adv: PartyMember): boolean => adv.isAlive && !adv.isConsumed && !adv.fled;
 
 /**
  * Work out how party members with behaviors react to a mimic action.
@@ -63,7 +62,7 @@ export function getBehaviorReactions(
   const dist = (a: RoomName, b: RoomName) => getRoomDistance(location, a, b);
 
   party.forEach((adv) => {
-    if (!adv.behavior || !isActive(adv) || excludeIds.includes(adv.id)) return;
+    if (!adv.behavior || !stillInHunt(adv) || excludeIds.includes(adv.id)) return;
 
     switch (adv.behavior) {
       case "keenHearing": {

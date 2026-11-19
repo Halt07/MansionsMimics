@@ -12,7 +12,7 @@ import type { AdventurerTemplate, PartyMember, QualityList } from "./adventurerD
 import type { HuntLocation, RoomContextMod, RoomName } from "./locationData";
 import {
   FORM_ROOM_TYPE, ROOM_FORM_IDS, effectiveFormTier, formFamily, formTier, getFormTierPenalties, getRoomContextMod,
-  getRoomDistance, hasMagic, quirkLine, rollDice, shuffle, wornMagic, type AppearanceLike,
+  getRoomDistance, hasMagic, quirkLine, rollDice, shuffle, stillInHunt, wornMagic, type AppearanceLike,
 } from "./gameData";
 
 // ---------- the checks: stealth and allure ----------
@@ -219,7 +219,7 @@ export function resolveLure(party: readonly PartyMember[], ctx: LureContext, ran
   const arrivals: PartyMember[] = [];
   let suspicion = 0;
   const next = party.map(adv => {
-    if (!adv.isAlive || adv.isConsumed || adv.isAttracted) return adv;
+    if (!stillInHunt(adv) || adv.isAttracted) return adv;
     if (getRoomDistance(ctx.location, ctx.mimicRoom, adv.location) > ctx.range) return adv;
     const result = allureCheck(ctx.mimic.baseAllure, ctx.plausibility, ctx.form, ctx.mimic.currentAppearance || {}, adv, roomMod, random);
     suspicion += result.suspicionChange;

@@ -89,7 +89,13 @@ export interface TurnOptions {
 }
 
 /** Still in the hunt: not eaten, fled, vanished, frozen or converted. */
-export const stillInHunt = (a: PartyMember): boolean => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared;
+/**
+ * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
+ * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
+ * for this, used everywhere.
+ */
+export const stillInHunt = (a: PartyMember): boolean =>
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
 
 export const activeAdventurers = (hunt: Pick<Hunt, "party">): PartyMember[] => hunt.party.filter(stillInHunt);
 
@@ -306,7 +312,7 @@ export class Turn {
       this.set({
         party: this.hunt.party.map(a => {
           const patch = reactions.patches[a.id];
-          if (!patch || !a.isAlive || a.isConsumed) return a;
+          if (!patch || !stillInHunt(a)) return a;
           const { suspicionDelta = 0, ...rest } = patch;
           return { ...a, ...rest, suspicion: a.suspicion + suspicionDelta };
         }),

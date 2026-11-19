@@ -327,7 +327,7 @@ export default function Game() {
     // first: tier-ups happen while feeding, so that goes straight back to the hunt afterwards.
     if (result.kind === "evolved" && result.formsLost) {
       startFormSelection("hunt");
-    } else if (phase === "evolve") {
+    } else {
       returnToHunt(updated);
     }
   };
@@ -544,7 +544,7 @@ export default function Game() {
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
-          <Link to={createPageUrl(character ? `Codex?characterId=${character.id}` : "Codex")} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
+          <Link to={createPageUrl(`Codex?characterId=${character.id}`)} className="text-muted-foreground hover:text-foreground transition-colors text-xs flex items-center gap-1">
             <Eye className="w-3 h-3" /> Codex
           </Link>
         </div>

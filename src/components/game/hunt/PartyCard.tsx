@@ -1,4 +1,4 @@
-import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "@/data/gameData";
+import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, stillInHunt, uneatenFrozen, type HuntLocation, type RoomName } from "@/data/gameData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";
@@ -67,7 +67,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
   return (
     <CardContent className="px-4 pb-3 space-y-2">
       {party.map(adv => {
-        const dist = adv.isAlive && !adv.isConsumed ? getRoomDistance(location, mimicRoom, adv.location) : null;
+        const dist = stillInHunt(adv) ? getRoomDistance(location, mimicRoom, adv.location) : null;
         const inRange = dist !== null && dist <= lureRange;
         const fled = adv.fled && !adv.isConsumed;
         const disappeared = adv.isDisappeared && !adv.isConsumed;
@@ -89,7 +89,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
               {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
               {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
               {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
-              {adv.warmth !== undefined && adv.isAlive && !adv.isConsumed && (
+              {adv.warmth !== undefined && stillInHunt(adv) && (
                 <span
                   title={`Warmth ${adv.warmth}/${adv.maxWarmth ?? adv.warmth}: freezes at 0`}
                   className={`text-[10px] whitespace-nowrap ${adv.warmth <= FROST_WARNING ? "text-sky-300" : "text-muted-foreground"}`}

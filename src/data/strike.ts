@@ -11,11 +11,9 @@ import type { Material, TeachableTrait } from "./vocabulary";
 import type { Form } from "./mimicData";
 import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, AP_REWARDS, type PartyMember } from "./adventurerData";
 import type { HuntLocation, RoomName } from "./locationData";
-import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle, type CheckResult } from "./gameData";
+import { calcAllureInterest, getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle, stillInHunt, type CheckResult } from "./gameData";
 import { RIVAL_STATS, pickTreasurePrize, rivalEscapeRoom, type RivalMimic, type TreasurePrize } from "./events";
 import { TITANIC_FEAST_GIANTS, isTitanicFeastComplete } from "./stats";
-
-const stillHunting = (a: PartyMember) => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared;
 
 // ---------- the checks: adhesion, escaping, AP, witnesses ----------
 
@@ -103,8 +101,7 @@ export function strikeDice(adhesion: number, appearance: Partial<Appearance> | n
  * room too, since they're all staring at the sky.
  */
 export function strikeCandidates(party: readonly PartyMember[], mimicRoom: RoomName | null, skyward: boolean): PartyMember[] {
-  return party.filter(a => a.isAlive && !a.isConsumed &&
-    (a.isAttracted || (skyward && a.location === mimicRoom && !a.fled && !a.isDisappeared)));
+  return party.filter(a => stillInHunt(a) && (a.isAttracted || (skyward && a.location === mimicRoom)));
 }
 
 /** The one struck: the nearest candidate, and among the nearest, whoever likes the mimic's look most. */
@@ -133,7 +130,7 @@ export interface Witnesses {
 export function strikeWitnesses(
   party: readonly PartyMember[], target: PartyMember, mimicRoom: RoomName | null, skyward: boolean,
 ): Witnesses {
-  const others = party.filter(a => a.id !== target.id && stillHunting(a));
+  const others = party.filter(a => a.id !== target.id && stillInHunt(a));
   const inRoom = others.filter(a => a.location === mimicRoom).length;
   return { othersRemain: others.length > 0, inRoom, witnesses: skyward ? 0 : inRoom };
 }

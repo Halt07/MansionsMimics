@@ -18,7 +18,7 @@ import {
   strikeDice, strikeWitnesses, today, unmask, withBiggestMeal, withDiscovered, withFormUsed,
   type RivalMimic, type Witnesses,
 } from "./gameData";
-import { Turn, skyward, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+import { Turn, skyward, stillInHunt, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
 import { plural, the } from "./text";
 
 /** How a devoured rival is named in the "biggest meal" stat. */
@@ -109,7 +109,7 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
   t.countAction();
   t.raise(1);
   // Anyone already in the room gets a look at you
-  t.stealth(hunt.party.filter(a => a.isAlive && !a.isConsumed && !a.fled && a.location === targetRoom));
+  t.stealth(hunt.party.filter(a => stillInHunt(a) && a.location === targetRoom));
   t.react("relocate", { fromRoom });
   t.endTurn();
   return t.finish();
@@ -179,21 +179,19 @@ export function lure(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = 
 
 /** Whether a Strike has anything to strike: someone lured, a revealed rival here, or (under the fireworks) anyone here. */
 export function canStrike(hunt: Hunt): boolean {
-  return hunt.party.some(a => a.isAlive && !a.isConsumed && a.isAttracted) ||
-    !!rivalInRoom(hunt.rivals, hunt.mimicRoom)?.revealed ||
-    (skyward(hunt) && hunt.party.some(a => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && a.location === hunt.mimicRoom));
+  return !!rivalInRoom(hunt.rivals, hunt.mimicRoom)?.revealed || strikeCandidates(hunt.party, hunt.mimicRoom, skyward(hunt)).length > 0;
 }
 
 /** Strike (see strike.ts for the rules). With nothing in reach it takes no turn. */
 export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions = {}): TurnResult {
   const t = new Turn(hunt, character, opts);
-  t.stir();
   const dice = strikeDice(t.stats.adhesion, character.currentAppearance);
   const { location, mimicRoom } = hunt;
 
   // A revealed rival mimic in the room comes first
   const rival = rivalInRoom(hunt.rivals, mimicRoom);
   if (rival?.revealed) {
+    t.stir();
     t.set({ actionCount: 0 });
     strikeRival(t, rival, dice);
     t.endTurn();
@@ -214,6 +212,8 @@ export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions 
   }
   const target = pickStrikeTarget(candidates, location, mimicRoom, form, character.currentAppearance);
   if (!target) return t.finish();
+  // A Strike that lands on someone stirs the mimic (the spiderweb starts over); one with nothing to strike takes no turn
+  t.stir();
   t.set({ actionCount: 0 });
   if (!target.isAttracted) t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
   const seen = strikeWitnesses(hunt.party, target, mimicRoom, looking);

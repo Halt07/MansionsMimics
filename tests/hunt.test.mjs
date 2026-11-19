@@ -190,6 +190,14 @@ export default async function ({ gameData: m, ok }) {
   const idle = m.strike(hunt(), mimic(), opts());
   ok(idle.hunt.turn === 0 && said(idle, 'No adventurers are close enough'), 'Strike with nobody in reach: no turn taken');
   ok(!m.canStrike(hunt()) && m.canStrike(hunt({ party: [member('Lured', { isAttracted: true })] })), 'canStrike: only with someone lured (or a rival, or the fireworks)');
+  ok(m.strike(hunt({ stillTurns: 9 }), mimic(), opts()).hunt.stillTurns === 9, '…and the spiderweb keeps growing (nothing was struck)');
+  ok(!m.canStrike(hunt({ party: [member('Gone', { isAttracted: true, isConverted: true })] })), 'canStrike: someone lured but no longer in the hunt doesn\'t count');
+
+  // ---------- who's still in the hunt (the one check, used everywhere) ----------
+  ok(m.stillInHunt(member('Here')), 'an adventurer about the place is in the hunt');
+  ok(['isConsumed', 'fled', 'isDisappeared', 'isConverted', 'isFrozen'].every((flag) => !m.stillInHunt(member('Out', { [flag]: true }))),
+    '…not once eaten, fled, vanished, converted or frozen, even if isAlive were left on');
+  ok(!m.stillInHunt(member('Dead', { isAlive: false })), '…nor once isAlive is off');
 
   // ---------- eaten in bites ----------
   const minor = mimic({ tier: 'Minor', startingType: 'Minor', mass: 3, adhesion: 6, patience: 6, forms: [ref('minor_book')] });
