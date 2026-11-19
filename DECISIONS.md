@@ -17,6 +17,7 @@ entries as decisions are made, with the reason if one was given.
 ## Seasonal locations
 
 - **Open to every tier while their holiday is on.** Nobody should miss a holiday for being too small or too big.
+- **Holidays that move get a window covering every date they can fall on.** Springtide covers every possible Easter (Mar 22 – Apr 25), and the Lantern Festival every possible Lunar New Year (Jan 21 – Feb 20): the season is about the New Year itself, so it always includes it, rather than tracking the exact date each year. (Pinned by tests/holidays.test.mjs.)
 - **Snowbound Lodge:** warmth only changes when an adventurer _enters_ the hearth room (+1) or a cold room (−1), not for every turn spent there (which would freeze them too fast), plus the usual −1 a turn. A frozen adventurer is a cheap meal (half AP, teaches nothing), not a lost one.
 - **Spell or Sweet Street:** only the mimic's house can fail to answer the door. Every other house always answers, so the procession can't rack up suspicion all the way round the loop before it reaches you.
 - **Real monsters on the street are a chance, not a guarantee** (unlike, say, the Captain on the Sinking Ship).
