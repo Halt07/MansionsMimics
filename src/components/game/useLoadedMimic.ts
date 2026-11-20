@@ -8,6 +8,8 @@ export interface OpenedMimic {
   character: MimicCharacter;
   massDecayNotice: string | null;
   seasonNotice: string | null;
+  /** A branch tier taken while it was away (losing Sovereign is on the decay notice instead). */
+  branchNotice: string | null;
 }
 
 /**

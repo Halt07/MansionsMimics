@@ -117,6 +117,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `spellOrSweet.test.mjs` | Spell or Sweet Street: the procession, answering the door, costumes |
 | `foundersFair.test.mjs` | The Founders' Fair: fireworks, the crate rummage |
 | `stargazersHill.test.mjs` | Stargazers' Hill: falling stars and the party running for them |
+| `branchTiers.test.mjs` | The branch tiers past Apex: taking Eternal, Primordial or Sovereign, losing Sovereign, one branch at a time |
 | `achievements.test.mjs` | Achievements and thresholds, every material and trait being learnable, lifetime stats |
 | `discovery.test.mjs` | Codex discovery: met and eaten, pooled across mimics |
 | `codexLocations.test.mjs` | The Codex's hunting grounds: groups, and what it reveals about each |

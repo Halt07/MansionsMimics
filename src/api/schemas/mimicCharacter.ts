@@ -61,6 +61,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   currentAppearance: AppearanceSchema.default(() => AppearanceSchema.parse({})),
   /** True when the mimic has reached mass 40 at Apex tier. */
   apexPeakReached: z.boolean().default(false),
+  /** True once the mimic has been Sovereign (Ruler of All Mimics), even if it has since lost it. */
+  sovereignReached: z.boolean().default(false),
   /** Names of the Cloud Kingdom giants this mimic has consumed whole (for Titanic Feast). */
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */

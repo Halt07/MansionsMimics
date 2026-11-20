@@ -65,6 +65,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
   const [showMovePanel, setShowMovePanel] = useState(false);
   const [massDecayNotice, setMassDecayNotice] = useState<string | null>(null); // shown once on load
   const [seasonNotice, setSeasonNotice] = useState<string | null>(null); // a seasonal form was lost
+  const [branchNotice, setBranchNotice] = useState<string | null>(null); // a branch tier was taken
   // Where form selection returns to: the hunting-ground screen normally, or straight back
   // into the hunt when a mid-hunt tier-up forced the selection
   const [formSelectReturnPhase, setFormSelectReturnPhase] = useState<Phase>("setup");
@@ -76,6 +77,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     setPhase(opened.character.forms.length ? "setup" : "formSelect");
     setMassDecayNotice(opened.massDecayNotice);
     if (opened.seasonNotice) setSeasonNotice(opened.seasonNotice);
+    if (opened.branchNotice) setBranchNotice(opened.branchNotice);
   });
 
   // Every event is stamped with the turn it happened in, so the
@@ -269,6 +271,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     } else if (result.kind === "grew") {
       addEvent("evolve", `Your mass increases to ${result.mass}.`);
       if (result.apexPeak) addEvent("evolve", `🏆 You have reached the Peak of the Apex tier — a living legend!`);
+      if (result.branchLine) addEvent("evolve", result.branchLine);
     } else {
       addEvent("evolve", `🌟 You have evolved to ${result.tier} tier!`);
       if (result.hatboxToLegend) {
@@ -446,6 +449,19 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     </div>
   ) : null;
 
+  // A branch tier taken while the mimic was away (Eternal, or Sovereign for a mimic already past 100 mass)
+  const BranchBanner = branchNotice ? (
+    <div className="max-w-5xl mx-auto px-4 pt-3">
+      <div className="p-3 bg-primary/10 border border-primary/40 rounded-lg flex items-start justify-between gap-3">
+        <div>
+          <p className="font-cinzel text-primary text-xs font-bold mb-0.5">Beyond the Apex</p>
+          <p className="text-xs text-foreground/80">{branchNotice}</p>
+        </div>
+        <button aria-label="Dismiss" onClick={() => setBranchNotice(null)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+      </div>
+    </div>
+  ) : null;
+
   // What the screen's pieces read (see HuntContext); actions are passed to them as props
   const huntView = huntState(character, hunt, { location: pendingLocation, huntOver, acting });
 
@@ -500,6 +516,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
       {/* Notices that need dismissing sit under the top bar, not above it */}
       {MassDecayBanner}
       {SeasonBanner}
+      {BranchBanner}
 
 
       <div className="max-w-5xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4">

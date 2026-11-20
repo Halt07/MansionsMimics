@@ -110,11 +110,16 @@ export function massDecay(
 /**
  * What's happened since a mimic was last opened: mass lost while it was away unfed (see
  * massDecay), and seasonal forms whose season has ended slipping away (see
- * dropExpiredSeasonalForms). The mimic as it is now, what to save, and the notices to show.
+ * dropExpiredSeasonalForms), and a branch tier taken or lost because of it (see branchTierChange:
+ * a Sovereign that has shrunk below SOVEREIGN_MASS says so on the decay notice). The mimic as it is
+ * now, what to save, and the notices to show.
  */
 export function welcomeBack(
   character: MimicCharacter, { now = new Date(), day = today() }: { now?: Date; day?: Date } = {},
-): { character: MimicCharacter; changes: Partial<MimicCharacter>; massDecayNotice: string | null; seasonNotice: string | null } {
+): {
+  character: MimicCharacter; changes: Partial<MimicCharacter>;
+  massDecayNotice: string | null; seasonNotice: string | null; branchNotice: string | null;
+} {
   let changes: Partial<MimicCharacter> = {};
   let massDecayNotice: string | null = null;
   const decay = massDecay(character.mass, character.lastFedAt, now);
@@ -127,7 +132,14 @@ export function welcomeBack(
   }
   const dropped = dropExpiredSeasonalForms(character.forms, character.activeFormIndex, day);
   if (dropped) changes = { ...changes, forms: dropped.forms, activeFormIndex: dropped.activeFormIndex };
-  return { character: { ...character, ...changes }, changes, massDecayNotice, seasonNotice: dropped?.message ?? null };
+  let branchNotice: string | null = null;
+  const branch = branchTierChange({ ...character, ...changes }, now);
+  if (branch) {
+    changes = { ...changes, ...branch.changes };
+    if (branch.lost) massDecayNotice = `${massDecayNotice ?? ""} ${branch.line}`.trim();
+    else branchNotice = branch.line;
+  }
+  return { character: { ...character, ...changes }, changes, massDecayNotice, seasonNotice: dropped?.message ?? null, branchNotice };
 }
 
 // ============================================================
@@ -363,6 +375,57 @@ export function tierFlavor(character: Pick<MimicCharacter, "tier" | "branchTier"
   return { description, lore };
 }
 
+/** Sovereign: this much mass at Apex. Held only while the mass is: dropping below it loses the tier. */
+export const SOVEREIGN_MASS = 100;
+
+/** What's said when a mimic takes a branch tier, or (Sovereign only) loses it. */
+export const BRANCH_TIER_LINES = {
+  Eternal: "⏳ Forty-five days, and not a speck of you has faded. You have outlasted hunger itself. You are Eternal.",
+  Primordial: "🌋 You step through the Tear in Time itself, into a world where nothing has ever pretended to be anything else. Until now. You are the very first mimic in history. You have become Primordial.",
+  Sovereign: "👑 At a hundred mass, every mimic in the world turns toward you, and waits. You are Sovereign: Ruler of All Mimics.",
+  sovereignLost: "👑 Your mass has fallen below a hundred, and the mimics of the world no longer answer to you. You are no longer Ruler of All Mimics.",
+} as const;
+
+type BranchProgress = Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "decayFreeDate">;
+
+/**
+ * The branch tier a mimic takes or loses just by where it stands (Primordial is taken by hunting
+ * at the Tear in Time instead; see becomePrimordial). Only an Apex mimic with no branch can take
+ * one, so a branch locks out the others. Sovereign is taken at SOVEREIGN_MASS and lost below it,
+ * leaving the mimic free to take any branch again; Eternal after ETERNAL_DECAY_FREE_DAYS without
+ * decay. If both are due at once, Sovereign comes first (Eternal can still follow, if it's lost).
+ * Null when nothing changes.
+ */
+export function branchTierChange(
+  character: BranchProgress, now: Date = new Date(),
+): { changes: Partial<MimicCharacter>; line: string; lost: boolean } | null {
+  if (character.tier !== "Apex") return null;
+  if (character.branchTier === "Sovereign") {
+    return character.mass < SOVEREIGN_MASS ? { changes: { branchTier: null }, line: BRANCH_TIER_LINES.sovereignLost, lost: true } : null;
+  }
+  if (character.branchTier) return null;
+  if (character.mass >= SOVEREIGN_MASS) {
+    return { changes: { branchTier: "Sovereign", sovereignReached: true }, line: BRANCH_TIER_LINES.Sovereign, lost: false };
+  }
+  if (decayFreeDays(character.decayFreeDate, now) >= ETERNAL_DECAY_FREE_DAYS) {
+    return { changes: { branchTier: "Eternal" }, line: BRANCH_TIER_LINES.Eternal, lost: false };
+  }
+  return null;
+}
+
+/** Whether the Tear in Time is open to this mimic: Apex, no branch yet, and both of its requirements met. */
+export function tearInTimeOpen(character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">): boolean {
+  return character.tier === "Apex" && !character.branchTier
+    && character.timeTearCounter >= TIME_TEAR_MAGIC_USERS && character.mass >= TIME_TEAR_MASS;
+}
+
+/** Going through the Tear in Time to hunt: the mimic becomes Primordial (null if the Tear isn't open to it). */
+export function becomePrimordial(
+  character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">,
+): { changes: Partial<MimicCharacter>; line: string } | null {
+  return tearInTimeOpen(character) ? { changes: { branchTier: "Primordial" }, line: BRANCH_TIER_LINES.Primordial } : null;
+}
+
 /** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
 export function decayFreeDays(decayFreeDate: string | null | undefined, now: Date = new Date()): number {
   if (!decayFreeDate) return 0;
@@ -407,7 +470,12 @@ export type UpgradeResult =
   /** +1 to a stat. */
   | { kind: "stat"; stat: CombatStat; value: number; changes: Partial<MimicCharacter> }
   /** More mass, same tier. */
-  | { kind: "grew"; mass: number; apexPeak: boolean; changes: Partial<MimicCharacter> }
+  | {
+      kind: "grew"; mass: number; apexPeak: boolean;
+      /** What's said if growing made the mimic Sovereign (see branchTierChange). */
+      branchLine: string | null;
+      changes: Partial<MimicCharacter>;
+    }
   /** Grown past the tier's top mass: on to the next tier. */
   | {
       kind: "evolved"; tier: Tier; mass: number;
@@ -441,9 +509,11 @@ export function applyUpgrade(
   if (!nextTier || grown <= cfg.massRange[1]) {
     // Peak of the Apex: crossing the line at Apex (not landing in Apex by evolving)
     const apexPeak = character.tier === "Apex" && grown >= APEX_PEAK_MASS && character.mass < APEX_PEAK_MASS;
+    // Growing is the only way to reach Sovereign mid-game (Eternal waits for the mimic to be opened)
+    const branch = branchTierChange({ ...character, mass: grown, decayFreeDate: undefined }, date);
     return {
-      kind: "grew", mass: grown, apexPeak,
-      changes: { mass: grown, assimilationPoints, tier: character.tier, ...(apexPeak ? { apexPeakReached: true } : {}) },
+      kind: "grew", mass: grown, apexPeak, branchLine: branch?.line ?? null,
+      changes: { mass: grown, assimilationPoints, tier: character.tier, ...(apexPeak ? { apexPeakReached: true } : {}), ...branch?.changes },
     };
   }
 

@@ -178,6 +178,18 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       await user.click(screen.getByRole('button', { name: 'Dismiss' }));
       ok(!has('Mass Decay'), '…until dismissed');
 
+      // Beyond the Apex: taken while away (Eternal), and lost to decay (Sovereign)
+      const longAgo = new Date(Date.now() - 46 * 24 * 3600 * 1000).toISOString();
+      const patient = await saveMimic(db, { name: 'Patient', tier: 'Apex', mass: 60, decayFreeDate: longAgo, lastFedAt: new Date().toISOString() });
+      await play(patient.id);
+      ok(has('Beyond the Apex') && has(m.BRANCH_TIER_LINES.Eternal) && screen.getByText('Eternal', { exact: true }), 'fed for 46 days: told it has become Eternal, and its badge says so');
+      await waitFor(async () => { if ((await stored(patient.id)).branchTier !== 'Eternal') throw new Error('not saved'); });
+      ok((await stored(patient.id)).branchTier === 'Eternal', '…saved');
+      const king = await saveMimic(db, { name: 'King', tier: 'Apex', mass: 101, branchTier: 'Sovereign', sovereignReached: true, lastFedAt });
+      await play(king.id);
+      ok(has('Mass Decay') && has(m.BRANCH_TIER_LINES.sovereignLost) && !has('Beyond the Apex') && screen.getByText('Apex', { exact: true }),
+        'a Sovereign shrunk below 100: the decay notice says it is no longer Ruler of All Mimics, and it is Apex again');
+
       await play('no-such-mimic');
       ok(has('Character not found.') && screen.getByRole('link', { name: 'Create a Mimic' }).getAttribute('href') === '/CharacterCreation', 'an unknown mimic: not found, with a way to make one');
     });
