@@ -273,6 +273,37 @@ const LOCATION_DATA = [
     ],
   },
 
+  // ── Greater+: a school of magic ──
+  {
+    id: "old_academy", name: "The Old Academy", minTier: "Greater",
+    description: "A rambling old school of magic around a cloistered courtyard, half library and half laboratory, where the scholars never look up from their books.",
+    flavorText: "Everyone here is studying something. Nobody here is studying the furniture.",
+    rooms: ["Great Library", "Lecture Hall", "Headmaster's Study", "Scriptorium", "Cloister Courtyard", "Alchemy Hall", "Dormitories", "Gatehouse", "Refectory"],
+    roomGraph: {
+      "Great Library":      ["Lecture Hall", "Scriptorium"],
+      "Lecture Hall":       ["Great Library", "Headmaster's Study", "Cloister Courtyard"],
+      "Headmaster's Study": ["Lecture Hall", "Alchemy Hall"],
+      "Scriptorium":        ["Great Library", "Cloister Courtyard", "Dormitories"],
+      "Cloister Courtyard": ["Lecture Hall", "Scriptorium", "Alchemy Hall", "Gatehouse"],
+      "Alchemy Hall":       ["Headmaster's Study", "Cloister Courtyard", "Refectory"],
+      "Dormitories":        ["Scriptorium", "Gatehouse"],
+      "Gatehouse":          ["Dormitories", "Cloister Courtyard", "Refectory"],
+      "Refectory":          ["Alchemy Hall", "Gatehouse"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 1,
+    advantageTags: ["Knowledge", "Decor"],
+    imageHint: "an old school of magic around a cloistered courtyard: towers of books, bubbling alembics, candlelit study rooms",
+    // Everyone here counts toward the Tear in Time (except the Dropout, and pact companions)
+    magicUsersOnly: true,
+    locationCreatures: [
+      { id: "academy_owl", name: "Academy Owl", ap: 2, discipline: 3, description: "Carries the post, and an air of disapproval." },
+      { id: "library_mouse", name: "Library Mouse", ap: 1, discipline: 2, description: "Lives in the stacks and eats the footnotes.", rooms: ["Great Library", "Scriptorium", "Dormitories"] },
+      { id: "lab_rat", name: "Lab Rat", ap: 1, discipline: 1, description: "Has been turned into a newt twice, and back again.", rooms: ["Alchemy Hall", "Refectory"] },
+      { id: "bookworm", name: "Bookworm", ap: 1, discipline: 1, description: "An actual worm. It has read more than most of the students.", rooms: ["Great Library", "Scriptorium"] },
+      { id: "stray_familiar", name: "Stray Familiar", ap: 2, discipline: 2, description: "Somebody's familiar, between somebodies." },
+    ],
+  },
+
   // ── Grand+ outdoor / wilderness locations ──
   {
     id: "hidden_grove", name: "Hidden Grove", minTier: "Grand",
@@ -731,36 +762,6 @@ const LOCATION_DATA = [
         "Stone Circle":     "comes down dead in the middle of the Stone Circle, as if the stones were waiting for it",
       },
     },
-  },
-  // ── Greater+: a school of magic ──
-  {
-    id: "old_academy", name: "The Old Academy", minTier: "Greater",
-    description: "A rambling old school of magic around a cloistered courtyard, half library and half laboratory, where the scholars never look up from their books.",
-    flavorText: "Everyone here is studying something. Nobody here is studying the furniture.",
-    rooms: ["Great Library", "Lecture Hall", "Headmaster's Study", "Scriptorium", "Cloister Courtyard", "Alchemy Hall", "Dormitories", "Gatehouse", "Refectory"],
-    roomGraph: {
-      "Great Library":      ["Lecture Hall", "Scriptorium"],
-      "Lecture Hall":       ["Great Library", "Headmaster's Study", "Cloister Courtyard"],
-      "Headmaster's Study": ["Lecture Hall", "Alchemy Hall"],
-      "Scriptorium":        ["Great Library", "Cloister Courtyard", "Dormitories"],
-      "Cloister Courtyard": ["Lecture Hall", "Scriptorium", "Alchemy Hall", "Gatehouse"],
-      "Alchemy Hall":       ["Headmaster's Study", "Cloister Courtyard", "Refectory"],
-      "Dormitories":        ["Scriptorium", "Gatehouse"],
-      "Gatehouse":          ["Dormitories", "Cloister Courtyard", "Refectory"],
-      "Refectory":          ["Alchemy Hall", "Gatehouse"],
-    },
-    partySize: [3, 4], suspicionGrowthRate: 1,
-    advantageTags: ["Knowledge", "Decor"],
-    imageHint: "an old school of magic around a cloistered courtyard: towers of books, bubbling alembics, candlelit study rooms",
-    // Everyone here counts toward the Tear in Time (except the Dropout, and pact companions)
-    magicUsersOnly: true,
-    locationCreatures: [
-      { id: "academy_owl", name: "Academy Owl", ap: 2, discipline: 3, description: "Carries the post, and an air of disapproval." },
-      { id: "library_mouse", name: "Library Mouse", ap: 1, discipline: 2, description: "Lives in the stacks and eats the footnotes.", rooms: ["Great Library", "Scriptorium", "Dormitories"] },
-      { id: "lab_rat", name: "Lab Rat", ap: 1, discipline: 1, description: "Has been turned into a newt twice, and back again.", rooms: ["Alchemy Hall", "Refectory"] },
-      { id: "bookworm", name: "Bookworm", ap: 1, discipline: 1, description: "An actual worm. It has read more than most of the students.", rooms: ["Great Library", "Scriptorium"] },
-      { id: "stray_familiar", name: "Stray Familiar", ap: 2, discipline: 2, description: "Somebody's familiar, between somebodies." },
-    ],
   },
   // ── Beyond the Apex ──
   {
