@@ -1,4 +1,5 @@
-import { useId } from "react";
+import { useId, useState } from "react";
+import { EyeOff } from "lucide-react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   HOLIDAYS, LOCATIONS, TIER_ORDER, branchLocationOpen, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, plural, seasonEnd, today,
@@ -37,6 +38,21 @@ function TearFilter() {
   );
 }
 
+/**
+ * Hunting grounds the player has hidden from the list (this browser only, for every mimic): a
+ * convenience, so it lives in localStorage and the list works the same without it.
+ */
+const HIDDEN_LOCATIONS_KEY = "locations.hidden";
+function readHiddenLocations(): string[] {
+  try {
+    const ids: unknown = JSON.parse(localStorage.getItem(HIDDEN_LOCATIONS_KEY) ?? "[]");
+    return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === "string") : [];
+  } catch { return []; }
+}
+function saveHiddenLocations(ids: readonly string[]) {
+  try { localStorage.setItem(HIDDEN_LOCATIONS_KEY, JSON.stringify(ids)); } catch { /* storage unavailable: just don't remember */ }
+}
+
 interface LocationSelectProps {
   onChoose: (location: HuntLocation) => void;
   onChooseForms: () => void;
@@ -50,6 +66,15 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
   const seasonalHint = seasonalHintFor(character);
   const sorted = [...locations].sort((a, b) =>
     Number(!!b.branch) - Number(!!a.branch) || Number(!!b.holiday) - Number(!!a.holiday) || Number(!!b.rare) - Number(!!a.rare));
+  // Grounds the player has tucked away: listed by name at the bottom, a click brings one back
+  const [hiddenIds, setHiddenIds] = useState<string[]>(readHiddenLocations);
+  const setHidden = (id: string, hide: boolean) => {
+    const next = hide ? [...new Set([...hiddenIds, id])] : hiddenIds.filter(x => x !== id);
+    setHiddenIds(next);
+    saveHiddenLocations(next);
+  };
+  const shown = sorted.filter(loc => !hiddenIds.includes(loc.id));
+  const tucked = sorted.filter(loc => hiddenIds.includes(loc.id));
   // Each card is named by its place, and described by its status, what it is and its party size
   const ids = useId();
   return (
@@ -71,18 +96,19 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
       )}
       {sorted.some(loc => loc.branch) && <TearFilter />}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {sorted.map(loc => {
+        {shown.map(loc => {
           const id = (part: string) => `${ids}-${loc.id}-${part}`;
           return (
+            // The hide button sits beside the card, not in it: the card is a button itself
+            <div key={loc.id} className="relative">
             <Card
-              key={loc.id}
               {...asButton(() => onChoose(loc), { labelledBy: id("name"), describedBy: [id("status"), id("about"), id("size")] })}
               data-holiday={loc.holiday}
               className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.branch ? "tear-card" : loc.holiday ? "holiday-card border-border" : loc.rare
                 ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
                 : "border-border hover:border-primary/40"}`}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-4 pr-9">
                 <div id={id("status")}>
                   <BurnBadge huntsLeft={locationBurn(character, loc.id)} />
                   {loc.holiday && (
@@ -116,9 +142,36 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
                 </div>
               </CardContent>
             </Card>
+            <button
+              type="button"
+              onClick={() => setHidden(loc.id, true)}
+              aria-label={`Hide ${loc.name}`}
+              title="Hide this hunting ground (bring it back from the list below)"
+              className={`absolute top-2 right-2 p-1 rounded text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors ${FOCUS_RING}`}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+            </button>
+            </div>
           );
         })}
       </div>
+      {tucked.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="font-cinzel uppercase tracking-wide mr-1">Hidden:</span>
+          {tucked.map(loc => (
+            <button
+              key={loc.id}
+              type="button"
+              onClick={() => setHidden(loc.id, false)}
+              aria-label={`Show ${loc.name}`}
+              title="Show it again"
+              className={`px-2 py-0.5 rounded border border-border hover:border-primary/40 hover:text-foreground transition-colors ${FOCUS_RING}`}
+            >
+              {loc.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -82,6 +82,25 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       ok(reads('Ruler of All Mimics') && !reads('Primordial'), 'reading for a mimic that has been Sovereign: Ruler of All Mimics is listed, the others still hidden');
       await user.selectOptions(pill(), scout.id);
       ok(!reads('Ruler of All Mimics'), '…and hidden again for a mimic that hasn\'t');
+
+      // ---------- forms: a branch's own only for a mimic on that branch ----------
+      const rex = await saveMimic(db, { name: 'Rex', tier: 'Apex', mass: 60, branchTier: 'Primordial' });
+      await open(`/Codex?characterId=${rex.id}`, 4);
+      await user.click(section('Forms'));
+      await user.click(section('Apex'));
+      const colossus = m.ALL_FORMS.find((f) => f.id === 'apex_colossus');
+      ok(screen.getByRole('heading', { level: 3, name: 'Volcano' }) && reads(colossus.branchDescriptions.Primordial) && reads('Primordial only'),
+        'reading for a Primordial mimic: its forms are in the Apex tier, the Colossus told its way');
+      await user.click(section('Locations'));
+      ok(!reads("What else don't you know?"), 'a Primordial mimic that hasn\'t hunted the Tear yet: no Beyond the Apex group, no teaser');
+      const rexHunted = await saveMimic(db, { name: 'Rex II', tier: 'Apex', mass: 60, branchTier: 'Primordial', locationHuntCounts: { tear_in_time: 1 } });
+      await open(`/Codex?characterId=${rexHunted.id}`, 5);
+      await user.click(section('Locations'));
+      ok(reads('The Tear in Time') && reads("What else don't you know?"), 'once it has: the Tear is listed under Beyond the Apex, "What else don\'t you know?"');
+      await user.click(section('Forms'));
+      await user.click(section('Apex'));
+      await user.selectOptions(pill(), scout.id);
+      ok(!screen.queryByRole('heading', { level: 3, name: 'Volcano' }) && !screen.queryByRole('heading', { level: 3, name: 'Colossus' }), '…not for a mimic on no branch');
     });
 
     // ---------- the season's forms ----------

@@ -47,6 +47,10 @@ export function escapeRoom(
 }
 
 export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember, random: () => number = Math.random): CheckResult {
+  // Stuck in the tar: nowhere to go
+  if (adventurer.tarStuck !== undefined) {
+    return { success: true, mimicRoll: 0, advRoll: 0, suspicionChange: 0, detectedFlaws: [], narrative: `The ${form.name} closes on ${adventurer.name}, held fast in the tar. There's nowhere to go.` };
+  }
   const mimicRoll = rollDice(adhesion, random);
   const advRoll = rollDice(strikeResistDice(adventurer), random);
   const success = mimicRoll >= advRoll;
@@ -91,10 +95,11 @@ export function strikeDice(adhesion: number, appearance: Partial<Appearance> | n
 
 /**
  * Who a Strike can reach: anyone lured. Under the fireworks (`skyward`), anyone in the mimic's
- * room too, since they're all staring at the sky.
+ * room too, since they're all staring at the sky; and anyone stuck in the tar in the mimic's room.
  */
 export function strikeCandidates(party: readonly PartyMember[], mimicRoom: RoomName | null, skyward: boolean): PartyMember[] {
-  return party.filter(a => stillInHunt(a) && (a.isAttracted || (skyward && a.location === mimicRoom)));
+  return party.filter(a => stillInHunt(a) &&
+    (a.isAttracted || ((skyward || a.tarStuck !== undefined) && a.location === mimicRoom)));
 }
 
 /** The one struck: the nearest candidate, and among the nearest, whoever likes the mimic's look most. */

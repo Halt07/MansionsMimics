@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, achievementsShown, displayTier, lifetimeStats, nameFlavor, tierFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
+import { ACHIEVEMENTS, achievementsShown, displayTier, lifetimeStats, nameFlavor, tierFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formDescription, formTier } from "@/data/gameData";
 import HolidayBadge from "./HolidayBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,7 +96,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
                       </div>
                     </div>
                     <HolidayBadge form={form} />
-                    <p className="text-muted-foreground mt-0.5">{form.description}</p>
+                    <p className="text-muted-foreground mt-0.5">{formDescription(form, character.branchTier)}</p>
                   </div>
                 ))}
               </div>

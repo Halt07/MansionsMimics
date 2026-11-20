@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  ALL_FORMS, TIER_ORDER, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
+  ALL_FORMS, TIER_ORDER, formDescription, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
   MAX_FORMS, MAX_FORMS_ABOVE_TIER, type Form, type Tier,
 } from "@/data/gameData";
 import BurnBadge from "./BurnBadge";
@@ -99,7 +99,7 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
         {form.variantOf && (
           <p className="text-[10px] text-teal-300 mb-0.5">🗝️ {form.holiday ? "Seasonal variant" : "Variant"} of {baseName(form.variantOf)}</p>
         )}
-        <p className="text-[11px] text-muted-foreground">{form.description}</p>
+        <p className="text-[11px] text-muted-foreground">{formDescription(form, character.branchTier)}</p>
         <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
         {blockedByAboveRule && selected.length < MAX_FORMS && (
           <p className="text-[10px] text-orange-400 mt-0.5">You already have a form from the tier above.</p>

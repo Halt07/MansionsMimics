@@ -39,6 +39,13 @@ interface FormDef {
    */
   readonly variantOf?: string;
   readonly unlockedBy?: readonly (Material | Trait)[];
+  /**
+   * Branch forms (see "Beyond Apex" in IDEAS.md): offered only to a mimic on one of these branch
+   * tiers, and kept out of the Codex for anyone else. A mimic that loses its branch loses them.
+   */
+  readonly branches?: readonly BranchTier[];
+  /** A branch form shared across branches: how each branch tells it (see formDescription). */
+  readonly branchDescriptions?: Readonly<Partial<Record<BranchTier, string>>>;
 }
 
 /**
@@ -659,6 +666,63 @@ const FORM_DATA = {
         { type: "spatial", description: "The staircase has more steps than exterior height allows" },
         { type: "environmental", description: "No salt residue or gull droppings accumulate on the outer walls" },
         { type: "presence", description: "The lens room radiates warmth far beyond what a lamp should produce" },
+      ],
+    },
+    // ── Beyond the Apex: branch forms (mass 50+, only on their branch) ──
+    {
+      id: "apex_colossus", name: "Colossus", tier: "Apex", baseMassRange: [50, 99],
+      branches: ["Eternal", "Primordial", "Sovereign"],
+      builtInTraits: ["Carved", "Cold to Touch"],
+      baseAllureModifier: 4, plausibilityModifier: 1, utilityTags: ["Decor", "Religious", "Authority"],
+      materialSlots: 8, digestCapacityRequired: 10, description: "A titanic figure of stone, taller than the trees around it.",
+      branchDescriptions: {
+        Primordial: "A primeval idol of rough stone, raised by hands that had only just learned to make things. Nobody remembers raising it.",
+        Eternal: "The forgotten guardian of a ruin older than memory, still standing watch over nothing at all.",
+        Sovereign: "A monument to the Mimic King, raised by the mimics themselves, in the King's own likeness.",
+      },
+      flawProfiles: [
+        { type: "visual", description: "Its face is a little different every time someone looks back at it" },
+        { type: "environmental", description: "No moss or lichen will grow on it" },
+        { type: "weight", description: "The ground around its feet isn't pressed down at all" },
+        { type: "presence", description: "Birds won't land on it" },
+      ],
+    },
+    {
+      id: "apex_volcano", name: "Volcano", tier: "Apex", baseMassRange: [50, 99],
+      branches: ["Primordial"],
+      builtInTraits: ["Warm to Touch", "Radiant"],
+      baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Defensive"],
+      materialSlots: 8, digestCapacityRequired: 10, description: "A smoking cone of black rock with a glow at its heart. At this size, a mountain is a fair disguise.",
+      flawProfiles: [
+        { type: "temperature", description: "The heat comes in slow, even breaths, like something asleep" },
+        { type: "environmental", description: "The smoke drifts against the wind" },
+        { type: "acoustic", description: "The rumbling stops whenever someone listens closely" },
+        { type: "grounding", description: "The ground doesn't shake when it rumbles" },
+      ],
+    },
+    {
+      id: "apex_trex_carcass", name: "T. Rex Carcass", tier: "Apex", baseMassRange: [50, 99],
+      branches: ["Primordial"],
+      builtInTraits: ["Heavy-Lidded", "Cold to Touch"],
+      baseAllureModifier: 5, plausibilityModifier: 1, utilityTags: ["Dining"],
+      materialSlots: 6, digestCapacityRequired: 10, description: "A fallen king of the jungle, all ribs and teeth. A feast for any hunter or scavenger who finds it first.",
+      flawProfiles: [
+        { type: "environmental", description: "No flies have found it, and it doesn't smell" },
+        { type: "structure", description: "The ribs flex, very slightly, as if breathing" },
+        { type: "presence", description: "The eye sockets seem to follow whoever is closest" },
+      ],
+    },
+    {
+      id: "apex_cave", name: "Cave", tier: "Apex", baseMassRange: [50, 99],
+      branches: ["Primordial"],
+      builtInTraits: ["Arched", "Cold to Touch"],
+      baseAllureModifier: 4, plausibilityModifier: 2, utilityTags: ["Comfort", "Structural"],
+      materialSlots: 7, digestCapacityRequired: 10, description: "A dry, sheltered cave in the hillside. Everyone needs somewhere to sleep.",
+      flawProfiles: [
+        { type: "acoustic", description: "Echoes come back a beat too early" },
+        { type: "temperature", description: "It's warmer inside than any cave should be" },
+        { type: "spatial", description: "It goes back further than the hillside it's in" },
+        { type: "presence", description: "The walls are faintly damp, and faintly warm, like the inside of a mouth" },
       ],
     },
     // ── Giant's Castle forms (mass 28+, giant-realm only) ──

@@ -96,7 +96,7 @@ export default function Codex() {
         <div className="flex-1 space-y-4">
           {activeSection === "Overview" && <OverviewSection />}
           {activeSection === "Tiers" && <TiersSection />}
-          {activeSection === "Forms" && <FormsSection />}
+          {activeSection === "Forms" && <FormsSection {...reader} />}
           {activeSection === "Materials" && <MaterialsSection />}
           {activeSection === "Traits" && <TraitsSection />}
           {activeSection === "Adventurers" && <AdventurersSection {...reader} />}

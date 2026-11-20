@@ -1,5 +1,5 @@
 import {
-  ALL_FORMS, STAR_FRAGMENT, creatureEmoji, effectiveFormTier, formBurn, formTier, frozenMealAp, uneatenFrozen,
+  ALL_FORMS, STAR_FRAGMENT, creatureEmoji, effectiveFormTier, formBurn, formDescription, formTier, remainsMealAp, uneatenRemains,
   type PartyMember, type RoomName, type SmallCreature,
 } from "@/data/gameData";
 import { useHunt } from "./HuntContext";
@@ -36,7 +36,7 @@ export function FormSwitcher({ onChange }: { onChange: (formIndex: number) => vo
               </div>
             </div>
             <HolidayBadge form={form} />
-            <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{formDescription(form, character.branchTier)}</p>
             <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
           </button>
         );
@@ -74,15 +74,17 @@ const MEAL_BUTTON = "disabled:opacity-50 disabled:pointer-events-none text-xs px
 interface MealsHereProps {
   onEatCreature: (creature: SmallCreature) => void;
   onEatStar: () => void;
-  onEatFrozen: (body: PartyMember) => void;
+  onEatRemains: (body: PartyMember) => void;
 }
 
-/** Easy meals lying about in the mimic's room: small creatures, a fallen star, frozen adventurers. */
-export function MealsHere({ onEatCreature, onEatStar, onEatFrozen }: MealsHereProps) {
+/** Easy meals lying about in the mimic's room: small creatures, a fallen star, frozen or roasted adventurers. */
+export function MealsHere({ onEatCreature, onEatStar, onEatRemains }: MealsHereProps) {
   const hunt = useHunt();
   const { mimicRoom, acting: disabled } = hunt;
   const creatures = hunt.creatures.filter(c => !c.isConsumed && c.location === mimicRoom);
-  const frozen = uneatenFrozen(hunt.party).filter(a => a.location === mimicRoom);
+  const remains = uneatenRemains(hunt.party).filter(a => a.location === mimicRoom);
+  const frozen = remains.filter(a => a.isFrozen);
+  const roasted = remains.filter(a => a.isRoasted);
   const starHere = !!hunt.location?.starfall && !!hunt.starFragment && hunt.starFragment === mimicRoom && !hunt.huntOver;
   return (
     <>
@@ -128,12 +130,31 @@ export function MealsHere({ onEatCreature, onEatStar, onEatFrozen }: MealsHerePr
             {frozen.map(body => (
               <button
                 key={body.id}
-                onClick={() => onEatFrozen(body)}
+                onClick={() => onEatRemains(body)}
                 disabled={disabled}
                 className={`${MEAL_BUTTON} border-sky-400/30 hover:border-sky-300/60 hover:text-sky-200`}
                 title="Frozen meals are easy to take, but worth half as much and teach you nothing."
               >
-                🧊 {body.name} <span className="text-primary ml-1">+{frozenMealAp(body)} AP</span>
+                🧊 {body.name} <span className="text-primary ml-1">+{remainsMealAp(body)} AP</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {roasted.length > 0 && (
+        <div className="bg-orange-500/5 border border-orange-500/30 rounded-lg p-3">
+          <p className="text-[11px] text-orange-300 font-cinzel uppercase tracking-widest mb-2">Roasted in the Ash</p>
+          <div className="flex flex-wrap gap-2">
+            {roasted.map(body => (
+              <button
+                key={body.id}
+                onClick={() => onEatRemains(body)}
+                disabled={disabled}
+                className={`${MEAL_BUTTON} border-orange-500/30 hover:border-orange-400/60 hover:text-orange-200`}
+                title="Roasted meals are easy to take, but worth half as much and teach you nothing."
+              >
+                🍖 {body.name} <span className="text-primary ml-1">+{remainsMealAp(body)} AP</span>
               </button>
             ))}
           </div>

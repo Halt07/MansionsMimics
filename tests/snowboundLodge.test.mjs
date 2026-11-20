@@ -70,7 +70,7 @@ export default async function ({ gameData: m, ok }) {
   ok(frozeOn.con2 < frozeOn.con3 && frozeOn.con3 < frozeOn.con4, `the frail go first (turns ${frozeOn.con2}, ${frozeOn.con3}, ${frozeOn.con4})`);
 
   // A cheap frozen meal
-  ok(m.frozenMealAp({ type: 'Commoner' }) === 1 && m.frozenMealAp({ type: 'Artificer' }) === 2 && m.frozenMealAp({ type: 'Hunter' }) === 4, 'a frozen meal is worth half, rounded up');
+  ok(m.remainsMealAp({ type: 'Commoner' }) === 1 && m.remainsMealAp({ type: 'Artificer' }) === 2 && m.remainsMealAp({ type: 'Hunter' }) === 4, 'a frozen meal is worth half, rounded up');
   ok(m.uneatenFrozen(ice.party).length === 1 && m.uneatenFrozen([{ ...ice.party[0], isConsumed: true }]).length === 0, 'eating a frozen body takes it off the table');
 
   // The report counts the frozen as lost, not as survivors

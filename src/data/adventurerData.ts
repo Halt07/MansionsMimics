@@ -147,7 +147,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { traits: ["Bloodstained", "Shadowed Presence", "Arcane Sigil", "Whispering", "Foul"] },
     quirks: ["Blesses suspicious objects", "Avoids direct skin contact"],
     appliedQuirk: "{name} sketches a quick blessing over the {form}, just in case.",
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched"], tags: ["Religious"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched", "Fresh"], tags: ["Religious"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 2, social: 1, spatial: 1, environmental: 1, acoustic: 0, presence: 2 },
     lootMaterials: ["Gold", "Silver", "Cotton"],
     lootTraits: ["Sacred Symbol"],
@@ -367,7 +367,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Mimic Hunter", type: "Hunter", discipline: 5, baseSuspicion: 5, constitution: 5, interactionStyle: "touch",
     group: "huntersElites",
-    repelledBy: { traits: ["Locked", "Heavy-Lidded"] },
+    repelledBy: { traits: ["Locked", "Heavy-Lidded", "Fragrant"] },
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Taps every surface methodically", "Carries a vial of acid for testing", "Never touches anything without gloves"],
     appliedQuirk: "{name} raps twice on the {form}, listening.",
@@ -398,7 +398,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Speaks to rooms aloud before entering", "Detects heat signatures instinctively", "Refuses to sit or lean on anything"],
     appliedQuirk: "{name} announces themselves to the room before entering, nostrils flaring for heat.",
-    alluringQualities: { materials: ["Gold", "Obsidian"], traits: ["Arcane Sigil", "Tally Marks"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Obsidian"], traits: ["Arcane Sigil", "Tally Marks", "Smoky"], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 1, magical: 3, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 3 },
     lootMaterials: ["Dragonhide", "Starforged Iron", "Aether Crystal"],
     lootTraits: ["Arcane Sigil", "Smoky"],
@@ -407,7 +407,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Gnomish Tinkerer-Hunter", type: "Hunter", discipline: 4, baseSuspicion: 5, constitution: 3, interactionStyle: "touch",
     group: "huntersElites",
-    repelledBy: { traits: ["Locked"] },
+    repelledBy: { traits: ["Locked", "Briny"] },
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Carries mechanical probes that measure density", "Obsessed with metalwork and alloys", "Taps every surface with a tiny silver hammer"],
     appliedQuirk: "{name} taps the {form} with a tiny silver hammer, checking its density.",
@@ -423,7 +423,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Follows scent trails", "Breaks off pieces of suspicious objects to taste them", "Ignores anything that doesn't smell like prey"],
     appliedQuirk: "{name} sniffs along the floor toward the {form}.",
-    alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced", "Tally Marks"], tags: ["Structural", "Valuable"] },
+    alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced", "Tally Marks", "Earthy"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 2 },
     lootMaterials: ["Boarhide", "Iron", "Horn"],
     lootTraits: ["Bloodstained", "Tally Marks"],
@@ -451,7 +451,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Veteran Inquisitor", type: "Paladin", discipline: 5, baseSuspicion: 5, constitution: 4, interactionStyle: "touch",
     group: "huntersElites",
-    repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained", "Whispering", "Thieves' Mark"] },
+    repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained", "Whispering", "Thieves' Mark", "Foul"] },
     minTier: "Grand",
     quirks: ["Casts detect magic on entry", "Marks rooms with chalk sigils", "Interrogates every object aloud"],
     appliedQuirk: "{name} chalks a sigil on the floor and questions the {form} aloud.",
@@ -467,7 +467,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Grand",
     quirks: ["Maintains a permanent magical sight", "Questions spatial anomalies obsessively", "Takes rubbings of every surface"],
     appliedQuirk: "{name} takes a charcoal rubbing of the {form}'s surface.",
-    alluringQualities: { materials: ["Aether Crystal", "Feywood"], traits: ["Runescript", "Arcane Sigil"], tags: ["Knowledge"] },
+    alluringQualities: { materials: ["Aether Crystal", "Feywood"], traits: ["Runescript", "Arcane Sigil", "Musty"], tags: ["Knowledge"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 3, magical: 4, social: 0, spatial: 3, environmental: 2, acoustic: 1, presence: 3 },
     lootMaterials: ["Aether Crystal", "Feywood", "Soulglass", "Void Marble"],
     lootTraits: ["Runescript", "Arcane Sigil"],
@@ -480,7 +480,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Apex", isMimicHunter: true,
     quirks: ["Can sense the life-force of a mimic's last meal", "Wears gloves treated with mimic-repellent", "Counts corners in every room — mimics always have one too many"],
     appliedQuirk: "{name} counts the corners of the room under their breath, then counts them again.",
-    alluringQualities: { materials: ["Obsidian", "Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence"], tags: ["Valuable", "Knowledge"] },
+    alluringQualities: { materials: ["Obsidian", "Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Foul"], tags: ["Valuable", "Knowledge"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 2, magical: 4, social: 0, spatial: 3, environmental: 2, acoustic: 1, presence: 4 },
     lootMaterials: ["Obsidian", "Shadowwood", "Starforged Iron"],
     lootTraits: ["Arcane Sigil", "Shadowed Presence"],
@@ -642,7 +642,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Doubting Scholar", type: "Wizard", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
     group: "common",
-    locations: ["hollow_reliquary"],
+    // Writes the treatise at the Old Academy, and tests it at the Reliquary
+    locations: ["hollow_reliquary", "old_academy"],
     quirks: ["Writing a treatise on why the legend is false", "Measures the altar where the chest once stood", "Reads every inscription aloud, skeptically"],
     appliedQuirk: "{name} reads the {form}'s markings aloud, skeptically.",
     alluringQualities: { materials: ["Walnut", "Linen"], traits: ["Runescript", "Etched", "Carved", "Minimalist", "Musty"], tags: ["Knowledge", "Religious"] },
@@ -1171,10 +1172,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["founders_fair"],
     quirks: ["Reminds everyone whose great-great-grandfather founded the town", "Inspects the decorations as if they paid for them (they did)", "Expects a front-row seat for the fireworks"],
     appliedQuirk: "{name} looks the {form} over. \"I don't recall approving this.\"",
-    alluringQualities: { materials: ["Gold", "Velvet"], traits: ["Heraldic Crest", "Gilded", "Polished"], tags: ["Valuable", "Authority", "Decor"] },
+    alluringQualities: { materials: ["Gold", "Velvet"], traits: ["Heraldic Crest", "Gilded", "Polished", "Fresh"], tags: ["Valuable", "Authority", "Decor"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 0, social: 2, spatial: 1, environmental: 0, acoustic: 0, presence: 1 },
     lootMaterials: ["Gold", "Velvet"],
-    lootTraits: ["Heraldic Crest"],
+    lootTraits: ["Heraldic Crest", "Fresh"],
     partialLoot: ["a sash of office", "a gold cufflink", "a commemorative medal"],
   },
 
@@ -1182,7 +1183,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Astronomer", type: "Wizard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "common",
-    locations: ["stargazers_hill"],
+    // Visiting faculty at the Old Academy, between showers of stars
+    locations: ["stargazers_hill", "old_academy"],
     quirks: ["Logs every streak in a battered notebook", "Never takes their eyes off the sky for long", "Keeps muttering about the angle of descent"],
     appliedQuirk: "{name} glances at the {form}, then back at the sky, then back at the {form}. \"That wasn't on my chart.\"",
     alluringQualities: { materials: ["Brass", "Crystal", "Clear Glass"], traits: ["Etched", "Polished", "Runescript"], tags: ["Knowledge", "Lighting"] },
@@ -1280,11 +1282,91 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
   },
 
+  // ── Port City of Lonmouth (Standard+; two places in each party are theirs) ──
+  {
+    name: "Fishwife", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
+    group: "commoners", locations: ["lonmouth"],
+    repelledBy: { traits: ["Fragrant"] },
+    quirks: ["Prices everything she lays eyes on", "Can smell a bad catch from across the market"],
+    appliedQuirk: "{name} sizes up the {form} as if deciding what it would fetch at market.",
+    alluringQualities: { materials: ["Oak", "Burlap", "Linen"], traits: ["Briny", "Smoky", "Worn"], tags: ["Storage", "Dining"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 2, spatial: 1, environmental: 2, acoustic: 1, presence: 1 },
+    lootMaterials: ["Burlap", "Linen"],
+    lootTraits: ["Briny"],
+    partialLoot: ["a scaling knife", "a salt-stiff apron", "a basket of herring"],
+  },
+  {
+    name: "Dockhand", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
+    group: "commoners", locations: ["lonmouth"],
+    quirks: ["Lifts anything to see how heavy it is", "Whistles shanties at work"],
+    appliedQuirk: "{name} grabs the {form} by a corner and tries to heave it onto a cart.",
+    alluringQualities: { materials: ["Oak", "Iron", "Burlap"], traits: ["Reinforced", "Iron-Banded", "Briny"], tags: ["Storage", "Structural"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 4, text: 0, magical: 0, social: 1, spatial: 1, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Iron", "Burlap"],
+    lootTraits: ["Pitted"],
+    partialLoot: ["a cargo hook", "a coil of hemp rope", "a sweat-stained neckerchief"],
+  },
+  {
+    // The Smuggler's opposite: drawn to the Guild Mark, put off by the Thieves' Mark
+    name: "Harbormaster", type: "Nobility", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "commoners", locations: ["lonmouth"],
+    repelledBy: { traits: ["Thieves' Mark"] },
+    quirks: ["Checks every crate against the manifest", "Never misses a docking fee"],
+    appliedQuirk: "{name} squints at the {form}, then at a manifest, then back at the {form}.",
+    alluringQualities: { materials: ["Brass", "Mahogany"], traits: ["Locked", "Polished", "Guild Mark"], tags: ["Storage", "Authority"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 3, magical: 0, social: 2, spatial: 2, environmental: 1, acoustic: 0, presence: 2 },
+    lootMaterials: ["Brass", "Mahogany"],
+    lootTraits: ["Guild Mark"],
+    partialLoot: ["a brass spyglass", "a page of the harbor ledger", "a tricorn hat"],
+  },
+  {
+    // The Harbormaster's opposite: drawn to the Thieves' Mark, put off by the Guild Mark
+    name: "Smuggler", type: "Rogue", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "touch",
+    group: "common", locations: ["lonmouth"],
+    repelledBy: { traits: ["Guild Mark"] },
+    quirks: ["Knocks on things to find the hollow ones", "Keeps one eye on the harbormaster"],
+    appliedQuirk: "{name} raps on the {form}, listening for a false bottom.",
+    alluringQualities: { materials: ["Oak", "Tanned Hide"], traits: ["Thieves' Mark", "Locked", "Briny"], tags: ["Storage", "Valuable"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 2, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 2, presence: 2 },
+    lootMaterials: ["Tanned Hide", "Smoked Glass"],
+    lootTraits: ["Thieves' Mark"],
+    partialLoot: ["a false-bottomed flask", "a length of tarred rope", "a note in a smuggler's cipher"],
+  },
+  {
+    name: "Sailor on Shore Leave", type: "Warrior", discipline: 2, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "common", locations: ["lonmouth"],
+    repelledBy: { traits: ["Fresh"] },
+    quirks: ["Can't walk straight on dry land", "Sings louder after every tavern"],
+    appliedQuirk: "{name} stumbles into the {form} and apologizes to it.",
+    alluringQualities: { materials: ["Oak", "Linen", "Brass"], traits: ["Briny", "Tally Marks", "Smoky"], tags: ["Dining", "Entertainment"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 2, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
+    lootMaterials: ["Linen", "Brass"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a knot of old rigging", "a sailor's earring", "a battered tin cup"],
+  },
+
+  // ── The Old Academy (Greater+; everyone else there is a magic user) ──
+  {
+    // Not a magic user, however hard they tried: a Commoner, so eating them doesn't count toward the Tear
+    name: "Academy Dropout", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "commoners", locations: ["old_academy"],
+    repelledBy: { traits: ["Faint Glow"] },
+    quirks: ["Still wears the robes, three sizes too big", "Mutters half-remembered incantations that never, ever work", "Insists they were 'this close' to passing"],
+    appliedQuirk: "{name} waves a hand at the {form} and mutters a spell. Nothing happens. Again.",
+    alluringQualities: { materials: ["Linen", "Brass"], traits: ["Arcane Sigil", "Runescript", "Worn"], tags: ["Knowledge"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 0, social: 2, spatial: 1, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Linen"],
+    lootTraits: ["Runescript"],
+    partialLoot: ["a dog-eared spellbook full of crossed-out notes", "a wand that has never once worked", "a failed exam scroll, marked in red"],
+  },
+
   // ── The Tear in Time (Primordial's hunting ground) ──
   // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
   {
-    name: "Cave Hunter", type: "Hunter", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
+    name: "Cave Hunter", type: "Hunter", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
+    // Spoiled meat is no meal, and a carcass draws bigger predators than he wants to meet
+    repelledBy: { traits: ["Foul"] },
     quirks: ["Prods anything unfamiliar with a spear", "Sniffs the air before stepping into a clearing"],
     appliedQuirk: "{name} jabs the {form} with the butt of a spear, and waits to see if it jabs back.",
     alluringQualities: { materials: ["Horn", "Obsidian", "Boarhide"], traits: ["Bloodstained", "Tally Marks"], tags: ["Defensive"] },
@@ -1295,12 +1377,12 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     companion: {
       chance: 0.5,
       options: [
-        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 3, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
+        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 4, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
       ],
     },
   },
   {
-    name: "Firekeeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
+    name: "Firekeeper", type: "Commoner", discipline: 3, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     repelledBy: { traits: ["Cold to Touch"] },
     quirks: ["Never lets the fire go out", "Warms anything that looks cold"],
@@ -1312,18 +1394,18 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a fire-blackened stick", "a pouch of tinder", "a scorched fur mitten"],
   },
   {
-    name: "Cave Painter", type: "Bard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    name: "Cave Painter", type: "Bard", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Traces every new shape on the cave wall", "Stares a long time at outlines"],
     appliedQuirk: "{name} squints at the {form}, then starts sketching it in ochre.",
-    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript"], tags: ["Decor"] },
+    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript", "Earthy"], tags: ["Decor"] },
     perceptionAffinity: { material: 2, structure: 3, weight: 0, text: 3, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 0, presence: 1 },
     lootMaterials: ["Limestone"],
     lootTraits: ["Etched"],
     partialLoot: ["a lump of red ochre", "a charcoal-stained finger bone", "a brush of moss and fat"],
   },
   {
-    name: "Tribal Elder", type: "Druid", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    name: "Tribal Elder", type: "Druid", discipline: 5, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Speaks to the spirit in every stone", "Leaves offerings on anything strange"],
     appliedQuirk: "{name} lays a bundle of herbs on the {form} and murmurs to it.",
@@ -1334,7 +1416,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a string of carved bone beads", "a bundle of dried herbs", "a feathered headdress"],
   },
   {
-    name: "Woolly Mammoth", type: "Beast", discipline: 3, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
+    name: "Woolly Mammoth", type: "Beast", discipline: 4, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
     repelledBy: { traits: ["Smoky"] },
     quirks: ["Rubs its flank against anything solid", "Trumpets at whatever won't get out of its way"],
@@ -1348,9 +1430,11 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Raptor", type: "Beast", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
+    // Fast and jumpy: an extra die against a Strike, and gone from the room if it slips one
+    behavior: "elusive",
     quirks: ["Hunts in short, silent dashes", "Tilts its head at anything that might be breathing"],
     appliedQuirk: "{name} circles the {form} twice, nostrils flaring.",
-    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained"], tags: ["Dining"] },
+    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained", "Foul"], tags: ["Dining"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 3, environmental: 3, acoustic: 3, presence: 5 },
     lootMaterials: ["Boarhide"],
     lootTraits: ["Bloodstained"],
@@ -1451,6 +1535,14 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   warmthRoom?: RoomName;
   /** Frozen solid: out of the hunt (isAlive is false), but still there to be eaten. */
   isFrozen?: boolean;
+  /** Roasted at the edge of an eruption (the Tear in Time): out of the hunt, but still there to be eaten. */
+  isRoasted?: boolean;
+  /** Caught in the heart of an eruption: gone, with nothing left to eat. */
+  isBurned?: boolean;
+  /** Stuck in the tar (the Tear in Time): turns spent stuck so far. Can't move; a Strike always holds. */
+  tarStuck?: number;
+  /** Sank into the tar: gone, with nothing left to eat. */
+  isSunk?: boolean;
   /**
    * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
    * eaten. When the two are the same, it isn't a costume at all (a real werewolf).
@@ -1460,12 +1552,12 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
 };
 
 /**
- * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
+ * Still in the hunt: not eaten, fled, vanished, converted, frozen, roasted, burned or sunk. (Each of those also sets
  * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
  * for this, used everywhere.
  */
 export const stillInHunt = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned && !a.isSunk;
 
 // ============================================================
 // AP REWARDS & LOOT FALLBACKS

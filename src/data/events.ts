@@ -4,13 +4,14 @@
 // the seasonal locations' cold, falling stars, fireworks and door-to-door procession. (Devotion
 // at the Hollow Reliquary has its own module, ./devotion.) Re-exported from ./gameData.
 // ============================================================
+import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { ADVENTURER_TEMPLATES, getApReward, isHiddenAdventurer, stillInHunt, type PartyMember, type Treasure } from "./adventurerData";
 import { getAdjacentRooms, getRoomDistance, shuffle } from "./core";
 import type { HuntLocation, RoomName } from "./locationData";
 import { type Form, type FormId } from "./mimicData";
 import { plural } from "./text";
 import {
-  TIER_ORDER, type Material, type TeachableTrait, type Tier, type Trait,
+  TIER_ORDER, type CombatStat, type Material, type TeachableTrait, type Tier, type Trait,
 } from "./vocabulary";
 
 // ============================================================
@@ -272,14 +273,74 @@ export function chillParty(party: readonly PartyMember[], location: HuntLocation
   return { party: next, frozen, numb };
 }
 
-/** What a frozen adventurer is worth: half the usual, rounded up. */
-export function frozenMealAp(member: Pick<PartyMember, "group" | "type" | "apReward">): number {
+/** What remains are worth (frozen at the Lodge, roasted at the Tear): half the usual, rounded up. */
+export function remainsMealAp(member: Pick<PartyMember, "group" | "type" | "apReward">): number {
   return Math.max(1, Math.ceil(getApReward(member) / 2));
 }
 
 /** Frozen adventurers nobody has eaten yet. */
 export function uneatenFrozen(party: readonly PartyMember[]): PartyMember[] {
   return party.filter(a => a.isFrozen && !a.isConsumed);
+}
+
+/** Remains nobody has eaten yet: frozen (the Lodge) or roasted (the Tear in Time). Out of the hunt, but still a meal. */
+export function uneatenRemains(party: readonly PartyMember[]): PartyMember[] {
+  return party.filter(a => (a.isFrozen || a.isRoasted) && !a.isConsumed);
+}
+
+// ============================================================
+// THE TEAR IN TIME: THE ERUPTION
+// Each hunt may (location.eruption.chance) see the volcano erupt, once, on a turn picked when the
+// hunt starts, with a warning the turn before. The crater room's occupants are killed outright;
+// the rooms next to it are roasted (cheap meals, like frozen ones). A mimic caught in it pays a
+// toll, unless it's wearing the Volcano: it's the mountain, after all.
+// ============================================================
+/** The form that an eruption can't hurt. */
+export const ERUPTION_PROOF_FORM: FormId = "apex_volcano";
+
+/** When this hunt's eruption comes, if it does: rolled once, when the hunt starts. */
+export function rollEruption(location: Pick<HuntLocation, "eruption">, random: () => number = Math.random): number | null {
+  const e = location.eruption;
+  if (!e || random() >= e.chance) return null;
+  const [first, last] = e.turns;
+  return first + Math.floor(random() * (last - first + 1));
+}
+
+/** The rooms an eruption reaches: the crater, where everyone dies, and the rooms next to it, where they're roasted. */
+export function eruptionZone(location: HuntLocation): { crater: RoomName; edge: readonly RoomName[] } | null {
+  if (!location.eruption) return null;
+  const crater = location.eruption.crater as RoomName;
+  return { crater, edge: getAdjacentRooms(location, crater) };
+}
+
+/** Points an eruption takes from a mimic's stats when it doesn't take mass. */
+export const ERUPTION_STAT_LOSS: readonly [number, number] = [2, 3];
+
+/**
+ * What an eruption costs a mimic caught in it (not wearing the Volcano): one time in four, 1 mass;
+ * otherwise 2–3 stat points, each from a random stat (all from one, or spread over two or three).
+ * Nothing goes below 1. The changes to save, and how it's told.
+ */
+export function eruptionToll(
+  character: Pick<MimicCharacter, "mass" | CombatStat>, random: () => number = Math.random,
+): { changes: Partial<MimicCharacter>; line: string } {
+  if (random() < 1 / 4) {
+    const mass = Math.max(1, character.mass - 1);
+    return { changes: { mass }, line: `The heat sears away part of you. (-${character.mass - mass} mass, now ${mass})` };
+  }
+  const [least, most] = ERUPTION_STAT_LOSS;
+  const points = least + Math.floor(random() * (most - least + 1));
+  const stats: CombatStat[] = ["plausibility", "adhesion", "patience"];
+  const after: Record<CombatStat, number> = { plausibility: character.plausibility, adhesion: character.adhesion, patience: character.patience };
+  for (let i = 0; i < points; i++) {
+    const open = stats.filter(s => after[s] > 1);
+    if (open.length === 0) break;
+    after[open[Math.floor(random() * open.length)]] -= 1;
+  }
+  const lost = stats.filter(s => after[s] < character[s]);
+  const changes = Object.fromEntries(lost.map(s => [s, after[s]])) as Partial<MimicCharacter>;
+  const told = lost.map(s => `${s} -${character[s] - after[s]} (now ${after[s]})`).join(", ");
+  return { changes, line: lost.length ? `The heat scorches you to the core. (${told})` : "The heat scorches you, but there's nothing left in you to burn away." };
 }
 
 // ============================================================

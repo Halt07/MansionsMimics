@@ -76,4 +76,25 @@ export default async function ({ gameData: m, ok }) {
   ok(!('branchTier' in grow({ mass: 100, branchTier: 'Sovereign' }).changes), 'growing as a Sovereign: nothing more to take');
   ok(!('branchTier' in grow({ mass: 98, branchTier: 'Eternal' }).changes), 'growing to 100 as Eternal: still Eternal');
   ok(!('branchTier' in grow({ mass: 60, decayFreeDate: ago(60) }).changes), 'growing never makes a mimic Eternal (that waits for it to be opened)');
+
+  // ---------- the branch forms ----------
+  const names = (forms) => forms.map((f) => f.name);
+  const offered = (over) => names(m.getValidForms('Apex', 60, { learnedMaterials: [], learnedTraits: [], ...over }));
+  ok(!offered({}).some((n) => ['Colossus', 'Volcano', 'T. Rex Carcass', 'Cave'].includes(n)), 'a plain Apex mimic is offered none of the branch forms');
+  ok(['Colossus', 'Volcano', 'T. Rex Carcass', 'Cave'].every((n) => offered({ branchTier: 'Primordial' }).includes(n)), 'a Primordial one: the Colossus, Volcano, T. Rex Carcass and Cave');
+  ok(offered({ branchTier: 'Eternal' }).includes('Colossus') && !offered({ branchTier: 'Eternal' }).includes('Volcano') && offered({ branchTier: 'Sovereign' }).includes('Colossus'),
+    'Eternal and Sovereign share only the Colossus (their own forms are still to come)');
+  ok(!names(m.getValidForms('Apex', 48, { learnedMaterials: [], learnedTraits: [], branchTier: 'Primordial' })).includes('Volcano'), 'branch forms need 50 mass');
+  ok(m.ALL_FORMS.filter((f) => f.branches?.includes('Primordial')).length === 4, 'Primordial has four forms, no more');
+  ok(m.ALL_FORMS.filter((f) => f.branches).every((f) => !m.VARIANT_FORMS.includes(f) && f.tier === 'Apex'), 'branch forms are Apex forms of their own, not variants (Curiosity Cabinet doesn\'t need them)');
+  const colossus = m.ALL_FORMS.find((f) => f.id === 'apex_colossus');
+  const told = ['Primordial', 'Eternal', 'Sovereign'].map((b) => m.formDescription(colossus, b));
+  ok(new Set(told).size === 3 && told[0].includes('idol') && told[1].includes('guardian') && told[2].includes('Mimic King'), 'the Colossus is told differently on each branch: idol, guardian, monument');
+  ok(m.formDescription(colossus, null) === colossus.description && m.formDescription(m.ALL_FORMS.find((f) => f.id === 'apex_volcano'), 'Primordial') === m.ALL_FORMS.find((f) => f.id === 'apex_volcano').description,
+    '…and plainly elsewhere (and other forms just use their own)');
+  const colossusKing = apex({ mass: 101, branchTier: 'Sovereign', sovereignReached: true, lastFedAt: ago(7), forms: [ref('apex_watchtower'), { ...ref('apex_colossus'), name: 'Colossus' }], activeFormIndex: 1 });
+  const uncrowned = m.welcomeBack(colossusKing, { now, day });
+  ok(uncrowned.changes.forms?.map((f) => f.formId).join() === 'apex_watchtower' && uncrowned.changes.activeFormIndex === 0, 'a Sovereign that loses it loses the Colossus too (back to its other form)');
+  ok(uncrowned.massDecayNotice.endsWith('You can no longer take the shape of the Colossus.'), '…and is told');
+  ok(!m.welcomeBack(apex({ mass: 101, branchTier: 'Sovereign', forms: [ref('apex_colossus')] }), { now, day }).changes.forms, 'a Sovereign that keeps it keeps its Colossus');
 }

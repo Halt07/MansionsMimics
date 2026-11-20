@@ -11,7 +11,7 @@ import { LOCATIONS, type HuntLocation, type LocationId } from "./locationData";
 import { HOLIDAYS, today, type HolidayId } from "./holidays";
 import { hasMagic, knowsTrait } from "./core";
 import {
-  VARIANT_FORMS, dropExpiredSeasonalForms, effectiveFormTier, formsStillAllowed, formTier, getFormTierPenalties,
+  VARIANT_FORMS, branchAllows, dropExpiredSeasonalForms, effectiveFormTier, formsStillAllowed, formTier, getFormTierPenalties,
 } from "./forms";
 
 // ============================================================
@@ -136,7 +136,18 @@ export function welcomeBack(
   const branch = branchOnOpening({ ...character, ...changes }, now);
   if (branch) {
     changes = { ...changes, ...branch.changes };
-    if (branch.lost) massDecayNotice = `${massDecayNotice ?? ""} ${branch.line}`.trim();
+    if (branch.lost) {
+      massDecayNotice = `${massDecayNotice ?? ""} ${branch.line}`.trim();
+      // ...and with it, the branch's own forms (the Colossus)
+      const forms = changes.forms ?? character.forms;
+      const activeId = forms[changes.activeFormIndex ?? character.activeFormIndex]?.formId;
+      const kept = forms.filter(ref => { const def = ALL_FORMS.find(f => f.id === ref.formId); return !def || branchAllows(def, null); });
+      if (kept.length < forms.length) {
+        const gone = forms.filter(ref => !kept.includes(ref)).map(ref => `the ${ref.name}`);
+        changes = { ...changes, forms: kept, activeFormIndex: Math.max(0, kept.findIndex(f => f.formId === activeId)) };
+        massDecayNotice += ` You can no longer take the shape of ${gone.join(" or ")}.`;
+      }
+    }
     else branchNotice = branch.line;
   }
   return { character: { ...character, ...changes }, changes, massDecayNotice, seasonNotice: dropped?.message ?? null, branchNotice };

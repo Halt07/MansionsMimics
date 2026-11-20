@@ -60,4 +60,11 @@ export default async function ({ gameData: m, ok, log }) {
   ok(mod('lesser_crate', 'noble_estate', 'Armory').plausibility === 1 && fw('noble_estate', 'Armory').plausibility === 0 && fw('noble_estate', 'Armory').allure === 0,
     'but not in the Noble Estate\'s Armory: fireworks among the weapons get nothing');
   ok(fw('founders_fair', 'Riverbank').allure === 1, 'and at the Fair\'s Riverbank it has its own, better bonus');
+
+  // ---------- the branch forms, away from the Tear in Time ----------
+  ok([['hidden_grove', 'Streamside Bank'], ['lonely_moor', 'Standing Stones'], ['ruined_mill', 'River Crossing'], ['ruined_city', 'Sewer Entrance']]
+    .every(([l, r]) => mod('apex_cave', l, r).plausibility > 0), 'the Cave fits in a few open places: a stream bank, the standing stones, a river crossing, a sewer mouth');
+  ok([['crossroads', 'Centre Stone'], ['abandoned_castle', 'Courtyard'], ['cloud_kingdom', 'Beanstalk Landing']]
+    .every(([l, r]) => mod('apex_volcano', l, r).plausibility < 0), 'a Volcano is plainly wrong at the crossroads, in a castle courtyard or on a cloud');
+  ok(mod('apex_colossus', 'ruined_city', 'Collapsed Temple').plausibility > 0 && mod('apex_colossus', 'hidden_grove', 'Ancient Altar').plausibility > 0, 'a Colossus fits among temple ruins and by an ancient altar');
 }

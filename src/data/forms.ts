@@ -5,7 +5,7 @@
 // wearing a form from the tier above or below. Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_MATERIALS, TIER_ORDER, type Material, type Tier, type Trait } from "./vocabulary";
+import { ALL_MATERIALS, TIER_ORDER, type BranchTier, type Material, type Tier, type Trait } from "./vocabulary";
 import { MASTER_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type SeasonalForm } from "./mimicData";
 import { HOLIDAYS, isInSeason, seasonStart } from "./holidays";
 import { plural } from "./text";
@@ -96,8 +96,23 @@ export function isVariantForm(form: Pick<Form, "variantOf">): boolean {
   return !!form.variantOf;
 }
 
-/** What a mimic knows, for unlocking variant forms. */
-export type FormKnowledge = Pick<MimicCharacter, "learnedMaterials" | "learnedTraits">;
+/** What a mimic knows, for unlocking variant forms, and its branch tier, for branch forms. */
+export type FormKnowledge = Pick<MimicCharacter, "learnedMaterials" | "learnedTraits"> & Partial<Pick<MimicCharacter, "branchTier">>;
+
+/** Whether a branch tier's own form (see Form.branches). */
+export function isBranchForm(form: Pick<Form, "branches">): boolean {
+  return !!form.branches;
+}
+
+/** Whether a mimic on `branch` (or none) may take this form: any ordinary one, a branch form only on its branch. */
+export function branchAllows(form: Pick<Form, "branches">, branch: BranchTier | null | undefined): boolean {
+  return !form.branches || (!!branch && form.branches.includes(branch));
+}
+
+/** A form's description, as told on `branch` (the Colossus is something different on each). */
+export function formDescription(form: Pick<Form, "description" | "branchDescriptions">, branch?: BranchTier | null): string {
+  return (branch && form.branchDescriptions?.[branch]) || form.description;
+}
 
 /** Whether the mimic knows any of the materials or traits that unlock this variant. */
 export function isVariantUnlocked(form: Pick<Form, "unlockedBy">, knowledge: FormKnowledge): boolean {
@@ -107,8 +122,8 @@ export function isVariantUnlocked(form: Pick<Form, "unlockedBy">, knowledge: For
       : knowsTrait(knowledge, x as Trait));
 }
 
-/** Ordinary forms whose tier and mass rules allow them, ignoring variant unlocks. */
-function formsInRange(tierStr: Tier, massVal: number): Form[] {
+/** Ordinary forms whose tier and mass rules (and branch, for branch forms) allow them, ignoring variant unlocks. */
+function formsInRange(tierStr: Tier, massVal: number, branch?: BranchTier | null): Form[] {
   const currentTierIndex = TIER_ORDER.indexOf(tierStr);
   if (currentTierIndex === -1) return [];
   const forms: Form[] = [];
@@ -116,6 +131,7 @@ function formsInRange(tierStr: Tier, massVal: number): Form[] {
     if (Math.abs(tierIndex - currentTierIndex) > 1) return;
     MASTER_FORMS[tier].forEach((form) => {
       if (isFormMassGated(form) && massVal < form.baseMassRange[0]) return;
+      if (!branchAllows(form, branch)) return;
       forms.push(form);
     });
   });
@@ -167,12 +183,13 @@ export function dropExpiredSeasonalForms<T extends { formId: string }>(
 
 /**
  * Forms a mimic can choose. Base forms by tier and mass; variant forms only when `knowledge`
- * is given and unlocks them (omit it, e.g. at character creation, for base forms only); seasonal
- * forms only when `date` is given and they're in season.
+ * is given and unlocks them (omit it, e.g. at character creation, for base forms only); branch
+ * forms only when `knowledge` is on their branch; seasonal forms only when `date` is given and
+ * they're in season.
  */
 export function getValidForms(tierStr: Tier, massVal: number, knowledge?: FormKnowledge, date?: Date): Form[] {
   return [
-    ...formsInRange(tierStr, massVal).filter(f =>
+    ...formsInRange(tierStr, massVal, knowledge?.branchTier).filter(f =>
       !isVariantForm(f) || (knowledge !== undefined && isVariantUnlocked(f, knowledge))),
     ...getSeasonalForms(tierStr, date),
   ];
@@ -180,7 +197,7 @@ export function getValidForms(tierStr: Tier, massVal: number, knowledge?: FormKn
 
 /** Variants whose base form is in range but which the mimic hasn't unlocked yet (shown locked). */
 export function getLockedVariants(tierStr: Tier, massVal: number, knowledge: FormKnowledge): Form[] {
-  return formsInRange(tierStr, massVal).filter(f => isVariantForm(f) && !isVariantUnlocked(f, knowledge));
+  return formsInRange(tierStr, massVal, knowledge.branchTier).filter(f => isVariantForm(f) && !isVariantUnlocked(f, knowledge));
 }
 
 // ---------- form tier penalties ----------

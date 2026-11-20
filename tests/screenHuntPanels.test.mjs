@@ -48,7 +48,7 @@ export default async function ({ gameData: m, load, ok }) {
 
   // ---------- meals lying about ----------
   const meals = (h, extra) => {
-    const handlers = { onEatCreature: spy(), onEatStar: spy(), onEatFrozen: spy() };
+    const handlers = { onEatCreature: spy(), onEatStar: spy(), onEatRemains: spy() };
     const { container } = s.showInHunt(MealsHere, handlers, s.huntState(mimic(), h, extra));
     return { ...handlers, container };
   };
@@ -82,7 +82,12 @@ export default async function ({ gameData: m, load, ok }) {
   const body = { ...lodge.party[0], location: lodge.mimicRoom, isAlive: false, isFrozen: true, warmth: 0 };
   const farBody = { ...lodge.party[1], location: lodgeLoc.rooms.find((r) => r !== lodge.mimicRoom), isAlive: false, isFrozen: true };
   const iced = meals({ ...lodge, party: [body, farBody] });
-  ok(button(body.name)?.textContent.includes(`+${m.frozenMealAp(body)} AP`) && !has(farBody.name), 'a frozen adventurer in your room is a meal (only in your room)');
+  ok(button(body.name)?.textContent.includes(`+${m.remainsMealAp(body)} AP`) && !has(farBody.name), 'a frozen adventurer in your room is a meal (only in your room)');
   await user.click(button(body.name));
-  ok(iced.onEatFrozen.calls.length === 1 && iced.onEatFrozen.calls[0][0].id === body.id, '…clicking it eats them');
+  ok(iced.onEatRemains.calls.length === 1 && iced.onEatRemains.calls[0][0].id === body.id, '…clicking it eats them');
+  const roast = { ...body, id: 'roast', name: 'Cave Painter', isFrozen: false, isRoasted: true };
+  const ash = meals({ ...lodge, party: [roast] });
+  ok(has('Roasted in the Ash') && button('Cave Painter')?.textContent.includes('🍖') && !has('Frozen Solid'), 'a roasted adventurer in your room is a meal too, under Roasted in the Ash');
+  await user.click(button('Cave Painter'));
+  ok(ash.onEatRemains.calls[0][0].id === 'roast', '…clicking it eats them');
 }

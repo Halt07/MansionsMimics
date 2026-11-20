@@ -53,10 +53,11 @@ export function withDiscovered(list: readonly string[], members: readonly Pick<P
 // CODEX: LOCATIONS
 // The Codex groups hunting grounds and only tells you about the ones you've found.
 // ============================================================
-export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare" | "seasonal" | "beyond";
+export type LocationGroupId = "common" | "uncommon" | "advanced" | "giant" | "adept" | "rare" | "seasonal" | "beyond";
 
 export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; description: string }[] = [
   { id: "common", label: "Common", description: "Hunting grounds every mimic knows from its first meal." },
+  { id: "uncommon", label: "Uncommon", description: "Grounds that open once a mimic outgrows the first five, at Standard and Greater." },
   { id: "advanced", label: "Advanced", description: "Grounds that open up as a mimic grows in tier and mass." },
   { id: "giant", label: "Giant", description: "Where the giants live. Only the largest mimics are taken seriously there." },
   { id: "adept", label: "Adept", description: "Grounds for mimics that have outgrown even the giants' doorways." },
@@ -78,6 +79,8 @@ export function locationGroup(location: HuntLocation): LocationGroupId {
   if (location.rare) return "rare";
   if (location.isGiantRealm) return "giant";
   if (location.minTier === TIER_ORDER[0] && !location.minMass) return "common";
+  // Standard and Greater: the grounds between the starter five and Grand
+  if (TIER_ORDER.indexOf(location.minTier) < TIER_ORDER.indexOf("Grand")) return "uncommon";
   return unlockRank(location) > firstGiantRank ? "adept" : "advanced";
 }
 

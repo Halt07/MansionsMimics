@@ -813,6 +813,82 @@
   to { opacity: 1; translate: 0 0; }
 }
 /* Leave the stamp its corner beside the signoff; in a narrow column it drops below instead */
+/* ── The Tear in Time: a cracked stone tablet, the words carved in, leaning on a firelit cave
+   wall. Sooty all over the edges if the volcano erupted ([data-scorched]). ── */
+.report-wall--cave {
+  background:
+    radial-gradient(ellipse at 50% 110%, hsl(25 90% 50% / 0.35), transparent 60%),
+    radial-gradient(ellipse at 15% 20%, rgb(255 255 255 / 0.04), transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0.7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #2a241f, #15110d);
+}
+.report-wall--cave .report-caption { color: hsl(30 40% 72% / 0.8); }
+.report-paper.report-paper--stone {
+  --ink: #33281a;
+  --ink-faded: #534430;
+  --blood: #5e2414;
+  font-family: 'Cinzel', serif;
+  transform: rotate(-0.6deg);
+  /* Carved, not written: a highlight under each stroke, a shadow over it */
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.28), 0 -1px 0 rgb(0 0 0 / 0.35);
+  background-image:
+    radial-gradient(circle at 70% 25%, rgb(255 255 255 / 0.12), transparent 30%),
+    radial-gradient(circle at 25% 80%, rgb(0 0 0 / 0.12), transparent 30%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.28 0 0 0 0 0.22 0 0 0 0 0.12 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #cdb98a, #ab9566 55%, #8f7a50);
+  box-shadow: inset 0 0 30px rgb(0 0 0 / 0.45), inset 0 2px 2px rgb(255 255 255 / 0.18);
+  /* A rough slab: chipped corners, a bite out of one side */
+  clip-path: polygon(
+    3% 4%, 12% 0.5%, 30% 1.5%, 47% 0%, 66% 1.2%, 82% 0.3%, 95% 2.5%, 100% 9%,
+    98.8% 24%, 100% 38%, 97.5% 44%, 99.2% 52%, 98.5% 70%, 100% 86%, 96% 98%,
+    80% 100%, 63% 98.8%, 44% 100%, 26% 98.5%, 9% 99.5%, 1.5% 95%,
+    0% 80%, 1.2% 62%, 0% 45%, 1.6% 28%, 0% 14%
+  );
+}
+.report-paper--stone .report-heading,
+.report-paper--stone .report-title,
+.report-paper--stone.report-paper--gossip .report-title,
+.report-paper--stone.report-paper--verse .report-title {
+  font-family: 'Cinzel', serif;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.report-paper--stone.report-paper--incident .report-title { text-shadow: 0 1px 0 rgb(255 255 255 / 0.25), 0 -1px 0 rgb(0 0 0 / 0.45); }
+.report-paper--stone .report-rule { border-color: rgb(0 0 0 / 0.45); box-shadow: 0 1px 0 rgb(255 255 255 / 0.25); }
+.report-paper--stone .report-quote { border-left-color: rgb(0 0 0 / 0.3); }
+.report-paper--stone.report-paper--gossip .report-body { font-style: normal; }
+/* The crack: a jagged line from the top edge down into the slab */
+.report-crack {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M71 0 L68 9 L73 15 L66 26 L69 33 L61 44 L64 51 L58 63' fill='none' stroke='%23201d19' stroke-width='0.7' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M66 26 L74 31 L79 30' fill='none' stroke='%23201d19' stroke-width='0.5' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M72 0 L69 9 L74 15 L67 26 L70 33 L62 44 L65 51 L59 63' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='0.5' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;
+  background-size: 100% 100%;
+}
+/* Soot from the eruption: black smudges creeping in from the edges and a smear across, painted
+   over the same stone */
+.report-paper.report-paper--stone[data-scorched] {
+  /* Streaks of soot (stretched noise, so they read as wiped and smeared, not as shadow) creeping
+     in from the corners and smeared across the middle, over a light darkening and the same stone */
+  background:
+    /* The bottom-left smear... */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='f' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.08' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0 0.03 -4.2 0 0 0 2.4'/%3E%3C/filter%3E%3CradialGradient id='g' cx='0' cy='1' r='0.95'%3E%3Cstop offset='0' stop-color='white'/%3E%3Cstop offset='0.55' stop-color='white' stop-opacity='0.7'/%3E%3Cstop offset='1' stop-color='white' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cmask id='m'%3E%3Crect width='200' height='120' fill='url(%23g)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23m)'%3E%3Crect x='-40' y='-40' width='280' height='200' filter='url(%23f)' transform='rotate(-14 100.0 60.0)'/%3E%3C/g%3E%3C/svg%3E") -6% 106% / 75% 55% no-repeat,
+    /* ...pulled partway off a denser clump of soot that never got smeared */
+    radial-gradient(ellipse 20% 24% at 3% 94%, rgb(10 8 5 / 0.9), rgb(10 8 5 / 0.55) 45%, transparent 100%) 0 0 / 100% 100%,
+    /* ...and a smaller one left in the top-right corner */
+    radial-gradient(ellipse 13% 10% at 97% 4%, rgb(10 8 5 / 0.85), rgb(10 8 5 / 0.5) 45%, transparent 100%) 0 0 / 100% 100%,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='f' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.007 0.09' numOctaves='3' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0 0.03 -3.2 0 0 0 1.76'/%3E%3C/filter%3E%3CradialGradient id='g' cx='1' cy='0' r='0.95'%3E%3Cstop offset='0' stop-color='white'/%3E%3Cstop offset='0.55' stop-color='white' stop-opacity='0.7'/%3E%3Cstop offset='1' stop-color='white' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cmask id='m'%3E%3Crect width='200' height='120' fill='url(%23g)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23m)'%3E%3Crect x='-40' y='-40' width='280' height='200' filter='url(%23f)' transform='rotate(-10 100.0 60.0)'/%3E%3C/g%3E%3C/svg%3E") right top / 70% 50% no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='f' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008 0.1' numOctaves='3' seed='13'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0 0.03 -2.8 0 0 0 1.54'/%3E%3C/filter%3E%3CradialGradient id='g' cx='1' cy='1' r='0.95'%3E%3Cstop offset='0' stop-color='white'/%3E%3Cstop offset='0.55' stop-color='white' stop-opacity='0.7'/%3E%3Cstop offset='1' stop-color='white' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cmask id='m'%3E%3Crect width='200' height='120' fill='url(%23g)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23m)'%3E%3Crect x='-40' y='-40' width='280' height='200' filter='url(%23f)' transform='rotate(8 100.0 60.0)'/%3E%3C/g%3E%3C/svg%3E") right bottom / 45% 35% no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='80' viewBox='0 0 300 80' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='f' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.14' numOctaves='3' seed='21'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0 0.03 -2.6 0 0 0 1.43'/%3E%3C/filter%3E%3CradialGradient id='g' cx='0.5' cy='0.5' r='0.5'%3E%3Cstop offset='0' stop-color='white'/%3E%3Cstop offset='0.4' stop-color='white' stop-opacity='0.8'/%3E%3Cstop offset='1' stop-color='white' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cmask id='m'%3E%3Crect width='300' height='80' fill='url(%23g)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23m)'%3E%3Crect x='-40' y='-40' width='380' height='160' filter='url(%23f)' transform='rotate(-18 150.0 40.0)'/%3E%3C/g%3E%3C/svg%3E") 30% 62% / 85% 22% no-repeat,
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgb(12 9 6 / 0.45), transparent 75%) 0 0 / 100% 100%,
+    radial-gradient(ellipse 50% 35% at 100% 0%, rgb(12 9 6 / 0.4), transparent 75%) 0 0 / 100% 100%,
+    radial-gradient(circle at 70% 25%, rgb(255 255 255 / 0.12), transparent 30%) 0 0 / 100% 100%,
+    radial-gradient(circle at 25% 80%, rgb(0 0 0 / 0.12), transparent 30%) 0 0 / 100% 100%,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.28 0 0 0 0 0.22 0 0 0 0 0.12 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E") 0 0,
+    linear-gradient(160deg, #cdb98a, #ab9566 55%, #8f7a50) 0 0 / 100% 100%;
+}
+
 .report-paper:has(.report-stamp) .report-signoff { padding-left: 9.5rem; }
 @container (max-width: 26rem) {
   .report-paper:has(.report-stamp) .report-signoff { padding-left: 0; }
@@ -1014,6 +1090,32 @@ button:disabled .key-hint { opacity: 0.4; }
 .tear-card:hover::before { filter: url(#tear-rip) drop-shadow(0 0 10px rgb(125 211 252 / 0.9)); }
 .tear-badge { color: #7dd3fc; text-shadow: 0 0 6px rgb(56 189 248 / 0.6); }
 
+/* The Codex's "What else don't you know?" under Beyond the Apex: a slow shimmer through the three
+   branches' colors (Eternal's indigo, the Tear's blue, Sovereign's gold), so a mimic that has
+   found one branch glimpses colors that aren't its own. */
+.beyond-teaser {
+  /* Only as wide as its words, so each band of color covers them completely */
+  display: inline-block;
+  /* Solid bands (Eternal's indigo, the Tear's blue, Sovereign's gold) with blends only between
+     them. The text shows a fifth of it at a time, so at 0%, 50% and 100% it's one solid color. */
+  background: linear-gradient(90deg,
+    #a5b4fc 0%, #a5b4fc 20%, #7dd3fc 40%, #7dd3fc 60%, #fbbf24 80%, #fbbf24 100%);
+  background-size: 500% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 4px rgb(125 211 252 / 0.35));
+  animation: beyond-shimmer 21s ease-in-out infinite;
+}
+/* Rest on each color, sweep to the next: indigo, blue, gold, blue, and round again */
+@keyframes beyond-shimmer {
+  0%, 12%   { background-position: 0% 50%; }
+  25%, 37%  { background-position: 50% 50%; }
+  50%, 62%  { background-position: 100% 50%; }
+  75%, 87%  { background-position: 50% 50%; }
+  100%      { background-position: 0% 50%; }
+}
+
 @keyframes tear-shift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -1023,5 +1125,5 @@ button:disabled .key-hint { opacity: 0.4; }
   50% { box-shadow: 0 0 22px rgb(129 140 248 / 0.5); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tear-card, .tear-card::before { animation: none; }
+  .tear-card, .tear-card::before, .beyond-teaser { animation: none; }
 }

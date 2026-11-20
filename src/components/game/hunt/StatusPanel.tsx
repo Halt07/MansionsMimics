@@ -1,4 +1,4 @@
-import { TIER_CONFIG } from "@/data/gameData";
+import { TIER_CONFIG, formDescription } from "@/data/gameData";
 import { useHunt } from "./HuntContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ export default function StatusPanel() {
             )}
           </div>
           {activeForm && (
-            <p className="text-xs text-muted-foreground flavor-text italic mb-1">{activeForm.description}</p>
+            <p className="text-xs text-muted-foreground flavor-text italic mb-1">{formDescription(activeForm, character.branchTier)}</p>
           )}
           {activeForm && activeForm.builtInTraits.length > 0 && (
             <p className="text-[11px] text-muted-foreground mb-1">

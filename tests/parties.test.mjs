@@ -41,4 +41,13 @@ export default async function ({ gameData: m, ok }) {
   ok(spawns.every((cs) => cs.every((c) => !c.rooms || c.rooms.includes(c.location))), 'each in a room it\'s allowed in');
   ok(spawns.every((cs) => cs.filter((c) => c.id === 'reindeer').length <= 1), 'never more than one reindeer');
   ok(spawns.every((cs) => new Set(cs.map((c) => c.uid)).size === cs.length), 'each with its own id');
+
+  // ---------- elite slots grow with the mimic ----------
+  ok(['Minor', 'Lesser', 'Standard'].every((t) => m.eliteSlots(t) === 0) && m.eliteSlots('Greater') === 2 && m.eliteSlots('Grand') === 2 && m.eliteSlots('Apex') === 3,
+    'elite slots: none until Greater, two at Greater and Grand, three at Apex');
+  const ruins = m.LOCATIONS.find((l) => l.id === 'ruined_city');
+  const isElite = (p) => ['huntersElites', 'giantKin'].includes(p.group);
+  const most = (tier, mass) => Math.max(...Array.from({ length: 400 }, () => m.generateParty(ruins, tier, mass).filter((p) => !p.isCompanion && isElite(p)).length));
+  ok(most('Apex', 40) === 3, 'an Apex mimic can meet three elites in one party');
+  ok(most('Grand', 25) <= 2, '…a Grand one, no more than two');
 }

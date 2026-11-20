@@ -33,6 +33,13 @@ export default async function ({ gameData: m, load, ok }) {
   ok(over.onChooseForms.calls.length === 1 && over.onHuntAgain.calls.length === 1, 'then: choose new forms, or hunt again as you are');
   s.show(HuntOverPanel, { report: null, ...over });
   ok(screen.queryByRole('figure') === null && has('The hunt is over.'), 'no report: just the buttons');
+  const tablet = m.buildHuntReport({ ending: 'discovered', party: [{ name: 'Firekeeper' }], seed: 3, locationName: 'The Tear in Time', locationId: 'tear_in_time',
+    lastRoom: 'Tar Pits', formName: 'Volcano', tier: 'Apex', mimicName: 'Rex', bounty: false, peakSuspicion: 10, biggestMeal: null, mimicsDevoured: 0, sank: false, erupted: true });
+  const { container: stone } = s.show(HuntOverPanel, { report: tablet, ...over });
+  const slab = stone.querySelector('.report-paper');
+  ok(slab.classList.contains('report-paper--stone') && stone.querySelector('.report-wall--cave') && slab.dataset.scorched === 'true', 'at the Tear: a stone tablet on a cave wall, sooty after an eruption');
+  ok(!stone.querySelector('.report-nail') && !stone.querySelector('.report-seal') && stone.querySelector('.report-crack'), '…cracked, leaning (no nails), and no Guild seal');
+  ok(!tablet.quote || stone.textContent.includes(`— ${tablet.quote.by} say`), '…the witness "say"s, rather than giving a statement');
 
   // ---------- found out ----------
   const caught = report('discovered', [{ name: 'Greedy Rogue' }]);

@@ -116,12 +116,12 @@ export default async function ({ gameData: m, ok }) {
   const ice = frozen.hunt.party[0];
   ok(ice.isFrozen && !ice.isAlive && said(frozen, 'Frozen solid'), 'a Wait at the Lodge freezes the cleric, in the same turn');
   ok(said(frozen, 'The lodge falls silent') && !frozen.hunt.recorded, 'the lodge falls silent, but the hunt isn\'t over while a frozen meal is left');
-  const meal = m.eatFrozen(frozen.hunt, frozen.character, ice.id, opts());
-  ok(meal.hunt.party[0].isConsumed && meal.character.assimilationPoints === m.frozenMealAp(ice), 'eating the frozen cleric: a cheap meal');
+  const meal = m.eatRemains(frozen.hunt, frozen.character, ice.id, opts());
+  ok(meal.hunt.party[0].isConsumed && meal.character.assimilationPoints === m.remainsMealAp(ice), 'eating the frozen cleric: a cheap meal');
   ok(meal.hunt.recorded && meal.character.huntsSurvived === 1 && m.huntCleared(meal.hunt), '…and with nobody left, the hunt is won and counted');
   // ---------- toward the Tear in Time: magic users eaten in a time form ----------
   const iced = (type) => member(`Iced ${type}`, { type, location: quiet, isFrozen: true, isAlive: false });
-  const thaw = (type, formId) => m.eatFrozen(hunt({ location: lodge, mimicRoom: quiet, party: [iced(type), member('Onlooker', { location: lodge.snowbound.hearth })] }),
+  const thaw = (type, formId) => m.eatRemains(hunt({ location: lodge, mimicRoom: quiet, party: [iced(type), member('Onlooker', { location: lodge.snowbound.hearth })] }),
     mimic({ forms: [ref('lesser_chest'), ref(formId)], activeFormIndex: 1, timeTearCounter: 2 }), `Iced ${type}`, opts()).character.timeTearCounter;
   ok(thaw('Wizard', 'minor_hourglass') === 3, 'a magic user eaten while wearing the Hourglass counts toward the Tear');
   ok(thaw('Warrior', 'minor_hourglass') === 2 && thaw('Wizard', 'lesser_barrel') === 2, '…but not anyone else, nor in an ordinary form');

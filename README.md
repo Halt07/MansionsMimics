@@ -31,7 +31,7 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | `holidays.ts` | Holiday seasons and the dates they run |
 | `gameData.ts` | The front door: re-exports everything in this folder, so the app and the tests import from here. The modules themselves import from each other directly (never through this file), so nothing loops back |
 | `core.ts` | The core rules: rooms, dice and shuffling, magic materials and what a mimic knows, choosing what to wear, burns, which locations are open |
-| `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, form-tier penalties |
+| `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, branch forms, form-tier penalties |
 | `hunt.ts` | A hunt in progress (`Hunt`) and what every turn shares (`Turn`): suspicion and being found out, meals, the end of a turn |
 | `turns.ts` | Each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait, eating, and changing form or look |
 | `lure.ts` | Luring, and the stealth and allure checks |
@@ -111,18 +111,20 @@ wide, but if one fails once, rerun before assuming a bug.
 | `companions.test.mjs` | Companion stats and AP, per-companion overrides, Changeling familiars, Goose-Keeper geese |
 | `giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
 | `mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
+| `oldAcademy.test.mjs` | The Old Academy: Greater+, its cloister, magic users only (and the Dropout) |
+| `lonmouth.test.mjs` | The Port City of Lonmouth: Standard+, its waterfront layout, its locals in every party, Briny |
 | `sinkingShip.test.mjs` | Sinking Ship roster, the Captain's strongbox, the sinking clock |
 | `rareLocations.test.mjs` | Rare locations opening and expiring, the Hollow Reliquary and Devotion |
 | `snowboundLodge.test.mjs` | The Snowbound Lodge: nobody leaves, the cold, frozen meals |
 | `spellOrSweet.test.mjs` | Spell or Sweet Street: the procession, answering the door, costumes |
 | `foundersFair.test.mjs` | The Founders' Fair: fireworks, the crate rummage |
 | `stargazersHill.test.mjs` | Stargazers' Hill: falling stars and the party running for them |
-| `tearInTime.test.mjs` | The Tear in Time: who it opens to, its roster, strays and the Time Caster, becoming Primordial, kept out of the Codex |
+| `tearInTime.test.mjs` | The Tear in Time: who it opens to, its roster, strays and the Time Caster, becoming Primordial, kept out of the Codex, the eruption |
 | `branchTiers.test.mjs` | The branch tiers past Apex: taking Eternal, Primordial or Sovereign, losing Sovereign, one branch at a time |
 | `achievements.test.mjs` | Achievements and thresholds (and the hidden ones, listed only once earned), every material and trait being learnable, lifetime stats |
 | `discovery.test.mjs` | Codex discovery: met and eaten, pooled across mimics |
 | `codexLocations.test.mjs` | The Codex's hunting grounds: groups, and what it reveals about each |
-| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data |
+| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data (and the Tear in Time's stone tablets) |
 | `easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
 | `creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |
 | `text.test.mjs` | `the()` and `plural()` |

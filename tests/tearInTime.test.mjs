@@ -33,6 +33,14 @@ export default async function ({ gameData: m, ok }) {
   ok(roster.some((t) => t.name === m.TIME_CASTER && t.type === 'Wizard'), '…the Time Caster among them, a magic user');
   const hunter = roster.find((t) => t.name === 'Cave Hunter');
   ok(hunter.companion?.options.map((o) => o.nameSuffix).join() === "'s Wolf" && hunter.companion.chance > 0, 'a Cave Hunter may bring a half-tamed wolf');
+  const named = (n) => roster.find((t) => t.name === n);
+  const resist = roster.filter((t) => t.name !== m.TIME_CASTER).map((t) => m.strikeResistDice(t));
+  ok(resist.reduce((n, d) => n + d, 0) / resist.length >= 4.3, `a hard place to hunt: its people resist a Strike with ${(resist.reduce((n, d) => n + d, 0) / resist.length).toFixed(1)} dice on average (the starter grounds, 3.3)`);
+  ok(m.strikeResistDice(named('Firekeeper')) === 3 && Math.min(...resist) === 3, '…but the Firekeeper is still an easier meal');
+  ok(named('Raptor').behavior === 'elusive' && named('Raptor').discipline === 4, 'the Raptor is elusive: an extra die, and it bolts if it slips a Strike');
+  ok(named('Raptor').alluringQualities.traits.includes('Foul') && named('Cave Hunter').repelledBy.traits.includes('Foul'),
+    'Foul: a Raptor follows the smell of rot, and a Cave Hunter keeps clear of it');
+  ok(named('Cave Painter').alluringQualities.traits.includes('Earthy'), 'a Cave Painter is drawn to the smell of earth (the ochre and clay they paint with)');
   ok(tear.locationCreatures.some((c) => c.name === 'Compsognathus') && m.creatureEmoji('Compsognathus') === '🦖', 'compsognathuses scurry about (as little dinosaurs)');
   const drawn = new Set();
   for (let i = 0; i < 300; i++) m.generateParty(tear, 'Apex', 60).forEach((p) => drawn.add(p.name));
@@ -78,4 +86,98 @@ export default async function ({ gameData: m, ok }) {
   const { materials, traits } = m.obtainableMaterialsAndTraits();
   ok(roster.every((t) => t.lootMaterials.every((x) => materials.has(x)) && t.lootTraits.every((x) => traits.has(x))),
     '…and they teach only what can be learned elsewhere, so Master of Disguise doesn\'t need them either');
+
+  // ---------- dressing for it: the Primordial forms where they belong ----------
+  const fits = (formId, room) => m.getRoomContextMod(formId, 'tear_in_time', room).plausibility;
+  ok(fits('apex_volcano', 'Smoking Slopes') > 0 && fits('apex_cave', 'Cave Mouth') > 0 && fits('apex_trex_carcass', 'Tar Pits') > 0 && fits('apex_colossus', 'The Tear') > 0,
+    'each Primordial form has somewhere it fits in: the Volcano on the slopes, the Cave at the cave mouth, the carcass in the tar pits, the Colossus by the Tear');
+  ok(fits('apex_roadside_inn', 'The Tear') < 0, '…unlike an inn');
+
+  // ---------- the eruption ----------
+  const seq = (...values) => { let i = 0; return () => values[Math.min(i++, values.length - 1)]; };
+  ok(tear.eruption.chance === 0.5 && tear.eruption.crater === 'Smoking Slopes', 'half of all hunts at the Tear see the volcano erupt, from the Smoking Slopes');
+  ok(m.rollEruption(tear, seq(0.4, 0)) === tear.eruption.turns[0] && m.rollEruption(tear, seq(0.4, 0.999)) === tear.eruption.turns[1], '…on a turn rolled when the hunt starts, within its window');
+  ok(m.rollEruption(tear, () => 0.6) === null && m.rollEruption(m.LOCATIONS.find((l) => l.id === 'manor'), () => 0) === null, '…or not at all (and never anywhere else)');
+  const zone = m.eruptionZone(tear);
+  ok(zone.crater === 'Smoking Slopes' && [...zone.edge].sort().join() === 'Cave Mouth,Tar Pits', 'it reaches the Smoking Slopes and the rooms next to them (the Tar Pits and the Cave Mouth)');
+  ok(m.startHunt(apex(), tear, 'The Tear', () => 0).eruptionTurn === tear.eruption.turns[0] && m.startHunt(apex(), tear, 'The Tear', () => 0.99).eruptionTurn === null, 'a hunt rolls its eruption when it starts');
+
+  const person = (name, location, over = {}) => ({
+    id: name, name, type: 'Hunter', group: 'beyondApex', discipline: 2, baseSuspicion: 1, suspicion: 1, constitution: 3,
+    interactionStyle: 'touch', location, isAlive: true, isConsumed: false, isAttracted: false, quirks: [],
+    alluringQualities: { materials: [], traits: [], tags: [] },
+    perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 0, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: [], lootTraits: [], partialLoot: [], ...over,
+  });
+  const atTear = (over = {}) => ({
+    location: tear, mimicRoom: 'The Tear', rivals: [], suspicion: 0, bounty: false, sickness: null, actionCount: 0,
+    starFragment: null, fireworksRoom: null, ending: null, stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null, seed: 1, recorded: false,
+    party: [person('Slope Walker', 'Smoking Slopes'), person('Tar Wader', 'Tar Pits'), person('Cave Dweller', 'Cave Mouth'), person('Far Off', 'Fern Thicket')],
+    creatures: [{ uid: 'c1', name: 'Fern Lizard', location: 'Tar Pits', rooms: ['Tar Pits'], ap: 2, discipline: 3, isConsumed: false }, { uid: 'c2', name: 'Dawn Horse', location: 'The Tear', rooms: ['The Tear'], ap: 3, discipline: 2, isConsumed: false }],
+    ...over,
+  });
+  // Waiting with everyone staying put (random above STAY_CHANCE... below it, nobody moves)
+  const still = { random: () => m.STAY_CHANCE / 2, now: new Date('2026-11-20T12:00:00Z') };
+  const rumble = m.wait(atTear({ turn: 3, eruptionTurn: 5 }), apex(), still);
+  ok(rumble.log.some((l) => l.message.includes('The ground shudders')) && rumble.hunt.party.every((a) => m.stillInHunt(a)), 'the turn before: the ground shudders (a warning), and nothing happens yet');
+  const boom = m.wait(atTear({ turn: 4, eruptionTurn: 5 }), apex(), still);
+  const who = (n) => boom.hunt.party.find((a) => a.name === n);
+  ok(boom.log.some((l) => l.message.includes('The mountain erupts')), 'then it erupts');
+  ok(who('Slope Walker').isBurned && !who('Slope Walker').isRoasted && !m.uneatenRemains(boom.hunt.party).some((a) => a.name === 'Slope Walker'), 'whoever was on the Smoking Slopes is gone: nothing left to eat');
+  ok(who('Tar Wader').isRoasted && who('Cave Dweller').isRoasted && m.uneatenRemains(boom.hunt.party).length === 2, 'whoever was next to them is roasted: a meal, lying where they fell');
+  ok(m.stillInHunt(who('Far Off')), 'anyone further away is untouched');
+  ok(boom.hunt.creatures.map((c) => c.name).join() === 'Dawn Horse', 'small creatures in the blast are gone too (the lizard in the Tar Pits; the horse at the Tear is fine)');
+  ok(boom.hunt.eruptionTurn === null && !m.wait(boom.hunt, apex(), still).log.some((l) => l.message.includes('erupts')), 'once per hunt: it doesn\'t go again');
+  ok(!boom.hunt.ending && !m.huntCleared({ ...boom.hunt, party: boom.hunt.party.filter((a) => a.name !== 'Far Off') }), 'roasted meals left uneaten keep the hunt going');
+
+  // A mimic caught in it
+  ok(!('mass' in boom.changes) && !('adhesion' in boom.changes), 'a mimic well clear of it pays nothing');
+  const caught = m.wait(atTear({ turn: 4, eruptionTurn: 5, mimicRoom: 'Tar Pits' }), apex({ adhesion: 4, plausibility: 4, patience: 4 }), { ...still, random: seq(m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, 0.1) });
+  ok(caught.log.some((l) => l.message.startsWith('🔥 The eruption catches you too.')), 'a mimic caught at the edge is hurt…');
+  const volcano = m.wait(atTear({ turn: 4, eruptionTurn: 5, mimicRoom: 'Tar Pits' }), apex({ forms: [ref('apex_volcano')], branchTier: 'Primordial' }), still);
+  ok(volcano.log.some((l) => l.message.includes('You are the mountain')) && !volcano.log.some((l) => l.message.includes('catches you')), '…unless it\'s wearing the Volcano: it is the mountain');
+  const massHit = m.eruptionToll({ mass: 60, plausibility: 3, adhesion: 3, patience: 3 }, () => 0.1);
+  ok(massHit.changes.mass === 59 && Object.keys(massHit.changes).join() === 'mass', 'the toll, one time in four: 1 mass');
+  const statHit = m.eruptionToll({ mass: 60, plausibility: 4, adhesion: 4, patience: 4 }, seq(0.5, 0.99, 0, 0, 0));
+  const lostPoints = ['plausibility', 'adhesion', 'patience'].reduce((n, st) => n + (4 - (statHit.changes[st] ?? 4)), 0);
+  ok(lostPoints === 3 && statHit.changes.plausibility === 1 && !('mass' in statHit.changes), 'otherwise 2–3 stat points, each from a random stat (here all three from one)');
+  const spread = m.eruptionToll({ mass: 60, plausibility: 4, adhesion: 4, patience: 4 }, seq(0.5, 0.99, 0, 0.5, 0.99));
+  ok(['plausibility', 'adhesion', 'patience'].every((st) => spread.changes[st] === 3), '…or spread across them');
+  const floor = m.eruptionToll({ mass: 60, plausibility: 1, adhesion: 1, patience: 2 }, seq(0.5, 0.99, 0, 0, 0));
+  ok(floor.changes.patience === 1 && !('plausibility' in floor.changes) && !('adhesion' in floor.changes), 'nothing goes below 1');
+  ok(m.eruptionToll({ mass: 1, plausibility: 1, adhesion: 1, patience: 1 }, () => 0.1).changes.mass === 1, '…mass included');
+
+  // Eating the roasted
+  const roast = who('Tar Wader');
+  const feast = m.eatRemains({ ...boom.hunt, mimicRoom: 'Tar Pits' }, apex(), roast.id, still);
+  ok(feast.hunt.party.find((a) => a.id === roast.id).isConsumed && feast.character.assimilationPoints === m.remainsMealAp(roast), 'a roasted adventurer is a cheap meal (half the usual)');
+  ok(feast.log.some((l) => l.message.includes("still warm from the mountain's fire")), '…still warm');
+  const burnedUp = who('Slope Walker');
+  ok(m.eatRemains({ ...boom.hunt, mimicRoom: 'Smoking Slopes' }, apex(), burnedUp.id, still).log.length === 0, 'there\'s nothing to eat of anyone burned up');
+
+  // ---------- the tar pits ----------
+  ok(tear.tarPits.room === 'Tar Pits' && tear.tarPits.stickChance > 0 && tear.tarPits.sinkTurns === 3, 'the Tar Pits: anyone who lingers may get stuck, and sink after 3 turns');
+  const tarHunt = (party, over = {}) => atTear({ party, creatures: [], turn: 1, eruptionTurn: null, ...over });
+  const wader = person('Wader', 'Tar Pits');
+  const stuckNow = m.wait(tarHunt([wader]), apex(), still).hunt.party[0];
+  ok(stuckNow.tarStuck === 0 && m.stillInHunt(stuckNow), 'ending a turn in the Tar Pits (unlucky): stuck fast, but still in the hunt');
+  ok(m.wait(tarHunt([wader]), apex(), { ...still, random: () => 0.99 }).hunt.party[0].tarStuck === undefined, '…or, more often, not (and nobody away from the pits ever sticks)');
+  const stuck = { ...wader, tarStuck: 0 };
+  // (a roll that would send anyone free walking off to the next room)
+  ok(m.wait(tarHunt([wader]), apex(), { ...still, random: () => 0.9 }).hunt.party[0].location !== 'Tar Pits', '(anyone free walks off with this roll…)');
+  const held = m.wait(tarHunt([stuck]), apex(), { ...still, random: () => 0.9 }).hunt.party[0];
+  ok(held.location === 'Tar Pits' && held.tarStuck === 1, 'the stuck can\'t move (whatever they wanted to do), and sink deeper each turn');
+  const sinking = m.wait(tarHunt([{ ...wader, tarStuck: 2 }]), apex(), still);
+  const sunk = sinking.hunt.party[0];
+  ok(sunk.isSunk && !m.stillInHunt(sunk) && m.uneatenRemains(sinking.hunt.party).length === 0 && sinking.log.some((l) => l.message.includes('slips under the tar')),
+    'three turns stuck: they slip under and are gone (nothing left to eat)');
+  const lured = m.lure(tarHunt([{ ...stuck, location: 'Tar Pits' }], { mimicRoom: 'Fern Thicket' }), apex(), { ...still, random: () => 0 });
+  ok(lured.hunt.party[0].location === 'Tar Pits' && !lured.hunt.party[0].isAttracted, 'however tempted, the stuck can\'t be drawn into another room');
+  const helpless = tarHunt([stuck], { mimicRoom: 'Tar Pits' });
+  ok(m.canStrike(helpless), 'a mimic in the Tar Pits can Strike the stuck without luring them…');
+  const meal = m.strike(helpless, apex(), { ...still, random: () => 0.99 });
+  ok(meal.hunt.party[0].isConsumed, '…and the Strike always holds: they have nowhere to go');
+  ok(!m.canStrike(tarHunt([stuck], { mimicRoom: 'Fern Thicket' })), 'from another room, they\'re out of reach like anyone else');
+  ok(m.buildHuntReport({ ending: 'cleared', seed: 1, locationName: 'The Tear in Time', locationId: 'tear_in_time', lastRoom: 'Tar Pits', formName: 'Cave', tier: 'Apex', mimicName: 'Rex', bounty: false, peakSuspicion: 2, biggestMeal: null, mimicsDevoured: 0, sank: false,
+    party: [sunk, { name: 'Firekeeper', isConsumed: false }] }).body.join(' ').includes('Two go out'), 'the report counts the sunk among the lost');
 }

@@ -43,7 +43,8 @@ export default function LocationsSection({ viewedMimic, knowers }: CodexReader) 
               <h3 className="font-cinzel text-sm uppercase tracking-widest text-foreground">{group.label}</h3>
               <span className="text-[11px] text-muted-foreground">{members.filter(e => e.knowledge !== "unknown").length}/{members.length} found</span>
             </div>
-            <p className="text-xs text-muted-foreground">{group.description}</p>
+            {/* Beyond the Apex's teaser shimmers through all three branches' colors: a hint that there's more */}
+            <p className={group.id === "beyond" ? "beyond-teaser text-xs font-cinzel italic" : "text-xs text-muted-foreground"}>{group.description}</p>
             <div className="space-y-2">
               {members.map(e => <LocationCard key={e.loc.id} location={e.loc} knowledge={e.knowledge} hunts={e.hunts} />)}
             </div>

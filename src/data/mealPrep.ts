@@ -12,9 +12,9 @@ import {
   BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
 } from "./core";
 import {
-  addRealMonster, addStray, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
+  addRealMonster, addStray, dressParty, rollEruption, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";
-import { STAT_CAP, getActiveForm, withCount, withFormUsed } from "./stats";
+import { STAT_CAP, getActiveForm, isMagicUser, withCount, withFormUsed } from "./stats";
 import { withDiscovered } from "./codex";
 
 // ============================================================
@@ -79,6 +79,8 @@ export function isTemplateEligible(
   if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
   if (template.locations && !template.locations.includes(location.id)) return false;
   if (location.exclusiveRoster && !template.locations?.includes(location.id)) return false;
+  // The Old Academy: magic users from anywhere (unless they belong somewhere else), and its own
+  if (location.magicUsersOnly && !template.locations?.includes(location.id) && !isMagicUser(template)) return false;
   // Giant-kin only appear in giant-realm locations
   if (template.group === "giantKin" && !location.isGiantRealm) return false;
   return true;
@@ -106,12 +108,19 @@ export interface SmallCreature extends LocationCreature {
   location: RoomName;
 }
 
-// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
+// Hunters, elites and giant-kin fill the "elite" slots: 2 from Greater, 3 at Apex (word of a
+// mimic that size gets around, and the people who come looking are the dangerous kind).
 // Everyone else — including tier-gated monsters — fills the common slots.
 const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
 
+/** How many of a party's places can go to elites, by the mimic's tier. */
+export function eliteSlots(tier: Tier): number {
+  if (tier === "Apex") return 3;
+  return TIER_ORDER.indexOf(tier) >= TIER_ORDER.indexOf("Greater") ? 2 : 0;
+}
+
 /**
- * A normal party for a location: any adventurers it always has, then (Greater+) up to 2 elites,
+ * A normal party for a location: any adventurers it always has, then (Greater+) a few elites (see eliteSlots),
  * then a random mix of everyone else eligible. Some locations save slots for their locals
  * (`nativeShare`), and a location's real monsters never come this way (see addRealMonster).
  */
@@ -134,7 +143,7 @@ export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass
     common.push(...elite);
     elite.length = 0;
   }
-  const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
+  const eliteCount = Math.min(eliteSlots(mimicTier || "Minor"), elite.length);
   const shuffledCommon = shuffle(common, random);
   const shuffledElite = shuffle(elite, random);
 
@@ -270,6 +279,8 @@ export interface HuntStart {
   openedRare: HuntLocation | null;
   /** An ordinary adventurer lost somewhere they don't belong (see addStray), if one came. */
   stray: PartyMember | null;
+  /** The Tear in Time: the turn the volcano erupts this hunt, or null if it won't (see rollEruption). */
+  eruptionTurn: number | null;
   /** What to save on the character now: burns tick down, the rare location, discovery, hunt counts. */
   changes: Partial<MimicCharacter>;
 }
@@ -299,6 +310,7 @@ export function startHunt(
   const dressed = location.costumes ? dressParty(withStray, random) : withStray;
   const party = location.procession ? placeProcession(dressed, location, room, random) : dressed;
   const creatures = spawnSmallCreatures(location, random);
+  const eruptionTurn = rollEruption(location, random);
   const sickness = rollForSickness(character, random);
 
   // Burned places and shapes (from being found out before) start the hunt under suspicion
@@ -319,5 +331,5 @@ export function startHunt(
     formHuntCounts: withCount(character.formHuntCounts, startForm?.id),
     locationHuntCounts: withCount(character.locationHuntCounts, location.id),
   };
-  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, stray, changes };
+  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, stray, eruptionTurn, changes };
 }

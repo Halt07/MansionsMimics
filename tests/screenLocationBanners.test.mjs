@@ -59,6 +59,16 @@ export default async function ({ gameData: m, load, ok }) {
   const crateFair = banners(start('founders_fair', undefined, crate), { character: crate });
   ok(crateFair.includes('a crate under the fireworks will get opened'), 'as a crate: a warning about the rummage');
 
+  // ---------- the Tear in Time: the eruption's warning ----------
+  const tear = start('tear_in_time', 'The Tear', mimic({ tier: 'Apex', mass: 60, branchTier: 'Primordial' }));
+  ok(!banners({ ...tear, turn: 2, eruptionTurn: 5 }).includes('about to erupt'), 'the Tear: no word of the eruption until it\'s close (a surprise)');
+  ok(banners({ ...tear, turn: 4, eruptionTurn: 5 }).includes('The Smoking Slopes are about to erupt!'), '…then, the turn before, a warning');
+  ok(!banners({ ...tear, turn: 4, eruptionTurn: null }).includes('about to erupt'), '…and nothing once it\'s done (or if it never comes)');
+
+  const gooey = { ...tear, mimicRoom: 'Tar Pits', party: [{ ...tear.party[0], location: 'Tar Pits', tarStuck: 1 }, ...tear.party.slice(1)] };
+  ok(banners(gooey).includes(`${tear.party[0].name} (2 turns until they sink)`) && banners(gooey).includes("They can't get away"), 'someone stuck in the tar: who, how long they have, and that they can\'t get away');
+  ok(!banners(tear).includes('Stuck in the'), '…and no strip when nobody is stuck');
+
   // ---------- Stargazers' Hill ----------
   const hill = start('stargazers_hill');
   ok(banners(hill).includes(`The next one should fall in ${loc('stargazers_hill').starfall.every} turns.`), 'stars: when the next one falls');
