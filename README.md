@@ -111,6 +111,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `companions.test.mjs` | Companion stats and AP, per-companion overrides, Changeling familiars, Goose-Keeper geese |
 | `giantRealm.test.mjs` | Giant's Castle and Cloud Kingdom rosters, giant-realm creatures, Titanic Feast |
 | `mimicNest.test.mjs` | Mimic Nest roster, rival placement and escapes, the Elder ending the hunt |
+| `oldAcademy.test.mjs` | The Old Academy: Greater+, its cloister, magic users only (and the Dropout) |
 | `lonmouth.test.mjs` | The Port City of Lonmouth: Standard+, its waterfront layout, its locals in every party, Briny |
 | `sinkingShip.test.mjs` | Sinking Ship roster, the Captain's strongbox, the sinking clock |
 | `rareLocations.test.mjs` | Rare locations opening and expiring, the Hollow Reliquary and Devotion |

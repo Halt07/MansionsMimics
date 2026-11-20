@@ -27,6 +27,12 @@ const ROOM_LAYOUTS: { readonly [L in LocationId]: Readonly<Record<RoomOf<L>, Cel
   lonely_moor: { "Moorland Path North": [0, 0], "Bothy Interior": [1, 0], "Standing Stones": [0, 1], "Peat Stack": [1, 1], "Moorland Path South": [0, 2], "Boggy Hollow": [1, 2] },
   hollow_reliquary: { "Pilgrims' Dormitory": [0, 0], "Bell Loft": [1, 0], "Nave": [0, 1], "Candle Gallery": [1, 1], "Reliquary Vault": [0, 2], "Ossuary": [1, 2] },
   mimic_nest: { "Rope Loft": [1, 0], "Loading Dock": [0, 1], "Crate Stacks": [1, 1], "Foreman's Office": [0, 2], "Cold Storage": [1, 2], "Bonded Vault": [0, 3] },
+  // A cloister: eight rooms around a courtyard
+  old_academy: {
+    "Great Library": [0, 0], "Lecture Hall": [1, 0], "Headmaster's Study": [2, 0],
+    "Scriptorium": [0, 1], "Cloister Courtyard": [1, 1], "Alchemy Hall": [2, 1],
+    "Dormitories": [0, 2], "Gatehouse": [1, 2], "Refectory": [2, 2],
+  },
   // The waterfront runs down the right side; the town (office, tavern) sits on the left
   lonmouth: {
     "Wharf Warehouse": [1, 0],

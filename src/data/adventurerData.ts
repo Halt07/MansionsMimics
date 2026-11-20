@@ -642,7 +642,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Doubting Scholar", type: "Wizard", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
     group: "common",
-    locations: ["hollow_reliquary"],
+    // Writes the treatise at the Old Academy, and tests it at the Reliquary
+    locations: ["hollow_reliquary", "old_academy"],
     quirks: ["Writing a treatise on why the legend is false", "Measures the altar where the chest once stood", "Reads every inscription aloud, skeptically"],
     appliedQuirk: "{name} reads the {form}'s markings aloud, skeptically.",
     alluringQualities: { materials: ["Walnut", "Linen"], traits: ["Runescript", "Etched", "Carved", "Minimalist", "Musty"], tags: ["Knowledge", "Religious"] },
@@ -1182,7 +1183,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Astronomer", type: "Wizard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "common",
-    locations: ["stargazers_hill"],
+    // Visiting faculty at the Old Academy, between showers of stars
+    locations: ["stargazers_hill", "old_academy"],
     quirks: ["Logs every streak in a battered notebook", "Never takes their eyes off the sky for long", "Keeps muttering about the angle of descent"],
     appliedQuirk: "{name} glances at the {form}, then back at the sky, then back at the {form}. \"That wasn't on my chart.\"",
     alluringQualities: { materials: ["Brass", "Crystal", "Clear Glass"], traits: ["Etched", "Polished", "Runescript"], tags: ["Knowledge", "Lighting"] },
@@ -1341,6 +1343,21 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Linen", "Brass"],
     lootTraits: ["Tally Marks"],
     partialLoot: ["a knot of old rigging", "a sailor's earring", "a battered tin cup"],
+  },
+
+  // ── The Old Academy (Greater+; everyone else there is a magic user) ──
+  {
+    // Not a magic user, however hard they tried: a Commoner, so eating them doesn't count toward the Tear
+    name: "Academy Dropout", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "commoners", locations: ["old_academy"],
+    repelledBy: { traits: ["Faint Glow"] },
+    quirks: ["Still wears the robes, three sizes too big", "Mutters half-remembered incantations that never, ever work", "Insists they were 'this close' to passing"],
+    appliedQuirk: "{name} waves a hand at the {form} and mutters a spell. Nothing happens. Again.",
+    alluringQualities: { materials: ["Linen", "Brass"], traits: ["Arcane Sigil", "Runescript", "Worn"], tags: ["Knowledge"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 0, social: 2, spatial: 1, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Linen"],
+    lootTraits: ["Runescript"],
+    partialLoot: ["a dog-eared spellbook full of crossed-out notes", "a wand that has never once worked", "a failed exam scroll, marked in red"],
   },
 
   // ── The Tear in Time (Primordial's hunting ground) ──

@@ -14,7 +14,7 @@ import {
 import {
   addRealMonster, addStray, dressParty, rollEruption, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";
-import { STAT_CAP, getActiveForm, withCount, withFormUsed } from "./stats";
+import { STAT_CAP, getActiveForm, isMagicUser, withCount, withFormUsed } from "./stats";
 import { withDiscovered } from "./codex";
 
 // ============================================================
@@ -79,6 +79,8 @@ export function isTemplateEligible(
   if (template.minMass && (mimicMass ?? 0) < template.minMass) return false;
   if (template.locations && !template.locations.includes(location.id)) return false;
   if (location.exclusiveRoster && !template.locations?.includes(location.id)) return false;
+  // The Old Academy: magic users from anywhere (unless they belong somewhere else), and its own
+  if (location.magicUsersOnly && !template.locations?.includes(location.id) && !isMagicUser(template)) return false;
   // Giant-kin only appear in giant-realm locations
   if (template.group === "giantKin" && !location.isGiantRealm) return false;
   return true;

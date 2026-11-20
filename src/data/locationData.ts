@@ -121,6 +121,11 @@ interface LocationDef {
    * the mimic is there); after `sinkTurns` turns they sink and are gone. See Turn.tar.
    */
   readonly tarPits?: { readonly room: string; readonly stickChance: number; readonly sinkTurns: number };
+  /**
+   * Only magic users come here (see isMagicUser), plus anyone tied to this location: the Old
+   * Academy. Adventurers tied to other locations stay there.
+   */
+  readonly magicUsersOnly?: boolean;
 }
 
 const LOCATION_DATA = [
@@ -727,6 +732,36 @@ const LOCATION_DATA = [
       },
     },
   },
+  // ── Greater+: a school of magic ──
+  {
+    id: "old_academy", name: "The Old Academy", minTier: "Greater",
+    description: "A rambling old school of magic around a cloistered courtyard, half library and half laboratory, where the scholars never look up from their books.",
+    flavorText: "Everyone here is studying something. Nobody here is studying the furniture.",
+    rooms: ["Great Library", "Lecture Hall", "Headmaster's Study", "Scriptorium", "Cloister Courtyard", "Alchemy Hall", "Dormitories", "Gatehouse", "Refectory"],
+    roomGraph: {
+      "Great Library":      ["Lecture Hall", "Scriptorium"],
+      "Lecture Hall":       ["Great Library", "Headmaster's Study", "Cloister Courtyard"],
+      "Headmaster's Study": ["Lecture Hall", "Alchemy Hall"],
+      "Scriptorium":        ["Great Library", "Cloister Courtyard", "Dormitories"],
+      "Cloister Courtyard": ["Lecture Hall", "Scriptorium", "Alchemy Hall", "Gatehouse"],
+      "Alchemy Hall":       ["Headmaster's Study", "Cloister Courtyard", "Refectory"],
+      "Dormitories":        ["Scriptorium", "Gatehouse"],
+      "Gatehouse":          ["Dormitories", "Cloister Courtyard", "Refectory"],
+      "Refectory":          ["Alchemy Hall", "Gatehouse"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 1,
+    advantageTags: ["Knowledge", "Decor"],
+    imageHint: "an old school of magic around a cloistered courtyard: towers of books, bubbling alembics, candlelit study rooms",
+    // Everyone here counts toward the Tear in Time (except the Dropout, and pact companions)
+    magicUsersOnly: true,
+    locationCreatures: [
+      { id: "academy_owl", name: "Academy Owl", ap: 2, discipline: 3, description: "Carries the post, and an air of disapproval." },
+      { id: "library_mouse", name: "Library Mouse", ap: 1, discipline: 2, description: "Lives in the stacks and eats the footnotes.", rooms: ["Great Library", "Scriptorium", "Dormitories"] },
+      { id: "lab_rat", name: "Lab Rat", ap: 1, discipline: 1, description: "Has been turned into a newt twice, and back again.", rooms: ["Alchemy Hall", "Refectory"] },
+      { id: "bookworm", name: "Bookworm", ap: 1, discipline: 1, description: "An actual worm. It has read more than most of the students.", rooms: ["Great Library", "Scriptorium"] },
+      { id: "stray_familiar", name: "Stray Familiar", ap: 2, discipline: 2, description: "Somebody's familiar, between somebodies." },
+    ],
+  },
   // ── Beyond the Apex ──
   {
     id: "tear_in_time", name: "The Tear in Time", minTier: "Apex", minMass: 50,
@@ -905,6 +940,34 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              // Its own entry, so it doesn't inherit the Crate's bonus (it's a seasonal variant)
                              "lesser_firework_crate":   { plausibility: 0, note: "Fireworks stored with the weapons: nobody is sure that's allowed." },
                              "greater_throne":          { plausibility: -2, note: "A throne in an armory is deeply suspicious." } },
+  },
+  // ── The Old Academy · Greater+ mimics · wearable forms: Standard–Apex (Lesser with Thimblewood) ──
+  old_academy: {
+    "Great Library":       { "standard_bookshelf":      { plausibility: 2, note: "One more shelf in a library of thousands." },
+                             "lesser_bookshelf_small":  { plausibility: 1, note: "A little shelf tucked in the stacks." },
+                             "lesser_barrel":           { plausibility: -2, note: "A barrel in the library? The librarian would never." } },
+    "Lecture Hall":        { "standard_writing_desk":   { plausibility: 1, note: "A lectern at the front of the hall." },
+                             "lesser_chair":            { plausibility: 1, note: "One more chair in the rows." },
+                             "greater_bed":             { plausibility: -2, note: "Somebody fell asleep in a lecture, but not in a bed." } },
+    "Headmaster's Study":  { "standard_writing_desk":   { plausibility: 2, note: "The Headmaster's own desk, piled with unmarked essays." },
+                             "standard_grand_chair":    { plausibility: 1, note: "The Headmaster's chair, where nobody else may sit." },
+                             "greater_grandfather_clock": { plausibility: 1, note: "The study clock, always slightly fast." } },
+    "Scriptorium":         { "standard_writing_desk":   { plausibility: 1, note: "A copyist's desk among many." },
+                             "lesser_bookshelf_small":  { plausibility: 1, note: "A shelf of books waiting to be copied." } },
+    "Cloister Courtyard":  { "greater_statue":          { plausibility: 1, note: "A statue of some forgotten founder." },
+                             "greater_gargoyle":        { plausibility: 1, note: "The gargoyles keep watch over the cloister." },
+                             "standard_wardrobe":       { plausibility: -2, note: "A wardrobe, out in the courtyard?" } },
+    "Alchemy Hall":        { "lesser_herbalists_chest": { plausibility: 2, note: "A chest of reagents, right where it belongs." },
+                             "lesser_barrel":           { plausibility: 1, note: "A barrel of something that bubbles." },
+                             "standard_bookshelf":      { plausibility: -1, note: "Books this close to the alembics? Asking for a fire." } },
+    "Dormitories":         { "greater_bed":             { plausibility: 2, note: "A student's bed, unmade." },
+                             "standard_wardrobe":       { plausibility: 1, note: "A wardrobe full of robes." },
+                             "lesser_chest":            { plausibility: 1, note: "A trunk at the foot of a bed." } },
+    "Gatehouse":           { "standard_door":           { plausibility: 1, note: "Another heavy door at the gate." },
+                             "lesser_chest":            { plausibility: 1, note: "A porter's chest for the post." } },
+    "Refectory":           { "standard_dining_table":   { plausibility: 2, note: "The long refectory table, scarred by generations of spoons." },
+                             "lesser_barrel":           { plausibility: 1, note: "A barrel of small beer." },
+                             "lesser_chair":            { plausibility: 1, note: "A bench-end chair at the table." } },
   },
   // ── Port City of Lonmouth · Standard+ mimics · wearable forms: Lesser–Apex (Minor with Thimblewood) ──
   lonmouth: {
