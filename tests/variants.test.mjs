@@ -4,7 +4,7 @@ export default async function ({ gameData: m, ok, log }) {
   const byId = (id) => ALL_FORMS.find((f) => f.id === id);
   const none = { learnedMaterials: [], learnedTraits: [] };
 
-  ok(VARIANT_FORMS.length === 10, `ten variant forms (${VARIANT_FORMS.map((f) => f.name).join(', ')})`);
+  ok(VARIANT_FORMS.length === 11, `eleven variant forms (${VARIANT_FORMS.map((f) => f.name).join(', ')})`);
   for (const v of VARIANT_FORMS) {
     const base = byId(v.variantOf);
     ok(base && !base.variantOf && base.tier === v.tier, `${v.name} is a variant of ${base?.name}, in the same tier`);

@@ -118,8 +118,11 @@ export function welcomeBack(
   let changes: Partial<MimicCharacter> = {};
   let massDecayNotice: string | null = null;
   const decay = massDecay(character.mass, character.lastFedAt, now);
+  // The decay-free stretch starts the first time a mimic is opened (older saves included)...
+  if (!character.decayFreeDate) changes = { decayFreeDate: now.toISOString() };
   if (decay) {
-    changes = { mass: decay.mass, lastFedAt: decay.lastFedAt };
+    // ...and starts over from the last mass decay taken
+    changes = { mass: decay.mass, lastFedAt: decay.lastFedAt, decayFreeDate: decay.lastFedAt };
     massDecayNotice = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
   }
   const dropped = dropExpiredSeasonalForms(character.forms, character.activeFormIndex, day);
@@ -308,6 +311,43 @@ export function withBiggestMeal(
   current: { name: string; ap: number } | null, name: string, ap: number,
 ): { name: string; ap: number } | null {
   return !current || ap > current.ap ? { name, ap } : current;
+}
+
+// ============================================================
+// BEYOND APEX (groundwork)
+// The hidden tiers past Apex aren't in the game yet (see "Beyond Apex" in IDEAS.md), but the
+// records they'll be judged on are kept from now on:
+// - timeTearCounter: magic users (see isMagicUser) eaten while wearing a time form (toward the Tear in Time)
+// - decayFreeDate: when the current stretch without losing mass to decay began (toward Eternal)
+// ============================================================
+/** Forms that count as time forms for the Tear in Time. */
+export const TIME_FORMS: readonly FormId[] = ["minor_hourglass", "greater_midnight_orb", "greater_grandfather_clock", "apex_clocktower"];
+/** Days without losing mass to decay that Eternal will ask for. */
+export const ETERNAL_DECAY_FREE_DAYS = 45;
+
+/** Adventurer types whose members are all magic users. */
+export const MAGIC_USER_TYPES: readonly string[] = ["Wizard", "Fey"];
+/** Magic users of other types, by name. */
+export const MAGIC_USER_EXCEPTIONS: readonly string[] = ["Tiefling Hexblade"];
+
+/** Whether an adventurer counts as a magic user for the Tear in Time (pass them unmasked). */
+export function isMagicUser(member: { name: string; type: string }): boolean {
+  return MAGIC_USER_TYPES.includes(member.type) || MAGIC_USER_EXCEPTIONS.includes(member.name);
+}
+
+/** The Tear in Time's counter after eating `member`: one more if it's a magic user and the mimic is wearing a time form. */
+export function withTimeTear(
+  character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
+): number {
+  const worn = character.forms[character.activeFormIndex]?.formId;
+  const counts = !!worn && TIME_FORMS.includes(worn) && isMagicUser(member);
+  return character.timeTearCounter + (counts ? 1 : 0);
+}
+
+/** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
+export function decayFreeDays(decayFreeDate: string | null | undefined, now: Date = new Date()): number {
+  if (!decayFreeDate) return 0;
+  return Math.max(0, Math.floor((now.getTime() - new Date(decayFreeDate).getTime()) / DAY_MS));
 }
 
 export function lifetimeStats(c: Pick<MimicCharacter,

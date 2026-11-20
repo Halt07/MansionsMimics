@@ -1,4 +1,5 @@
-// Mass decay: 1 mass per MASS_DECAY_DAYS days unfed, charged once (reloading doesn't charge it again).
+// Mass decay: 1 mass per MASS_DECAY_DAYS days unfed, charged once (reloading doesn't charge it again),
+// and the decay-free stretch it ends (toward Eternal).
 export default async function ({ gameData: m, ok }) {
   const DAY = 24 * 60 * 60 * 1000;
   const now = new Date('2026-11-20T12:00:00Z');
@@ -16,7 +17,7 @@ export default async function ({ gameData: m, ok }) {
 
   // ---------- coming back to a mimic (welcomeBack) ----------
   const ref = (formId) => { const f = m.ALL_FORMS.find((x) => x.id === formId); return { formId, name: f.name, tier: f.tier, learned: true }; };
-  const base = { mass: 7, lastFedAt: ago(1), forms: [ref('lesser_chest')], activeFormIndex: 0 };
+  const base = { mass: 7, lastFedAt: ago(1), decayFreeDate: ago(20), forms: [ref('lesser_chest')], activeFormIndex: 0 };
   const day = new Date(2026, 4, 15);
   const quiet = m.welcomeBack(base, { now, day });
   ok(Object.keys(quiet.changes).length === 0 && !quiet.massDecayNotice && !quiet.seasonNotice && quiet.character.mass === 7, 'back after a day: nothing has changed');
@@ -28,4 +29,13 @@ export default async function ({ gameData: m, ok }) {
   ok(afterHalloween.character.forms.map((f) => f.formId).join() === 'lesser_chest' && afterHalloween.character.activeFormIndex === 0, 'back after its season: the seasonal form has slipped away, the one worn still worn');
   ok(afterHalloween.changes.forms?.length === 1 && afterHalloween.seasonNotice?.includes('is over'), '…saved, and the player is told');
   ok(!m.welcomeBack(lantern, { now, day: new Date(2026, 9, 31) }).seasonNotice, '…still in season, it stays');
+
+  // ---------- the decay-free stretch (decayFreeDate) ----------
+  const fresh = m.welcomeBack({ ...base, decayFreeDate: undefined }, { now, day });
+  ok(fresh.changes.decayFreeDate === now.toISOString() && Object.keys(fresh.changes).length === 1, 'a mimic with no stretch yet (new, or an older save) starts one when opened');
+  ok(m.decayFreeDays(quiet.character.decayFreeDate, now) === 20, 'fed in time: the stretch carries on (20 days)');
+  ok(hungry.changes.decayFreeDate === hungry.changes.lastFedAt && m.decayFreeDays(hungry.character.decayFreeDate, now) === 1,
+    'losing mass to decay starts it over, from the last loss (a day ago here, not today)');
+  ok(m.decayFreeDays(undefined, now) === 0 && m.decayFreeDays(ago(-1), now) === 0, 'no stretch, or one dated ahead, counts as 0 days');
+  ok(m.ETERNAL_DECAY_FREE_DAYS === 45, 'Eternal will ask for 45 days');
 }

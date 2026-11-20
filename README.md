@@ -41,7 +41,7 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | `events.ts` | Location events: rival mimics, the Sinking Ship, and the seasonal locations' twists |
 | `devotion.ts` | Devotion at the Hollow Reliquary: who's ready, the offerings, and the whole ceremony |
 | `mealPrep.ts` | Setting up a hunt: the party, companions, small creatures, sickness |
-| `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats |
+| `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats; the records kept for the tiers beyond Apex |
 | `codex.ts` | What the Codex knows: adventurers met and eaten, hunting grounds found |
 | `easterEggs.ts` | Name remarks, the cat that knows, the spiderweb, quirks and other flavor |
 | `huntReportData.ts` | The end-of-hunt report (Guild notices, verses, gossip, and location-specific versions) |
@@ -83,7 +83,7 @@ wide, but if one fails once, rerun before assuming a bug.
 
 | File | Covers |
 |---|---|
-| `hunt.test.mjs` | Whole turns: each action from one hunt state to the next, found out, bored parties, the cold, fireworks, stars, rivals, bites, Devotion |
+| `hunt.test.mjs` | Whole turns: each action from one hunt state to the next, found out, bored parties, the cold, fireworks, stars, rivals, bites, Devotion, magic users eaten in a time form |
 | `startHunt.test.mjs` | Starting a hunt: who's there, rivals, creatures, sickness, bounties, starting suspicion |
 | `parties.test.mjs` | Who's at a location when a hunt starts |
 | `movement.test.mjs` | Party movement on a Wait, and the small creatures' turn |
@@ -94,7 +94,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `dice.test.mjs` | Dice odds helpers and the Wait action's minimum success chance |
 | `stats.test.mjs` | Effective stats after mass, sickness and form-tier penalties |
 | `upgrade.test.mjs` | Spending AP: growing (and tier-ups), raising a stat |
-| `massDecay.test.mjs` | Mass lost while unfed, charged once |
+| `massDecay.test.mjs` | Mass lost while unfed, charged once; the decay-free stretch it ends |
 | `burns.test.mjs` | Burned lairs and forms: starting suspicion, stacking, expiry |
 | `forms.test.mjs` | Which forms a mimic can choose, tier penalties, the one-form-above rule |
 | `variants.test.mjs` | Variant forms: unlocks, availability, shared burns, Curiosity Cabinet |

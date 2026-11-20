@@ -7,23 +7,26 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 - **Trophy room / hoard.** Keep the special things you swallow (the Captain's strongbox, the porter's token, the Doubting Scholar's notes, biggest meals) as objects you can look at on the character sheet or Home, so easter eggs leave a souvenir behind.
 - **Mass and AP progress on Home.** Show them on each mimic's card, not just PL/AD/PA.
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
+- **Should "every X" achievements stick once earned?** Connoisseur (every adventurer eaten), Master of Disguise (every material and trait), Curiosity Cabinet (every variant), For All Seasons and Seasoned Traveler are worked out from what the mimic has done, not saved when earned, so new content (an adventurer, trait, variant, holiday or seasonal location) takes them away until the mimic catches up. Fine while there are no outside players; before there are, decide between keeping that (new content gives veterans something to chase) and saving them once earned, the way Peak of the Apex is.
 
 ## Beyond Apex: Eternal, Primordial or Sovereign
 
 A hidden tier for players who keep going after the Peak of the Apex (mass 40). Today an Apex mimic can keep growing forever (120 AP per +2 mass) with nothing more to earn; this gives that grind somewhere to go.
 
 - **A fork, not a rung.** A mimic becomes **Eternal**, **Primordial** or **Sovereign**, one at a time. Whichever it qualifies for first locks out the others (the one exception is a fallen Sovereign, below), which gives devoted players a reason to raise more mimics to see the other paths.
-- **Eternal: the mimic that never ends.** Earned by endurance (for example a long streak of hunts or days without losing mass to decay). Its reward: mass decay becomes rarer (longer than the usual `MASS_DECAY_DAYS` of 3 between losses) or stops altogether.
-- **Primordial: the original horror.** A choice rather than something that just happens. Once a mimic meets the prerequisites (still undecided; perhaps something about consumption, such as having eaten every adventurer type), the Tear in Time appears among its hunting grounds. It becomes Primordial only when it goes through to hunt there, with flavor text about being the very first mimic in history. Until then it can ignore the Tear and take another path, which closes the Tear for good. Its reward beyond the location is still open; something about appetite would mirror Eternal's.
+- **Eternal: the mimic that never ends.** Earned by endurance: 45 days without losing mass to decay (in practice, feeding at least every 3 days). Its reward: mass decay becomes rarer (longer than the usual `MASS_DECAY_DAYS` of 3 between losses) or stops altogether.
+- **Primordial: the original horror.** A choice rather than something that just happens. The Tear in Time appears among its hunting grounds once the mimic has (1) eaten a set number of magic users while wearing a time form (the Hourglass, the Midnight Orb, the Grandfather Clock or the Clocktower), and (2) reached about 50 mass at Apex. The count can be met at any tier, often long before the mass, and needs its own saved counter. Eating magic users alone would be too easy, since most players eat everyone they can. It becomes Primordial only when it goes through to hunt there, with flavor text about being the very first mimic in history. Until then it can ignore the Tear and take another path, which closes the Tear for good. Its reward beyond the location is still open; something about appetite would mirror Eternal's.
 - **Sovereign: the mimic that is the building.** Earned by reaching 100 mass, which gives Apex's "26–99" mass range in the Codex its meaning: 99 is the last Apex mass. The only tier that can be lost: if mass decay takes a Sovereign below 100, it devolves back to Apex, and has to grow back to reclaim it. Devolving shows as a line on the "welcome back" mass-decay notice, about the mimic losing its standing as Ruler of All Mimics. (Eternal, the decay-proof path, is the opposite trade-off.)
 - **A fallen Sovereign may take another path.** Back at Apex, it can still become Eternal or Primordial, and keeps the Sovereign achievement if it does. But taking one closes Sovereign for good: it can't grow back to it. Until it takes one, it can still grow back to Sovereign.
 - **Each branch gets its own content:** one hunting ground, with adventurers found nowhere else, and 2 or 3 forms. One form might be shared across the branches.
+- **Year-round time forms** (added): the Hourglass and Midnight Orb are seasonal, so the Grandfather Clock (Greater) and the Clocktower (an Apex variant of the Watchtower, unlocked by Brass or the Maker's Mark) let the Tear be worked toward in any season. An Apex mimic can wear the Clocktower, or the Grandfather Clock through Thimblewood.
 - **Primordial's hunting ground: the Tear in Time.** A rip in space and time opens onto a prehistoric world, with dinosaurs, mammoths and cave-dwelling hunters. Now and then an ordinary adventurer who stumbled through the same tear turns up too, badly out of place. Far rarer still is the one who opened the tear in the first place: the Time Caster, a time wizard or warlock stranded (or exploring) on the far side of their own spell. The mimic quite literally becomes the first mimic ever to exist on the planet.
 - **Two hidden achievements per branch**, absent from the achievement list until earned:
   - one for reaching the tier. Sovereign's is **Ruler of All Mimics**, so the devolving line on the welcome-back notice echoes it; the achievement stays earned after devolving, like the others;
   - one more for each: eating the Time Caster for Primordial; Eternal's and Sovereign's are still to be decided.
+- **Already tracked** (in the save, from now on, so mimics are on their way before the tiers exist): `timeTearCounter` (magic users eaten in a time form) and `decayFreeDate` (when the current stretch without decay began), with `TIME_FORMS` and `ETERNAL_DECAY_FREE_DAYS` in `src/data/stats.ts`.
 - **Open questions:**
-  - Eternal's threshold, and the prerequisites that open the Tear in Time.
+  - For the Tear: how many magic users (Wizards, Fey and the Tiefling Hexblade).
 
 ## Seasonal locations
 
@@ -68,7 +71,7 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 ### All Hallows' Eve 🎃
 
 - **Gloaming Hall Masquerade.** A costume ball. Everything is decorated, so an odd object looks like part of the party (a plausibility bonus). The catch: guests are masked, so they show as "???" until one enters your room, and some of them are real monsters in costume.
-- **Spell or Sweet Street.** *Drafted.* A village lane of eight houses in a loop (a ring around the village green), with costumed parties going door to door.
+- **Spell or Sweet Street.** _Drafted._ A village lane of eight houses in a loop (a ring around the village green), with costumed parties going door to door.
   - _The procession:_ instead of wandering, everyone walks the loop clockwise, one house per Wait, so you can see who's coming and lie in wait ahead of them.
   - _Spell or sweet:_ when they reach your house they knock and call "Spell or sweet!" Answer as a Door (or a Jack-o'-Lantern on the step) and they come right up for their sweet, ready to be struck without a Lure. Anywhere else, nobody answers, so they cast a "spell" (a prank) and take a closer look around: an extra stealth check.
   - _Costumes:_ every party member shows only as their costume (Dracula, Bugbear, Bedsheet Ghost, Pumpkin-Head, Witch, Mummy…). Their type, what lures them and their Codex entry stay hidden until you eat one: "Under the Dracula cape: a Paranoid Cleric!" Now and then the costume isn't a costume (a real Werewolf, dressed as a werewolf).
@@ -89,7 +92,6 @@ Like the Snowbound Lodge: open to every tier while their holiday is in season, e
 
 ## Easter eggs
 
-- **The UI is a mimic.** "You are the _room_." Very rarely, a card or the "Read the Codex" button on Home grows teeth when you hover over it, or nibbles the cursor.
 - **Eat the cat that knew.** If you eat a cat after it has stared at you (`CAT_KNOWS_LINE`), add a payoff line ("It took the secret with it").
 - **Real-world dates.** A full moon or Friday the 13th could change the mood or add a modifier. A Halloween hunt could have all adventurers that enter your room while you are in the form of a door knock and say "Trick or Treat!".
 - **More name remarks.** Naming your mimic after an adventurer template, or after a location ("Manor"), could get a reply.

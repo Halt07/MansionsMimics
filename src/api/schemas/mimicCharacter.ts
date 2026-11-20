@@ -113,6 +113,10 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   titanicFeastReached: z.boolean().default(false),
   /** ISO timestamp of the last time the mimic consumed something (used for mass decay). */
   lastFedAt: z.iso.datetime().optional(),
+  /** Magic users eaten while wearing a time form (toward the Tear in Time; see withTimeTear). */
+  timeTearCounter: z.number().int().min(0).default(0),
+  /** When the current stretch without losing mass to decay began (toward Eternal; see welcomeBack). */
+  decayFreeDate: z.iso.datetime().optional(),
   /** What the hunt's left sidebar shows: the room map or the party list (clicking it switches). */
   sidebarView: z.enum(["map", "party"]).default("map"),
   isActive: z.boolean().default(true),

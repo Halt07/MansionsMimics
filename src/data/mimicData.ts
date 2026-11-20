@@ -434,6 +434,17 @@ const FORM_DATA = {
         { type: "temperature", description: "Mattress retains warmth unnaturally long" },
       ],
     },
+    {
+      id: "greater_grandfather_clock", name: "Grandfather Clock", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Carved", "Arched"],
+      baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Decor", "Valuable"],
+      materialSlots: 4, digestCapacityRequired: 5, description: "Tall, patient, and counting every second until you come closer.",
+      flawProfiles: [
+        { type: "acoustic", description: "The tick falls a fraction behind the swing of the pendulum" },
+        { type: "presence", description: "It keeps perfect time, though no one has wound it in years" },
+        { type: "structure", description: "The weights never descend" },
+      ],
+    },
   ],
 
   Grand: [
@@ -596,6 +607,19 @@ const FORM_DATA = {
         { type: "environmental", description: "Wind intensity does not increase at higher levels" },
         { type: "acoustic", description: "Echo delay inconsistent with tower height" },
         { type: "structure", description: "Arrow slits fail to admit correct light angles" },
+      ],
+    },
+    {
+      id: "apex_clocktower", name: "Clocktower", tier: "Apex", baseMassRange: [25, 38],
+      variantOf: "apex_watchtower", unlockedBy: ["Maker's Mark", "Brass"],
+      builtInTraits: ["Reinforced", "Arched", "Ornate"],
+      baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Authority"],
+      materialSlots: 7, digestCapacityRequired: 8, description: "The whole town sets its day by it. It has been keeping time for longer than the town has stood.",
+      flawProfiles: [
+        { type: "acoustic", description: "Some nights the bells strike thirteen, and nobody remembers it in the morning" },
+        { type: "visual", description: "The great clock face casts no shadow at noon" },
+        { type: "structure", description: "The hands move, but nothing behind the face turns" },
+        { type: "spatial", description: "The stair has more steps going up than coming down" },
       ],
     },
     {

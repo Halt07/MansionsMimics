@@ -119,6 +119,28 @@ export default async function ({ gameData: m, ok }) {
   const meal = m.eatFrozen(frozen.hunt, frozen.character, ice.id, opts());
   ok(meal.hunt.party[0].isConsumed && meal.character.assimilationPoints === m.frozenMealAp(ice), 'eating the frozen cleric: a cheap meal');
   ok(meal.hunt.recorded && meal.character.huntsSurvived === 1 && m.huntCleared(meal.hunt), '…and with nobody left, the hunt is won and counted');
+  // ---------- toward the Tear in Time: magic users eaten in a time form ----------
+  const iced = (type) => member(`Iced ${type}`, { type, location: quiet, isFrozen: true, isAlive: false });
+  const thaw = (type, formId) => m.eatFrozen(hunt({ location: lodge, mimicRoom: quiet, party: [iced(type), member('Onlooker', { location: lodge.snowbound.hearth })] }),
+    mimic({ forms: [ref('lesser_chest'), ref(formId)], activeFormIndex: 1, timeTearCounter: 2 }), `Iced ${type}`, opts()).character.timeTearCounter;
+  ok(thaw('Wizard', 'minor_hourglass') === 3, 'a magic user eaten while wearing the Hourglass counts toward the Tear');
+  ok(thaw('Warrior', 'minor_hourglass') === 2 && thaw('Wizard', 'lesser_barrel') === 2, '…but not anyone else, nor in an ordinary form');
+  const magicUsers = m.ADVENTURER_TEMPLATES.filter(m.isMagicUser).map((a) => a.name);
+  ok(m.ADVENTURER_TEMPLATES.filter((a) => a.type === 'Wizard' || a.type === 'Fey').every((a) => magicUsers.includes(a.name)),
+    'magic users: every Wizard and every Fey…');
+  ok(magicUsers.includes('Tiefling Hexblade') && magicUsers.filter((n) => !['Wizard', 'Fey'].includes(m.ADVENTURER_TEMPLATES.find((a) => a.name === n).type)).length === 1,
+    '…and, of everyone else, only the Tiefling Hexblade');
+  ok(!m.isMagicUser({ name: 'Draconic Bounty Hunter', type: 'Hunter' }) && !m.isMagicUser({ name: 'Pilgrim Elder', type: 'Cleric' }), '…not other casters, like the Draconic Bounty Hunter or the Pilgrim Elder');
+  const mage = member('Mage', { type: 'Wizard', location: 'Library', isAttracted: true });
+  const timeMeal = m.strike(hunt({ party: [mage] }), mimic({ adhesion: 6, forms: [ref('greater_midnight_orb')], timeTearCounter: 0 }), opts(0));
+  ok(timeMeal.hunt.party[0].isConsumed && timeMeal.character.timeTearCounter === 1, 'swallowing one whole in the Midnight Orb counts too');
+  ok(['Hourglass', 'Midnight Orb', 'Grandfather Clock', 'Clocktower'].every((n) => m.TIME_FORMS.includes(m.ALL_FORMS.find((f) => f.name === n)?.id)),
+    'the time forms: the Hourglass and Midnight Orb (in season), the Grandfather Clock and the Clocktower (all year)');
+  ok(m.TIME_FORMS.filter((id) => !m.SEASONAL_FORMS.some((f) => f.id === id)).length === 2, '…two of them year-round');
+  const formsFor = (tier, knows) => m.getValidForms(tier, 40, { learnedMaterials: knows, learnedTraits: [] }).map((f) => f.name);
+  ok(formsFor('Apex', ['Brass']).includes('Clocktower') && !formsFor('Apex', []).includes('Clocktower'), 'an Apex mimic can take the Clocktower once it knows Brass (or the Maker\'s Mark)');
+  ok(!formsFor('Apex', []).includes('Grandfather Clock') && formsFor(m.formTier({ tier: 'Apex', currentAppearance: { primaryMaterials: ['Thimblewood'] } }), []).includes('Grandfather Clock'),
+    '…and the Grandfather Clock only by shrinking with Thimblewood');
   const warm = m.wait(hunt({ party: [member('Warrior', { location: 'Kitchen', warmth: 1, warmthRoom: 'Kitchen' })] }), mimic(), opts());
   ok(!warm.hunt.party[0].isFrozen, 'nowhere else is cold');
 
@@ -207,6 +229,8 @@ export default async function ({ gameData: m, ok }) {
   ok(said(finished, 'collapses from their wounds') && finished.hunt.party[0].isConsumed, 'a Minor mimic bites someone until they collapse');
   ok(finished.changes.biggestMeal?.name === 'Worn Down' && finished.changes.biggestMeal.ap === 2 + lastBite, '…and the whole meal (every bite) is its biggest meal');
   ok(finished.hunt.biggestMeal?.name === 'Worn Down' && finished.hunt.biggestMeal.ap === 2 + lastBite, '…in the hunt\'s report too');
+  const bittenMage = m.strike(hunt({ party: [{ ...worn, type: 'Wizard' }] }), { ...minor, forms: [ref('minor_hourglass')], timeTearCounter: 0 }, opts(0));
+  ok(bittenMage.hunt.party[0].isConsumed && bittenMage.character.timeTearCounter === 1, '…and a magic user bitten down in the Hourglass counts toward the Tear');
   const firstBite = m.strike(hunt({ party: [member('Fresh', { location: 'Library', isAttracted: true, constitution: 3 })] }), minor, opts(0));
   ok(!firstBite.hunt.party[0].isConsumed && firstBite.hunt.party[0].biteAp === firstBite.changes.assimilationPoints && !firstBite.changes.biggestMeal, 'a bite that doesn\'t finish them: counted toward the meal, not a meal yet');
 
