@@ -13,7 +13,7 @@ import {
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
   // DEV ONLY (achievement-preview branch): the dev buttons below
   ADVENTURER_TEMPLATES, ALL_MATERIALS, LEARNABLE_TRAITS, LOCATIONS, SEASONAL_FORMS, HOLIDAYS, CULT_CONVERSIONS, CANNIBAL_MIMICS,
-  type Material, type HolidayId,
+  TIME_TEAR_MAGIC_USERS, TIME_TEAR_MASS, tearInTimeOpen, type Material, type HolidayId,
 } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -443,6 +443,19 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     addEvent("system", `🛠 Dev: ${material} ${knows ? "removed" : "learned"}.`);
   };
 
+  // Give or take away what opens the Tear in Time (saved), to check its card on the hunting-ground
+  // screen. Giving makes the mimic Apex with at least TIME_TEAR_MASS mass and TIME_TEAR_MAGIC_USERS
+  // magic users, on no branch; taking away clears the count (and Primordial, which keeps it open).
+  const devToggleTear = () => {
+    if (!character) return;
+    const open = tearInTimeOpen(character) || character.branchTier === "Primordial";
+    const updates: Partial<MimicCharacter> = open
+      ? { timeTearCounter: 0, ...(character.branchTier === "Primordial" ? { branchTier: null } : {}) }
+      : { tier: "Apex", mass: Math.max(character.mass, TIME_TEAR_MASS), timeTearCounter: Math.max(character.timeTearCounter, TIME_TEAR_MAGIC_USERS), branchTier: null };
+    setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+    persist(updates);
+  };
+
   const displayCharacter = character && previewAchievements
     ? {
         ...character,
@@ -673,6 +686,23 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
               </select>
             </label>
           )}
+          {/* DEV ONLY (achievement-preview branch): open or close the Tear in Time for this mimic, to
+              check its card. Saved, like the Thimblewood button. */}
+          {import.meta.env.DEV && phase === "setup" && !roomSelecting && (() => {
+            const open = tearInTimeOpen(character) || character.branchTier === "Primordial";
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+                onClick={devToggleTear}
+              >
+                🛠 Dev: {open
+                  ? "take away the Tear in Time (saved)"
+                  : `give the Tear in Time: Apex, ${TIME_TEAR_MASS}+ mass, ${TIME_TEAR_MAGIC_USERS} magic users (saved)`}
+              </Button>
+            );
+          })()}
           {phase === "setup" && !roomSelecting && (
             <LocationSelect onChoose={chooseLocation} onChooseForms={() => startFormSelection("setup")} />
           )}
