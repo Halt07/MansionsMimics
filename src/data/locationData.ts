@@ -866,7 +866,9 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   },
   // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──
   hidden_grove: {
-    "Ancient Altar":       { "greater_statue":          { plausibility: 1, note: "Old forest altars are often watched over by weathered statues." } },
+    "Streamside Bank":     { "apex_cave":               { plausibility: 2, note: "The stream has cut a cave into the bank." } },
+    "Ancient Altar":       { "greater_statue":          { plausibility: 1, note: "Old forest altars are often watched over by weathered statues." },
+                             "apex_colossus":           { plausibility: 1, note: "The grove's old altar was raised at the feet of something." } },
     "Forest Path":         { "apex_abandoned_cottage":  { plausibility: 1, note: "An abandoned cottage lost to the woods." } },
     "Collapsed Shrine":    { "apex_chapel":             { plausibility: -1, note: "An intact chapel among the ruins raises questions." },
                              "apex_cathedral":          { plausibility: -2, note: "A whole cathedral where only rubble should be?" } },
@@ -892,7 +894,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   // ── The Crossroads · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──
   crossroads: {
     "Centre Stone":        { "greater_statue":          { plausibility: 1, note: "Crossroads are often marked with a statue or shrine." },
-                             "standard_door":           { plausibility: -2, note: "A door standing in the middle of a crossroads." } },
+                             "standard_door":           { plausibility: -2, note: "A door standing in the middle of a crossroads." },
+                             "apex_volcano":            { plausibility: -2, note: "A smoking mountain at the crossroads, where yesterday there was a signpost." } },
     "North Road":          { "grand_carriage":          { plausibility: 1, note: "Carriages pass through every crossroads." },
                              "standard_door":           { plausibility: -2, note: "A door standing in the middle of a crossroads." } },
     "South Road":          { "grand_carriage":          { plausibility: 1, note: "Carriages pass through every crossroads." },
@@ -910,7 +913,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "grand_personal_library":  { plausibility: -1, note: "A scholar's library in a mill house is out of place." },
                              "standard_dining_table":   { plausibility: 1, note: "The miller's family table." },
                              "standard_writing_desk":   { plausibility: 1, note: "Where the miller kept the ledgers." } },
-    "River Crossing":      { "grand_carriage":          { plausibility: 1, note: "Carriages wait at the crossing for the ford to clear." } },
+    "River Crossing":      { "grand_carriage":          { plausibility: 1, note: "Carriages wait at the crossing for the ford to clear." },
+                             "apex_cave":               { plausibility: 1, note: "The river has hollowed a cave beneath the crossing." } },
     "Grain Storage":       { "standard_wardrobe":       { plausibility: -1, note: "A wardrobe in the grain store is out of place." } },
   },
   // ── Border Guardhouse · Apex mimics only, mass 33+ · wearable forms: Grand–Apex (Greater with Thimblewood) ──
@@ -923,13 +927,15 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
   },
   // ── Ruined City Quarter · Apex mimics only, mass 30+ · wearable forms: Grand–Apex (Greater with Thimblewood) ──
   ruined_city: {
+    "Sewer Entrance":      { "apex_cave":               { plausibility: 1, note: "Just one more dark opening under the city." } },
     "Market Square":       { "grand_carriage":          { plausibility: 1, note: "Abandoned carts and carriages litter the old market." },
                              "greater_statue":          { plausibility: 1, note: "A market square's old statue." } },
     "Merchant Row":        { "grand_vault":             { plausibility: 1, allure: 1, note: "Merchant houses kept their strongrooms — and someone may have left something." } },
     "Collapsed Temple":    { "apex_chapel":             { plausibility: -1, note: "Too intact for a collapsed temple." },
                              "apex_cathedral":          { plausibility: -2, note: "A whole cathedral standing in the rubble of a temple?" },
                              "greater_statue":          { plausibility: 1, note: "Temple statues still stand among the rubble." },
-                             "greater_gargoyle":        { plausibility: 1, note: "Fallen gargoyles litter the temple ruins." } },
+                             "greater_gargoyle":        { plausibility: 1, note: "Fallen gargoyles litter the temple ruins." },
+                             "apex_colossus":           { plausibility: 1, note: "One more toppled idol among the temple's ruins." } },
     "City Gate":           { "apex_castle_gate":        { plausibility: 1, note: "A great gate is exactly what a city gate should be." } },
   },
   // ── Abandoned Castle · Apex mimics only, mass 35+ · wearable forms: Grand–Apex (Greater with Thimblewood) ──
@@ -940,7 +946,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "greater_throne":          { plausibility: 1, note: "The lord's throne, still in its hall." },
                              "greater_statue":          { plausibility: 1, note: "Great halls were lined with statues." } },
     "Courtyard":           { "grand_carriage":          { plausibility: 1, note: "Carriages pull into the courtyard." },
-                             "greater_statue":          { plausibility: 1, note: "A statue in the castle courtyard." } },
+                             "greater_statue":          { plausibility: 1, note: "A statue in the castle courtyard." },
+                             "apex_volcano":            { plausibility: -2, note: "Somebody would have noticed a volcano in the courtyard." } },
     "Dungeon":             { "grand_chandelier":        { plausibility: -2, note: "A chandelier in the dungeon?" },
                              "greater_throne":          { plausibility: -2, note: "A throne...in the dungeon." },
                              "giant_throne":            { plausibility: -2, note: "A throne in the dungeon — and a giant one at that." } },
@@ -966,7 +973,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "Giant's Larder":      { "giant_barrel":            { plausibility: 1, note: "Larders are lined with barrels this size." },
                              "giant_goblet":            { plausibility: 1, note: "Giant goblets stacked for the next feast." } },
     "High Nest":           { "giant_pillow":            { plausibility: 1, note: "Soft enough to be part of the nest." } },
-    "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." } },
+    "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." },
+                             "apex_volcano":            { plausibility: -2, note: "A volcano, on a cloud?" } },
   },
   // ── The Tear in Time · Primordial's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
   // Nothing has been built yet: anything made by later hands looks wildly out of place
@@ -999,7 +1007,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "Standing Stones":     { "apex_castle_gate":        { plausibility: -2, note: "A castle gate among the standing stones, with no castle?" },
                              "apex_chapel":             { plausibility: -1, note: "The old stones predate any chapel." },
                              "greater_statue":          { plausibility: 1, note: "One more stone among the stones." },
-                             "greater_gargoyle":        { plausibility: -1, note: "A carved gargoyle among the ancient stones looks wrong." } },
+                             "greater_gargoyle":        { plausibility: -1, note: "A carved gargoyle among the ancient stones looks wrong." },
+                             "apex_cave":               { plausibility: 1, note: "A barrow mouth among the old stones." } },
   },
   // ── The Hollow Reliquary · Standard+ mimics · wearable forms: Lesser–Apex (Minor with Thimblewood) ──
   hollow_reliquary: {
