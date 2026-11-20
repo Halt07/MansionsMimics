@@ -53,6 +53,8 @@ export interface Hunt {
   fireworksRoom: RoomName | null;
   /** The Tear in Time: the turn the volcano erupts this hunt, if it does (see rollEruption). Gone once it has. */
   eruptionTurn?: number | null;
+  /** The Tear in Time: the volcano has erupted this hunt (the report comes out sooty). */
+  erupted?: boolean;
   /** Set once the hunt ends early: found out, or the party got bored and left. A cleared hunt (see huntCleared) leaves it null. */
   ending: Exclude<HuntEnding, "cleared"> | null;
 
@@ -364,6 +366,7 @@ export class Turn {
     const roasted: string[] = [];
     this.set({
       eruptionTurn: null,
+      erupted: true,
       party: this.hunt.party.map(a => {
         if (!stillInHunt(a) || !blast.includes(a.location)) return a;
         if (a.location === zone.crater) {

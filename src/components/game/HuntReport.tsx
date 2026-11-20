@@ -1,14 +1,24 @@
 import type { HuntReport as Report } from "@/data/huntReportData";
 
-/** The end-of-hunt report: a notice, verse or bit of gossip, pinned to a plank wall. */
+/**
+ * The end-of-hunt report: a notice, verse or bit of gossip, pinned to a plank wall. At the Tear in
+ * Time it's carved into a cracked stone tablet propped against a cave wall instead (sooty, if the
+ * volcano erupted).
+ */
 export default function HuntReport({ report }: { report: Report }) {
   const isNotice = report.kind === "incident" || report.kind === "missing";
+  const stone = report.material === "stone";
   return (
-    <figure className="report-wall" aria-label={`${report.heading}: ${report.title}`}>
+    <figure className={`report-wall${stone ? " report-wall--cave" : ""}`} aria-label={`${report.heading}: ${report.title}`}>
       <div className="report-shadow">
-        <article className={`report-paper report-paper--${report.kind}`}>
-          <span className="report-nail report-nail--left" aria-hidden />
-          {isNotice && <span className="report-nail report-nail--right" aria-hidden />}
+        <article
+          className={`report-paper report-paper--${report.kind}${stone ? " report-paper--stone" : ""}`}
+          data-scorched={report.scorched || undefined}
+        >
+          {/* Paper is nailed up; a stone slab just leans */}
+          {!stone && <span className="report-nail report-nail--left" aria-hidden />}
+          {!stone && isNotice && <span className="report-nail report-nail--right" aria-hidden />}
+          {stone && <span className="report-crack" aria-hidden />}
 
           <p className="report-heading">{report.heading}</p>
           <h3 className="report-title">{report.title}</h3>
@@ -29,7 +39,7 @@ export default function HuntReport({ report }: { report: Report }) {
           {report.quote && (
             <blockquote className="report-quote">
               “{report.quote.text}”
-              <footer>— statement of {report.quote.by}</footer>
+              <footer>— {stone ? `${report.quote.by} say` : `statement of ${report.quote.by}`}</footer>
             </blockquote>
           )}
 
@@ -40,7 +50,7 @@ export default function HuntReport({ report }: { report: Report }) {
           {report.signoff && (
             <div className="report-signoff">
               <span>{report.signoff}</span>
-              {isNotice && <span className="report-seal" aria-hidden>G</span>}
+              {isNotice && !stone && <span className="report-seal" aria-hidden>G</span>}
             </div>
           )}
 

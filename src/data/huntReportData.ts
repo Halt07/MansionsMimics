@@ -54,6 +54,8 @@ export interface HuntReportInput {
   readonly sank: boolean;
   /** For locations that tell their own story (LOCATION_REPORTS). */
   readonly locationId?: string;
+  /** The volcano erupted this hunt (the Tear in Time): the tablet comes out scorched. */
+  readonly erupted?: boolean;
 }
 
 export type HuntReportKind = "incident" | "missing" | "verse" | "gossip";
@@ -74,6 +76,10 @@ export interface HuntReport {
   readonly signoff?: string;
   /** A big rubber stamp across the notice. */
   readonly stamp?: string;
+  /** What it's on: paper (the default), or a stone tablet (the Tear in Time, long before paper). */
+  readonly material?: "paper" | "stone";
+  /** Smeared with soot (the volcano erupted). */
+  readonly scorched?: boolean;
 }
 
 // ---------- helpers ----------
@@ -507,6 +513,124 @@ function streetGossip(c: Ctx): HuntReport {
 }
 
 /** Locations that tell their own story. Any not listed get the Guild's. */
+// ---------- the Tear in Time: carved in stone, in the words of people who only just got words ----------
+// Short words, blunt sayings. Before paper, so it's a stone tablet (and sooty if the mountain blew).
+
+/** "TWO" for the tablet; numbers past what anyone here can count are "MANY". */
+const caveCount = (n: number) => (n > 5 ? "Many" : numberWord(n));
+/** The form, as a cave person would say it ("Grandfather Clock" is just "thing"). */
+const caveThing = (c: Ctx) => (c.input.formName && c.input.formName.split(" ").length === 1 ? c.input.formName.toLowerCase() : "thing");
+const tablet = (c: Ctx, report: Omit<HuntReport, "material" | "scorched">): HuntReport => ({ ...report, material: "stone", scorched: !!c.input.erupted });
+
+/** Discovered: the ones who got away carved a warning. */
+function tearWarning(c: Ctx): HuntReport {
+  const { pick, witness, meal, mealWasPerson, lost, room } = c;
+  const thing = caveThing(c);
+  const quotes = [
+    `Rock have mouth. Rock bite.`,
+    `Me poke ${thing}. ${thing.charAt(0).toUpperCase() + thing.slice(1)} poke back.`,
+    `It warm. Rock not warm. Why rock warm?`,
+    `We look at it. It look at us. We run.`,
+    ...(meal && mealWasPerson ? [`It eat ${meal}. One bite. ${meal} gone.`] : []),
+  ];
+  return tablet(c, {
+    kind: "incident",
+    postedAt: "Carved on a slab at the mouth of the cave",
+    heading: "Stone of Warning",
+    title: `Bad ${thing}`,
+    subtitle: "Tribe see. Tribe know.",
+    fields: [
+      { label: "Where", value: room ?? "Far" },
+      { label: "What", value: `${thing.charAt(0).toUpperCase() + thing.slice(1)}. Not ${thing}` },
+      { label: "Gone", value: lost ? caveCount(lost) : "None. This time" },
+    ],
+    body: [
+      `No sit on ${thing}. No touch ${thing}. Poke with long stick. Then run.`,
+      ...(c.input.erupted ? [`Mountain mad too. Fire fall. Ash on all.`] : []),
+    ],
+    quote: witness ? { text: pick(quotes), by: witness } : undefined,
+    signoff: "Elder say. Tribe do.",
+  });
+}
+
+/** Cleared, nobody left: the fire waited, and nobody came back to it. */
+function tearMissing(c: Ctx): HuntReport {
+  const { pick, people } = c;
+  const thing = caveThing(c);
+  return tablet(c, {
+    kind: "missing",
+    postedAt: "Scratched on a stone by the cold fire",
+    heading: "Stone of the Lost",
+    title: pick(["None Come Back", "Hunt Not Come Home", "All Gone"]),
+    subtitle: `${caveCount(people.length)} go out. None come back.`,
+    fields: [
+      { label: "Who", value: people.length ? listOf(people.map(p => p.name)) : "Hunt" },
+      { label: "Last seen", value: c.room ?? "Far" },
+    ],
+    body: [
+      `Fire wait. Fire go cold. No one come.`,
+      `Big thing eat them. Thing that look like ${thing}.`,
+      ...(c.input.erupted ? [`Mountain roar. Ash fall. Sky go black.`] : []),
+    ],
+    signoff: "Firekeeper mark this. Firekeeper not forget.",
+  });
+}
+
+/** Cleared, some got away: a chant, the way the tribe remembers things. */
+function tearChant(c: Ctx): HuntReport {
+  const { pick, devoured, survivors, meal } = c;
+  const thing = caveThing(c);
+  const went = survivors.length + c.lost;
+  const stanzas = [
+    `${caveCount(went)} go out.
+${caveCount(survivors.length)} come back.
+Hunt come back small.`,
+    `Big ${thing}. Still ${thing}.
+It wait. It wait.
+Then it eat.`,
+    ...(meal ? [`It eat ${meal}.
+No more ${meal}.
+We sing, so we know.`] : []),
+    ...(c.input.erupted ? [`Mountain wake.
+Fire run down.
+Mountain eat too.`] : []),
+    pick([`No sleep near ${thing}.
+No sleep near rock.
+No sleep.`, `Drum slow. Drum low.
+We go home.
+We not go back.`]),
+  ];
+  return tablet(c, {
+    kind: "verse",
+    postedAt: "Scratched on a stone by the fire, to be sung",
+    heading: "Song of the Hunt",
+    title: `Song of the ${thing}`,
+    fields: [],
+    body: stanzas,
+    signoff: devoured.length ? `For the ${caveCount(devoured.length).toLowerCase()} that not come home` : undefined,
+  });
+}
+
+/** Abandoned: the hunt got bored and went home, and the fire heard all about it. */
+function tearTalk(c: Ctx): HuntReport {
+  const { pick, witness } = c;
+  const thing = caveThing(c);
+  return tablet(c, {
+    kind: "gossip",
+    postedAt: "Scratched on a stone by the fire, after",
+    heading: "Fire Talk",
+    title: pick(["Bored", "Long Walk", "No Meat"]),
+    fields: [],
+    body: [
+      `Hunt walk. Hunt sit. Hunt walk more. No meat.`,
+      `${witness ?? "One"} say ${thing} look at them. Tribe laugh. ${thing.charAt(0).toUpperCase() + thing.slice(1)} not look.`,
+      ...(c.input.erupted ? [`Then mountain go boom. Then hunt go home fast.`] : []),
+      pick([`Next sun, more meat.`, `Next time, bring more stick.`, `Elder say: rock is rock. Elder old.`]),
+    ],
+  });
+}
+
 const LOCATION_REPORTS: Partial<Record<string, ReportTeller>> = {
   spell_or_sweet_street: { incident: streetNotice, missing: streetMissing, verse: streetRhyme, gossip: streetGossip },
+  tear_in_time: { incident: tearWarning, missing: tearMissing, verse: tearChant, gossip: tearTalk },
 };

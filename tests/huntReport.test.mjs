@@ -121,4 +121,21 @@ export default async function ({ gameData: m, ok, log }) {
 
   // Everywhere else still gets the Guild's
   ok(m.buildHuntReport({ ...base, locationId: 'manor', ending: 'discovered', party: [member('Naive Bard')] }).heading.includes('Guild'), 'other locations: still the Guild');
+
+  // ---------- the Tear in Time: carved in stone, in short blunt words ----------
+  const tear = { ...base, locationId: 'tear_in_time', locationName: 'The Tear in Time', formName: 'Volcano', tier: 'Apex', lastRoom: 'Tar Pits' };
+  const caveParty = [member('Cave Hunter', { isConsumed: true }), member('Firekeeper'), member('Raptor', { isConsumed: true })];
+  const tablets = [['discovered', caveParty], ['cleared', caveParty], ['cleared', caveParty.map((p) => ({ ...p, isConsumed: true }))], ['abandoned', [member('Firekeeper')]]]
+    .flatMap(([ending, party]) => seeds.slice(0, 20).map((seed) => m.buildHuntReport({ ...tear, seed, ending, party, peakSuspicion: 10, biggestMeal: { name: 'Cave Hunter', ap: 8 } })));
+  ok(new Set(tablets.map((r) => r.kind)).size === 4 && tablets.every((r) => r.material === 'stone' && !r.scorched), 'every ending at the Tear is a stone tablet (its own four ways of telling it)');
+  ok(tablets.every((r) => !/Guild|crowns|ten-foot/.test(text(r))), '…nothing about the Guild, coin or ten-foot poles: none of that exists yet');
+  const words = tablets.flatMap((r) => [...r.body, r.title, r.subtitle ?? '', r.quote?.text ?? ''].join(' ').split(/[^A-Za-z']+/).filter(Boolean))
+    .filter((w) => !['Cave', 'Hunter', 'Firekeeper', 'Raptor', 'volcano', 'Volcano'].includes(w));
+  const long = [...new Set(words.filter((w) => w.length > 6))];
+  ok(words.reduce((n, w) => n + w.length, 0) / words.length < 4.5 && long.length === 0, `short, blunt words (no long ones${long.length ? `: ${long.join(', ')}` : ''})`);
+  ok(text(m.buildHuntReport({ ...tear, ending: 'discovered', party: caveParty, peakSuspicion: 10 })).includes('Bad volcano'), 'found out in the Volcano: "Bad volcano"');
+  ok(text(m.buildHuntReport({ ...tear, formName: 'T. Rex Carcass', ending: 'discovered', party: caveParty, peakSuspicion: 10 })).includes('Bad thing'), 'a form too long to say is just a "thing"');
+  const sooty = m.buildHuntReport({ ...tear, ending: 'cleared', party: caveParty, erupted: true });
+  ok(sooty.scorched && sooty.body.some((p) => p.includes('Mountain')), 'after an eruption: scorched, and the mountain gets a mention');
+  ok(!m.buildHuntReport({ ...base, ending: 'cleared', party: caveParty, erupted: true }).material, 'anywhere else: paper, as always');
 }

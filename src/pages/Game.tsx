@@ -356,6 +356,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     mimicsDevoured: hunt.rivals.filter(r => r.consumed).length,
     sank: !!hunt.location.sinkingTurns && hunt.turn >= hunt.location.sinkingTurns,
     locationId: hunt.location.id,
+    erupted: !!hunt.erupted,
   }) : null;
 
   // Screen effects for the latest turn (the CSS lives under HUNT EFFECTS in index.css):

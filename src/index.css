@@ -813,6 +813,75 @@
   to { opacity: 1; translate: 0 0; }
 }
 /* Leave the stamp its corner beside the signoff; in a narrow column it drops below instead */
+/* ── The Tear in Time: a cracked stone tablet, the words carved in, leaning on a firelit cave
+   wall. Sooty all over the edges if the volcano erupted ([data-scorched]). ── */
+.report-wall--cave {
+  background:
+    radial-gradient(ellipse at 50% 110%, hsl(25 90% 50% / 0.35), transparent 60%),
+    radial-gradient(ellipse at 15% 20%, rgb(255 255 255 / 0.04), transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0.7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #2a241f, #15110d);
+}
+.report-wall--cave .report-caption { color: hsl(30 40% 72% / 0.8); }
+.report-paper.report-paper--stone {
+  --ink: #2c2924;
+  --ink-faded: #48433b;
+  --blood: #5a2416;
+  font-family: 'Cinzel', serif;
+  transform: rotate(-0.6deg);
+  /* Carved, not written: a highlight under each stroke, a shadow over it */
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.28), 0 -1px 0 rgb(0 0 0 / 0.35);
+  background-image:
+    radial-gradient(circle at 70% 25%, rgb(255 255 255 / 0.12), transparent 30%),
+    radial-gradient(circle at 25% 80%, rgb(0 0 0 / 0.12), transparent 30%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.19 0 0 0 0 0.17 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #aaa59a, #858076 55%, #6f6a61);
+  box-shadow: inset 0 0 30px rgb(0 0 0 / 0.45), inset 0 2px 2px rgb(255 255 255 / 0.18);
+  /* A rough slab: chipped corners, a bite out of one side */
+  clip-path: polygon(
+    3% 4%, 12% 0.5%, 30% 1.5%, 47% 0%, 66% 1.2%, 82% 0.3%, 95% 2.5%, 100% 9%,
+    98.8% 24%, 100% 38%, 97.5% 44%, 99.2% 52%, 98.5% 70%, 100% 86%, 96% 98%,
+    80% 100%, 63% 98.8%, 44% 100%, 26% 98.5%, 9% 99.5%, 1.5% 95%,
+    0% 80%, 1.2% 62%, 0% 45%, 1.6% 28%, 0% 14%
+  );
+}
+.report-paper--stone .report-heading,
+.report-paper--stone .report-title,
+.report-paper--stone.report-paper--gossip .report-title,
+.report-paper--stone.report-paper--verse .report-title {
+  font-family: 'Cinzel', serif;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.report-paper--stone.report-paper--incident .report-title { text-shadow: 0 1px 0 rgb(255 255 255 / 0.25), 0 -1px 0 rgb(0 0 0 / 0.45); }
+.report-paper--stone .report-rule { border-color: rgb(0 0 0 / 0.45); box-shadow: 0 1px 0 rgb(255 255 255 / 0.25); }
+.report-paper--stone .report-quote { border-left-color: rgb(0 0 0 / 0.3); }
+.report-paper--stone.report-paper--gossip .report-body { font-style: normal; }
+/* The crack: a jagged line from the top edge down into the slab */
+.report-crack {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M71 0 L68 9 L73 15 L66 26 L69 33 L61 44 L64 51 L58 63' fill='none' stroke='%23201d19' stroke-width='0.7' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M66 26 L74 31 L79 30' fill='none' stroke='%23201d19' stroke-width='0.5' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M72 0 L69 9 L74 15 L67 26 L70 33 L62 44 L65 51 L59 63' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='0.5' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;
+  background-size: 100% 100%;
+}
+/* Soot from the eruption: black smudges creeping in from the edges and a smear across, painted
+   over the same stone */
+.report-paper.report-paper--stone[data-scorched] {
+  background-image:
+    radial-gradient(ellipse 70% 50% at 0% 100%, rgb(12 9 6 / 0.95), rgb(12 9 6 / 0.5) 40%, transparent 75%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(12 9 6 / 0.9), rgb(12 9 6 / 0.45) 40%, transparent 75%),
+    radial-gradient(ellipse 45% 35% at 100% 100%, rgb(16 12 8 / 0.85), transparent 75%),
+    radial-gradient(ellipse 35% 28% at 0% 0%, rgb(16 12 8 / 0.75), transparent 75%),
+    radial-gradient(ellipse 20% 60% at 0% 55%, rgb(16 12 8 / 0.6), transparent 75%),
+    linear-gradient(100deg, transparent 48%, rgb(20 14 10 / 0.45) 56%, rgb(20 14 10 / 0.2) 62%, transparent 70%),
+    radial-gradient(circle at 70% 25%, rgb(255 255 255 / 0.12), transparent 30%),
+    radial-gradient(circle at 25% 80%, rgb(0 0 0 / 0.12), transparent 30%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.19 0 0 0 0 0.17 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #aaa59a, #858076 55%, #6f6a61);
+}
+
 .report-paper:has(.report-stamp) .report-signoff { padding-left: 9.5rem; }
 @container (max-width: 26rem) {
   .report-paper:has(.report-stamp) .report-signoff { padding-left: 0; }
