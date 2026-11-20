@@ -346,7 +346,34 @@ export class Turn {
     if (location.starfall && !this.over) this.starfall();
     if (location.sinkingTurns && !this.over) this.sinking(location.sinkingTurns);
     if (location.snowbound && !this.over) this.frost();
+    if (location.tarPits && !this.over) this.tar();
     if (location.eruption && !this.over) this.erupt();
+  }
+
+  // The Tear in Time's tar pits: whoever ends a turn there may get stuck. The stuck sink a little
+  // each turn, and after sinkTurns they're gone. The mimic never sticks: the tar can't tell it from a rock.
+  private tar() {
+    const pits = this.hunt.location.tarPits;
+    if (!pits) return;
+    const lines: string[] = [];
+    this.set({
+      party: this.hunt.party.map(a => {
+        if (!stillInHunt(a) || a.location !== pits.room) return a;
+        if (a.tarStuck !== undefined) {
+          const stuck = a.tarStuck + 1;
+          if (stuck >= pits.sinkTurns) {
+            lines.push(`${a.name} slips under the tar and is gone.`);
+            return { ...a, tarStuck: stuck, isAlive: false, isAttracted: false, isSunk: true };
+          }
+          lines.push(`${a.name} sinks deeper into the tar, struggling.`);
+          return { ...a, tarStuck: stuck };
+        }
+        if (this.random() >= pits.stickChance) return a;
+        lines.push(`${a.name} steps into the ${pits.room}, and the tar takes hold. They're stuck fast.`);
+        return { ...a, tarStuck: 0 };
+      }),
+    });
+    lines.forEach(l => this.alert(`🕳️ ${l}`));
   }
 
   // The Tear in Time: the volcano rumbles a turn ahead, then erupts (once, if this hunt rolled one).

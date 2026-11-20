@@ -73,7 +73,7 @@ export default function RoomMap({
                   className="occupant occupant-adventurer"
                   data-type={a.costume ? undefined : a.type}
                   data-attracted={a.isAttracted || undefined}
-                  title={`${a.costume ? `Someone dressed as a ${a.costume}` : `${a.name} (${a.type})`}${a.isAttracted ? " — attracted" : ""}`}
+                  title={`${a.costume ? `Someone dressed as a ${a.costume}` : `${a.name} (${a.type})`}${a.isAttracted ? " — attracted" : ""}${a.tarStuck !== undefined ? " — stuck in the tar" : ""}`}
                 >
                   {initials(a.name)}
                 </span>

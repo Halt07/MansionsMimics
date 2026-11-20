@@ -1522,6 +1522,10 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   isRoasted?: boolean;
   /** Caught in the heart of an eruption: gone, with nothing left to eat. */
   isBurned?: boolean;
+  /** Stuck in the tar (the Tear in Time): turns spent stuck so far. Can't move; a Strike always holds. */
+  tarStuck?: number;
+  /** Sank into the tar: gone, with nothing left to eat. */
+  isSunk?: boolean;
   /**
    * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
    * eaten. When the two are the same, it isn't a costume at all (a real werewolf).
@@ -1531,12 +1535,12 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
 };
 
 /**
- * Still in the hunt: not eaten, fled, vanished, converted, frozen, roasted or burned. (Each of those also sets
+ * Still in the hunt: not eaten, fled, vanished, converted, frozen, roasted, burned or sunk. (Each of those also sets
  * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
  * for this, used everywhere.
  */
 export const stillInHunt = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned;
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned && !a.isSunk;
 
 // ============================================================
 // AP REWARDS & LOOT FALLBACKS

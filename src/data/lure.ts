@@ -222,6 +222,8 @@ export function resolveLure(party: readonly PartyMember[], ctx: LureContext, ran
   const next = party.map(adv => {
     if (!stillInHunt(adv) || adv.isAttracted) return adv;
     if (getRoomDistance(ctx.location, ctx.mimicRoom, adv.location) > ctx.range) return adv;
+    // Stuck in the tar elsewhere: however tempted, they can't come
+    if (adv.tarStuck !== undefined && adv.location !== ctx.mimicRoom) return adv;
     const result = allureCheck(ctx.mimic.baseAllure, ctx.plausibility, ctx.form, ctx.mimic.currentAppearance || {}, adv, roomMod, random);
     suspicion += result.suspicionChange;
     const drawnIn = result.success && adv.location !== ctx.mimicRoom;

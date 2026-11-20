@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, turnsUntil,
+  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, stillInHunt, turnsUntil,
   type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +42,7 @@ export default function LocationBanners() {
       {live && location.starfall && <StarfallBanner {...props} />}
       {live && location.snowbound && <SnowboundBanner {...props} />}
       {live && location.eruption && props.eruptionTurn === props.huntTurn + 1 && <EruptionBanner {...props} />}
+      {live && location.tarPits && props.party.some(a => a.tarStuck !== undefined && stillInHunt(a)) && <TarBanner {...props} />}
       {/* The party gets bored and leaves (not when snowed in: the cold is the clock there) */}
       {!location.snowbound && actionsLeft <= ACTION_WARNING && (
         <Banner
@@ -134,6 +135,21 @@ function FireworksBanner({ location, huntTurn, fireworksRoom, activeForm, skywar
           ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses${skyward ? ", and you can Strike anyone in your room without luring them first" : ""}.`
           : `The next volley goes up in ${turns(turnsUntil(every, huntTurn))}.`}
         {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
+      </Note>
+    </Banner>
+  );
+}
+
+// The Tear in Time: who's stuck in the tar, and how long before they're gone
+function TarBanner({ location, party, mimicRoom }: BannerProps) {
+  const pits = location.tarPits;
+  if (!pits) return null;
+  const stuck = party.filter(a => a.tarStuck !== undefined && stillInHunt(a));
+  return (
+    <Banner tone="border-amber-600/40 bg-amber-900/10 text-amber-400/90" title={`🕳️ Stuck in the ${pits.room}`}>
+      <Note>
+        {stuck.map(a => `${a.name} (${turns(pits.sinkTurns - (a.tarStuck ?? 0))} until they sink)`).join(", ")}.{" "}
+        {mimicRoom === pits.room ? "They can't get away: Strike while they're still there." : "They can't move. Get there before the tar takes them."}
       </Note>
     </Banner>
   );

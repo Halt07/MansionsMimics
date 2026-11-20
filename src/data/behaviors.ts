@@ -96,6 +96,7 @@ export function getBehaviorReactions(
       case "bloodScent": {
         if (trigger !== "feed") return;
         if (adv.behavior === "bloodScent" && hasMagic(appearance, "Direwolf Pelt")) return;
+        if (adv.tarStuck !== undefined) return; // stuck in the tar: going nowhere
         const newRoom = stepToward(location, adv.location, mimicRoom);
         const arrived = newRoom === mimicRoom;
         const moved = newRoom !== adv.location;

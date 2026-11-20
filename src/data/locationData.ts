@@ -115,6 +115,12 @@ interface LocationDef {
    * anyone next to it is roasted (a cheap meal, like a frozen one). See Turn.erupt.
    */
   readonly eruption?: { readonly chance: number; readonly turns: readonly [number, number]; readonly crater: string };
+  /**
+   * The Tear in Time's tar pits: an adventurer who ends a turn in `room` has `stickChance` of
+   * getting stuck. Stuck, they can't move, and a Strike on them always holds (no luring needed if
+   * the mimic is there); after `sinkTurns` turns they sink and are gone. See Turn.tar.
+   */
+  readonly tarPits?: { readonly room: string; readonly stickChance: number; readonly sinkTurns: number };
 }
 
 const LOCATION_DATA = [
@@ -744,6 +750,7 @@ const LOCATION_DATA = [
     realMonsters: { chance: 1 / 12, names: ["Time Caster"] },
     strays: { chance: 0.25 },
     eruption: { chance: 0.5, turns: [4, 10], crater: "Smoking Slopes" },
+    tarPits: { room: "Tar Pits", stickChance: 0.35, sinkTurns: 3 },
     locationCreatures: [
       { id: "dawn_horse", name: "Dawn Horse", ap: 3, discipline: 2, description: "A horse no bigger than a dog. It will be bigger, in a few million years." },
       { id: "archaeopteryx", name: "Archaeopteryx", ap: 2, discipline: 2, description: "Half bird, half lizard, wholly unsure about flying." },

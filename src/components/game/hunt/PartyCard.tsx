@@ -74,16 +74,19 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
         const frozen = adv.isFrozen && !adv.isConsumed;
         const roasted = adv.isRoasted && !adv.isConsumed;
         const burned = adv.isBurned;
+        const sunk = adv.isSunk;
+        const stuck = adv.tarStuck !== undefined && stillInHunt(adv);
         const maxHits = adv.constitution || 3;
         return (
-          <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared || burned ? "opacity-40" : ""}`}>
+          <div key={adv.id} className={`text-xs flex items-center justify-between ${adv.isConsumed || fled || disappeared || burned || sunk ? "opacity-40" : ""}`}>
             <span className={
               adv.isConsumed ? "line-through text-muted-foreground" :
               fled ? "text-muted-foreground italic" :
               disappeared ? "text-purple-400/60 italic" :
               frozen ? "text-sky-300/80 italic" :
               roasted ? "text-orange-300/80 italic" :
-              burned ? "text-muted-foreground line-through" :
+              burned || sunk ? "text-muted-foreground line-through" :
+              stuck ? "text-amber-700 dark:text-amber-500" :
               adv.isAttracted ? "text-yellow-400" : "text-foreground"
             }>
               {adv.isConsumed && isTheRealThing(adv) ? `${adv.name} (a real one!)`
@@ -95,6 +98,8 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
               {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
               {roasted && <span title={adv.location} className="text-[10px] text-orange-300/80">🍖 Roasted · {adv.location}</span>}
               {burned && <span className="text-[10px] text-muted-foreground">🔥 Lost to the eruption</span>}
+              {sunk && <span className="text-[10px] text-muted-foreground">🕳️ Sank in the tar</span>}
+              {stuck && <span className="text-[10px] text-amber-500/90">🕳️ Stuck in the tar</span>}
               {adv.warmth !== undefined && stillInHunt(adv) && (
                 <span
                   title={`Warmth ${adv.warmth}/${adv.maxWarmth ?? adv.warmth}: freezes at 0`}

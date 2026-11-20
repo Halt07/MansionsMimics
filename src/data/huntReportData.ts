@@ -24,6 +24,8 @@ export interface ReportPartyMember {
   /** Roasted (isConsumed too if eaten after) or burned up by an eruption (the Tear in Time). */
   readonly isRoasted?: boolean;
   readonly isBurned?: boolean;
+  /** Sank into the tar (the Tear in Time). */
+  readonly isSunk?: boolean;
   /** AP bitten off them: if they were eaten, it was a bite at a time, not swallowed whole. */
   readonly biteAp?: number;
   /** In costume, `name` is the costume (all anyone knew them by); the same as trueName for a real monster. */
@@ -134,10 +136,11 @@ export function buildHuntReport(input: HuntReportInput): HuntReport {
   // Frozen solid and left where they fell (eaten after, they count as devoured)
   const frozen = people.filter(a => a.isFrozen && !a.isConsumed);
   // Lost to an eruption: burned up, or roasted and left uneaten
-  const erupted = people.filter(a => a.isBurned || (a.isRoasted && !a.isConsumed));
+  // ...or sunk in the tar
+  const erupted = people.filter(a => a.isBurned || a.isSunk || (a.isRoasted && !a.isConsumed));
   const lost = devoured.length + vanished.length + frozen.length + erupted.length;
   // Anyone not eaten, vanished, frozen, roasted, burned or converted walked (or ran) out
-  const survivors = people.filter(a => !a.isConsumed && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned);
+  const survivors = people.filter(a => !a.isConsumed && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned && !a.isSunk);
   const witness = survivors.length ? pick(survivors).name : null;
 
   const form = input.formName ? input.formName.toLowerCase() : "furniture";

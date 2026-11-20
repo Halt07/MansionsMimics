@@ -154,4 +154,30 @@ export default async function ({ gameData: m, ok }) {
   ok(feast.log.some((l) => l.message.includes("still warm from the mountain's fire")), '…still warm');
   const burnedUp = who('Slope Walker');
   ok(m.eatRemains({ ...boom.hunt, mimicRoom: 'Smoking Slopes' }, apex(), burnedUp.id, still).log.length === 0, 'there\'s nothing to eat of anyone burned up');
+
+  // ---------- the tar pits ----------
+  ok(tear.tarPits.room === 'Tar Pits' && tear.tarPits.stickChance > 0 && tear.tarPits.sinkTurns === 3, 'the Tar Pits: anyone who lingers may get stuck, and sink after 3 turns');
+  const tarHunt = (party, over = {}) => atTear({ party, creatures: [], turn: 1, eruptionTurn: null, ...over });
+  const wader = person('Wader', 'Tar Pits');
+  const stuckNow = m.wait(tarHunt([wader]), apex(), still).hunt.party[0];
+  ok(stuckNow.tarStuck === 0 && m.stillInHunt(stuckNow), 'ending a turn in the Tar Pits (unlucky): stuck fast, but still in the hunt');
+  ok(m.wait(tarHunt([wader]), apex(), { ...still, random: () => 0.99 }).hunt.party[0].tarStuck === undefined, '…or, more often, not (and nobody away from the pits ever sticks)');
+  const stuck = { ...wader, tarStuck: 0 };
+  // (a roll that would send anyone free walking off to the next room)
+  ok(m.wait(tarHunt([wader]), apex(), { ...still, random: () => 0.9 }).hunt.party[0].location !== 'Tar Pits', '(anyone free walks off with this roll…)');
+  const held = m.wait(tarHunt([stuck]), apex(), { ...still, random: () => 0.9 }).hunt.party[0];
+  ok(held.location === 'Tar Pits' && held.tarStuck === 1, 'the stuck can\'t move (whatever they wanted to do), and sink deeper each turn');
+  const sinking = m.wait(tarHunt([{ ...wader, tarStuck: 2 }]), apex(), still);
+  const sunk = sinking.hunt.party[0];
+  ok(sunk.isSunk && !m.stillInHunt(sunk) && m.uneatenRemains(sinking.hunt.party).length === 0 && sinking.log.some((l) => l.message.includes('slips under the tar')),
+    'three turns stuck: they slip under and are gone (nothing left to eat)');
+  const lured = m.lure(tarHunt([{ ...stuck, location: 'Tar Pits' }], { mimicRoom: 'Fern Thicket' }), apex(), { ...still, random: () => 0 });
+  ok(lured.hunt.party[0].location === 'Tar Pits' && !lured.hunt.party[0].isAttracted, 'however tempted, the stuck can\'t be drawn into another room');
+  const helpless = tarHunt([stuck], { mimicRoom: 'Tar Pits' });
+  ok(m.canStrike(helpless), 'a mimic in the Tar Pits can Strike the stuck without luring them…');
+  const meal = m.strike(helpless, apex(), { ...still, random: () => 0.99 });
+  ok(meal.hunt.party[0].isConsumed, '…and the Strike always holds: they have nowhere to go');
+  ok(!m.canStrike(tarHunt([stuck], { mimicRoom: 'Fern Thicket' })), 'from another room, they\'re out of reach like anyone else');
+  ok(m.buildHuntReport({ ending: 'cleared', seed: 1, locationName: 'The Tear in Time', locationId: 'tear_in_time', lastRoom: 'Tar Pits', formName: 'Cave', tier: 'Apex', mimicName: 'Rex', bounty: false, peakSuspicion: 2, biggestMeal: null, mimicsDevoured: 0, sank: false,
+    party: [sunk, { name: 'Firekeeper', isConsumed: false }] }).body.join(' ').includes('Two go out'), 'the report counts the sunk among the lost');
 }
