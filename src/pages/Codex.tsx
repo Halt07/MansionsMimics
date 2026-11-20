@@ -101,7 +101,7 @@ export default function Codex() {
           {activeSection === "Traits" && <TraitsSection />}
           {activeSection === "Adventurers" && <AdventurersSection {...reader} />}
           {activeSection === "Locations" && <LocationsSection {...reader} />}
-          {activeSection === "Mechanics" && <MechanicsSection />}
+          {activeSection === "Mechanics" && <MechanicsSection {...reader} />}
 
         </div>
       </div>

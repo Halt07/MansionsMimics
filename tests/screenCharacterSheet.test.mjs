@@ -70,10 +70,14 @@ export default async function ({ gameData: m, load, ok }) {
 
   // ---------- achievements ----------
   sheet();
-  ok(has(`Achievements (0/${m.ACHIEVEMENTS.length})`) && has('None yet. The Codex lists what to aim for.'), 'no achievements yet: says so');
+  const ordinary = m.ACHIEVEMENTS.filter((a) => !a.hidden).length;
+  ok(has(`Achievements (0/${ordinary})`) && has('None yet. The Codex lists what to aim for.'), 'no achievements yet: says so (counting only the ones not kept secret)');
   sheet({ name: 'Bilge', downWithTheShipReached: true });
   const ship = m.ACHIEVEMENTS.find((a) => a.id === 'downWithTheShip');
-  ok(has(`Achievements (1/${m.ACHIEVEMENTS.length})`) && screen.getByText(ship.name) && has(ship.flavor('Bilge')), 'an earned one: named, in its words, with the mimic in it');
+  ok(has(`Achievements (1/${ordinary})`) && screen.getByText(ship.name) && has(ship.flavor('Bilge')), 'an earned one: named, in its words, with the mimic in it');
+  sheet({ name: 'Rex', tier: 'Apex', mass: 60, branchTier: 'Primordial' });
+  ok(has(`Achievements (1/${ordinary + 1})`) && screen.getByText('Primordial', { selector: '.font-cinzel' }) && has(m.ACHIEVEMENTS.find((a) => a.id === 'primordial').flavor('Rex')),
+    'a hidden one, once earned: listed, and counted in the total');
 
   // ---------- one frame: the header stays put, the body scrolls inside it ----------
   const framed = sheet({}, spy());

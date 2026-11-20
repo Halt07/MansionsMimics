@@ -71,6 +71,17 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       ok(counts('Found') === String(lesserGrounds) && counts('Mapped') === '1', 'Locations: the grounds this mimic has found, and the one it has hunted (mapped)');
       await user.selectOptions(pill(), glutton.id);
       ok(Number(counts('Found')) > lesserGrounds && counts('Mapped') === '0', '…a bigger mimic has found more, but mapped none');
+
+      // ---------- achievements: the hidden ones only once earned ----------
+      const achievements = async () => { await user.click(section('Mechanics')); await user.click(screen.getByRole('button', { name: 'Achievements' })); };
+      await achievements();
+      ok(reads('Peak of the Apex') && !reads('Ruler of All Mimics') && !reads('Primordial'), 'the Codex lists the achievements, but not the hidden ones');
+      const king = await saveMimic(db, { name: 'King', tier: 'Apex', mass: 100, branchTier: 'Sovereign', sovereignReached: true });
+      await open(`/Codex?characterId=${king.id}`, 3);
+      await achievements();
+      ok(reads('Ruler of All Mimics') && !reads('Primordial'), 'reading for a mimic that has been Sovereign: Ruler of All Mimics is listed, the others still hidden');
+      await user.selectOptions(pill(), scout.id);
+      ok(!reads('Ruler of All Mimics'), '…and hidden again for a mimic that hasn\'t');
     });
 
     // ---------- the season's forms ----------

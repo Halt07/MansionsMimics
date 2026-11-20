@@ -15,6 +15,9 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   festive:           { text: "text-pink-300",   box: "bg-pink-400/10 border-pink-400/40" },
   forAllSeasons:     { text: "text-lime-300",   box: "bg-lime-400/10 border-lime-400/40" },
   seasonedTraveler:  { text: "text-orange-300", box: "bg-orange-400/10 border-orange-400/40" },
+  eternal:           { text: "text-indigo-300", box: "bg-indigo-400/10 border-indigo-400/40" },
+  primordial:        { text: "text-red-400",    box: "bg-red-500/10 border-red-500/40" },
+  rulerOfAllMimics:  { text: "text-yellow-400", box: "bg-yellow-500/10 border-yellow-500/40" },
 };
 
 /**

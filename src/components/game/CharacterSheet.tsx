@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, displayTier, lifetimeStats, nameFlavor, tierFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
+import { ACHIEVEMENTS, achievementsShown, displayTier, lifetimeStats, nameFlavor, tierFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
 import HolidayBadge from "./HolidayBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -194,7 +194,7 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
           {/* Achievements */}
           <div>
             <p className="text-[11px] font-cinzel text-muted-foreground uppercase tracking-widest mb-2">
-              Achievements ({ACHIEVEMENTS.filter(a => a.isEarned(character)).length}/{ACHIEVEMENTS.length})
+              Achievements ({ACHIEVEMENTS.filter(a => a.isEarned(character)).length}/{achievementsShown([character]).length})
             </p>
             <AchievementList character={character} />
           </div>

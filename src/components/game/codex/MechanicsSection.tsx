@@ -1,9 +1,10 @@
-import { ACHIEVEMENTS, BURN_HUNTS, BURN_SUSPICION, ACTION_WARNING, ACTION_LIMIT, MAX_FORMS_ABOVE_TIER, plural } from "@/data/gameData";
+import { achievementsShown, BURN_HUNTS, BURN_SUSPICION, ACTION_WARNING, ACTION_LIMIT, MAX_FORMS_ABOVE_TIER, plural } from "@/data/gameData";
 import { ACHIEVEMENT_STYLES } from "@/components/game/Achievements";
 import Collapsible from "./Collapsible";
+import type { CodexReader } from "./CodexReader";
 
 /** The detailed rules, one panel each. */
-export default function MechanicsSection() {
+export default function MechanicsSection({ knowers }: Pick<CodexReader, "knowers">) {
   return (
     <div className="space-y-4">
         <h2 className="font-cinzel text-2xl text-foreground mb-4">Detailed Mechanics</h2>
@@ -223,7 +224,7 @@ export default function MechanicsSection() {
         </Collapsible>
         <Collapsible title="Achievements">
           <div className="text-sm text-muted-foreground space-y-2">
-            {ACHIEVEMENTS.map(a => (
+            {achievementsShown(knowers).map(a => (
               <p key={a.id}><span className={`${ACHIEVEMENT_STYLES[a.id].text} font-semibold`}>{a.icon} {a.name}:</span> {a.description}</p>
             ))}
             <p>Earned achievements appear as badges beside your mimic on the home screen.</p>
