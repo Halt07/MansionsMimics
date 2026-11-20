@@ -39,8 +39,26 @@ export default async function ({ gameData: m, load, storage, ok }) {
       'screen readers hear its name, then what it is and how many adventurers (not the whole card)');
     cardOf('manor').focus();
     await user.tab();
+    ok(document.activeElement === screen.getByRole('button', { name: `Hide ${loc('manor').name}` }), '…Tab reaches its hide button…');
+    await user.tab();
     await user.keyboard('{Enter}');
-    ok(keyed.onChoose.calls.length === 1 && keyed.onChoose.calls[0][0].id === offered()[1], '…Tab moves to the next, and Enter chooses it');
+    ok(keyed.onChoose.calls.length === 1 && keyed.onChoose.calls[0][0].id === offered()[1], '…then the next ground, and Enter chooses it');
+
+    // ---------- hiding grounds you aren't interested in ----------
+    choose(mimic());
+    const before = offered();
+    await user.click(screen.getByRole('button', { name: `Hide ${loc('manor').name}` }));
+    ok(!offered().includes('manor') && offered().length === before.length - 1, 'hiding a ground takes its card out of the list');
+    ok(screen.getByRole('button', { name: `Show ${loc('manor').name}` }) && has('Hidden:'), '…to a "Hidden" row, by name');
+    ok(JSON.parse(storage.get('locations.hidden')).includes('manor'), '…and it stays hidden (remembered in this browser)');
+    choose(mimic({ name: 'Another' }));
+    ok(!offered().includes('manor'), '…for every mimic');
+    await user.click(screen.getByRole('button', { name: `Show ${loc('manor').name}` }));
+    ok(offered().join() === before.join() && !has('Hidden:'), 'clicking it brings it back, in its place');
+    storage.set('locations.hidden', 'not json');
+    choose(mimic());
+    ok(offered().join() === before.join(), 'a garbled setting just shows everything');
+    storage.delete('locations.hidden');
     choose(mimic({ tier: 'Grand', mass: 60 }));
     ok(!has('Wilderness territories unlock') && offered().includes('hidden_grove'), 'at Grand: the wilderness is open');
 
