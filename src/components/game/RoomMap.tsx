@@ -14,8 +14,8 @@ interface RoomMapProps {
   /** Small creatures still about. */
   creatures?: readonly { uid: string; name: string; location: RoomName }[];
   rivals?: readonly RivalMimic[];
-  /** Adventurers frozen solid (snowbound locations), still waiting to be eaten. */
-  frozen?: readonly { id: string; name: string; location: RoomName }[];
+  /** Remains still waiting to be eaten: frozen solid (snowbound locations), or roasted (an eruption). */
+  remains?: readonly { id: string; name: string; location: RoomName; isRoasted?: boolean }[];
   /** Rooms where everyone is looking the other way (under the fireworks): they glow. */
   distracted?: readonly RoomName[];
   /** Things to mark in a room: a fallen star, fireworks overhead… */
@@ -37,7 +37,7 @@ function initials(name: string): string {
  * styling is under ROOM MAP in index.css, driven by the data attributes set here.
  */
 export default function RoomMap({
-  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], frozen = [], distracted = [], markers = [], formName,
+  location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], remains = [], distracted = [], markers = [], formName,
 }: RoomMapProps) {
   const plan = floorPlan(location);
   return (
@@ -81,9 +81,9 @@ export default function RoomMap({
               {markers.filter(m => m.room === cell.room).map(m => (
                 <span key={m.icon} className="occupant occupant-marker" title={m.title}>{m.icon}</span>
               ))}
-              {frozen.filter(f => f.location === cell.room).map(f => (
-                <span key={f.id} className="occupant occupant-frozen" title={`${f.name}, frozen solid`}>🧊</span>
-              ))}
+              {remains.filter(f => f.location === cell.room).map(f => f.isRoasted
+                ? <span key={f.id} className="occupant occupant-frozen" title={`${f.name}, roasted in the eruption`}>🍖</span>
+                : <span key={f.id} className="occupant occupant-frozen" title={`${f.name}, frozen solid`}>🧊</span>)}
               {crits.map(c => (
                 <span key={c.uid} className="occupant occupant-creature" title={c.name}>{creatureEmoji(c.name)}</span>
               ))}

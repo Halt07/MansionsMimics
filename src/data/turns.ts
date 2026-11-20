@@ -11,7 +11,7 @@ import { withDiscovered } from "./codex";
 import { BURN_SUSPICION, getRoomDistance, hasMagic, maxTargetForChance, rollDice } from "./core";
 import { PORTER_SISTER, PORTER_TOKEN_LINE, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE } from "./easterEggs";
 import {
-  PRANKS, RIVAL_STATS, STAR_FRAGMENT, disguiseOf, frozenMealAp, isTheRealThing, pickTreasurePrize, rivalInRoom,
+  PRANKS, RIVAL_STATS, STAR_FRAGMENT, disguiseOf, remainsMealAp, isTheRealThing, pickTreasurePrize, rivalInRoom,
   unmask, type RivalMimic,
 } from "./events";
 import { formsStillAllowed, formTier } from "./forms";
@@ -42,7 +42,7 @@ export function beginHunt(character: MimicCharacter, location: HuntLocation, roo
   const hunt: Hunt = {
     location, mimicRoom: room, party: start.party, creatures: start.creatures, rivals: start.rivals,
     suspicion: start.suspicion, bounty: start.bounty, sickness: start.sickness,
-    actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, ending: null,
+    actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, eruptionTurn: start.eruptionTurn, ending: null,
     stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null,
     seed: Math.floor(random() * 2 ** 31), recorded: false,
   };
@@ -567,16 +567,22 @@ export function eatStar(hunt: Hunt, character: MimicCharacter, opts: TurnOptions
 }
 
 /**
- * The Snowbound Lodge: a frozen adventurer in your room is a cheap meal. Easy to take (no roll,
- * any size of mimic), but worth less, and it teaches nothing: the flavor is locked in the ice.
+ * Remains in your room are a cheap meal: an adventurer frozen at the Snowbound Lodge, or roasted
+ * by the eruption at the Tear in Time. Easy to take (no roll, any size of mimic), but worth less,
+ * and they teach nothing: the flavor is locked in the ice, or burned away.
  */
-export function eatFrozen(hunt: Hunt, character: MimicCharacter, id: string, opts: TurnOptions = {}): TurnResult {
+export function eatRemains(hunt: Hunt, character: MimicCharacter, id: string, opts: TurnOptions = {}): TurnResult {
   const t = new Turn(hunt, character, opts);
   const body = hunt.party.find(a => a.id === id);
-  if (!body?.isFrozen || body.isConsumed) return t.finish();
-  const ap = frozenMealAp(body);
-  t.consume(`You crack ${body.name} free of the ice and swallow them, stiff and cold. +${ap} AP.`);
-  seenEating(t, gain => `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
+  if (!body || !(body.isFrozen || body.isRoasted) || body.isConsumed) return t.finish();
+  const ap = remainsMealAp(body);
+  if (body.isRoasted) {
+    t.consume(`You swallow ${body.name}, still warm from the mountain's fire. +${ap} AP.`);
+    seenEating(t, gain => `Someone looks back to where ${body.name} fell in the ash. There's nothing there now. (+${gain} suspicion)`);
+  } else {
+    t.consume(`You crack ${body.name} free of the ice and swallow them, stiff and cold. +${ap} AP.`);
+    seenEating(t, gain => `Someone turns back to where ${body.name} stood frozen. There's nothing there now. (+${gain} suspicion)`);
+  }
   t.patchMember(body.id, () => ({ isConsumed: true }));
   t.noteMeal(body.name, ap);
   t.set({ actionCount: 0 });

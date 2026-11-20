@@ -41,6 +41,7 @@ export default function LocationBanners() {
       {live && location.fireworks && <FireworksBanner {...props} />}
       {live && location.starfall && <StarfallBanner {...props} />}
       {live && location.snowbound && <SnowboundBanner {...props} />}
+      {live && location.eruption && props.eruptionTurn === props.huntTurn + 1 && <EruptionBanner {...props} />}
       {/* The party gets bored and leaves (not when snowed in: the cold is the clock there) */}
       {!location.snowbound && actionsLeft <= ACTION_WARNING && (
         <Banner
@@ -134,6 +135,16 @@ function FireworksBanner({ location, huntTurn, fireworksRoom, activeForm, skywar
           : `The next volley goes up in ${turns(turnsUntil(every, huntTurn))}.`}
         {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
       </Note>
+    </Banner>
+  );
+}
+
+// The Tear in Time: only the turn before it blows (the rumbling); it's otherwise a surprise
+function EruptionBanner({ location }: BannerProps) {
+  const crater = location.eruption?.crater;
+  return (
+    <Banner tone="border-orange-500/40 bg-orange-500/10 text-orange-300" title={`🌋 The ${crater} are about to erupt!`}>
+      <Note>Next turn, fire pours down the {crater}: anyone there dies, and the rooms next to it are roasted. Get clear, or don't.</Note>
     </Banner>
   );
 }

@@ -36,7 +36,7 @@ export default async function ({ gameData: m, load, ok }) {
       adv('Werewolf', 'Monster', far, { costume: 'Werewolf' }),
     ],
     creatures: [{ uid: 'c1', name: 'Estate Cat', location: here }],
-    frozen: [{ id: 'f', name: 'Frail Scholar', location: far }],
+    remains: [{ id: 'f', name: 'Frail Scholar', location: far }, { id: 'r', name: 'Cave Painter', location: next, isRoasted: true }],
     rivals: [
       { id: 'r1', kind: 'lone', room: next, revealed: true, consumed: false, disguise: { name: 'Barrel', icon: '🛢️' } },
       { id: 'r2', kind: 'lone', room: far, revealed: false, consumed: false, disguise: { name: 'Crate', icon: '📦' } },
@@ -52,6 +52,7 @@ export default async function ({ gameData: m, load, ok }) {
   ok(masked && !masked.dataset.type, 'a costume hides who it is, even from the styling');
   ok(within(at[here]).getByTitle('Estate Cat').textContent === m.creatureEmoji('Estate Cat'), 'small creatures show as their emoji');
   ok(within(at[far]).getByTitle('Frail Scholar, frozen solid').textContent === '🧊', 'a frozen adventurer is still on the map, as ice');
+  ok(within(at[next]).getByTitle('Cave Painter, roasted in the eruption').textContent === '🍖', '…and a roasted one, as a roast');
   ok(titles(at[next]).some((t) => t.includes('posing as a Barrel')), 'an exposed rival shows its disguise');
   ok(!at[far].textContent.includes('📦') && !titles(at[far]).some((t) => t.includes('Crate')), '…a hidden one does not show at all');
   ok(at[next].dataset.distracted === 'true' && !at[here].dataset.distracted, 'rooms under the fireworks are flagged (they glow)');

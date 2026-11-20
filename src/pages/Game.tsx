@@ -8,7 +8,7 @@ import {
   getAdjacentRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
   getActiveForm, applyUpgrade, displayTier, type UpgradeChoice,
   activeAdventurers, huntCleared, beginHunt, relocate, lure, strike, canStrike, wait,
-  eatCreature, eatStar, eatFrozen, changeForm, changeAppearance,
+  eatCreature, eatStar, eatRemains, changeForm, changeAppearance,
   type Hunt, type LogLine, type TurnResult,
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
 } from "@/data/gameData";
@@ -573,7 +573,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
                   <MealsHere
                     onEatCreature={c => act((h, ch) => eatCreature(h, ch, c.uid))}
                     onEatStar={doEatStar}
-                    onEatFrozen={body => act((h, ch) => eatFrozen(h, ch, body.id))}
+                    onEatRemains={body => act((h, ch) => eatRemains(h, ch, body.id))}
                   />
                 </>
               )}

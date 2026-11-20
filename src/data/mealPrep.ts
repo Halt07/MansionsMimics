@@ -12,7 +12,7 @@ import {
   BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
 } from "./core";
 import {
-  addRealMonster, addStray, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
+  addRealMonster, addStray, dressParty, rollEruption, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";
 import { STAT_CAP, getActiveForm, withCount, withFormUsed } from "./stats";
 import { withDiscovered } from "./codex";
@@ -270,6 +270,8 @@ export interface HuntStart {
   openedRare: HuntLocation | null;
   /** An ordinary adventurer lost somewhere they don't belong (see addStray), if one came. */
   stray: PartyMember | null;
+  /** The Tear in Time: the turn the volcano erupts this hunt, or null if it won't (see rollEruption). */
+  eruptionTurn: number | null;
   /** What to save on the character now: burns tick down, the rare location, discovery, hunt counts. */
   changes: Partial<MimicCharacter>;
 }
@@ -299,6 +301,7 @@ export function startHunt(
   const dressed = location.costumes ? dressParty(withStray, random) : withStray;
   const party = location.procession ? placeProcession(dressed, location, room, random) : dressed;
   const creatures = spawnSmallCreatures(location, random);
+  const eruptionTurn = rollEruption(location, random);
   const sickness = rollForSickness(character, random);
 
   // Burned places and shapes (from being found out before) start the hunt under suspicion
@@ -319,5 +322,5 @@ export function startHunt(
     formHuntCounts: withCount(character.formHuntCounts, startForm?.id),
     locationHuntCounts: withCount(character.locationHuntCounts, location.id),
   };
-  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, stray, changes };
+  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, stray, eruptionTurn, changes };
 }

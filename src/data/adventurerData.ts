@@ -1516,6 +1516,10 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   warmthRoom?: RoomName;
   /** Frozen solid: out of the hunt (isAlive is false), but still there to be eaten. */
   isFrozen?: boolean;
+  /** Roasted at the edge of an eruption (the Tear in Time): out of the hunt, but still there to be eaten. */
+  isRoasted?: boolean;
+  /** Caught in the heart of an eruption: gone, with nothing left to eat. */
+  isBurned?: boolean;
   /**
    * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
    * eaten. When the two are the same, it isn't a costume at all (a real werewolf).
@@ -1525,12 +1529,12 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
 };
 
 /**
- * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
+ * Still in the hunt: not eaten, fled, vanished, converted, frozen, roasted or burned. (Each of those also sets
  * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
  * for this, used everywhere.
  */
 export const stillInHunt = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen && !a.isRoasted && !a.isBurned;
 
 // ============================================================
 // AP REWARDS & LOOT FALLBACKS

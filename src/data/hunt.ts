@@ -14,7 +14,7 @@ import { BURN_HUNTS, burnAfterDiscovery } from "./core";
 import { CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS, isCat } from "./easterEggs";
 import {
   RIVAL_STATS, chillParty, distractedRooms, fireworksDue, fireworksRummage, isNestCleared, sinkingWarning,
-  starfallDue, tossRoom, uneatenFrozen, type RivalMimic,
+  ERUPTION_PROOF_FORM, eruptionToll, eruptionZone, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
 } from "./events";
 import { DUPLICATE_ROOM_SUSPICION, resolveStealth } from "./lure";
 import type { SmallCreature } from "./mealPrep";
@@ -51,6 +51,8 @@ export interface Hunt {
   starFragment: RoomName | null;
   /** The Founders' Fair: the room the last volley went up over (for the turn after it). */
   fireworksRoom: RoomName | null;
+  /** The Tear in Time: the turn the volcano erupts this hunt, if it does (see rollEruption). Gone once it has. */
+  eruptionTurn?: number | null;
   /** Set once the hunt ends early: found out, or the party got bored and left. A cleared hunt (see huntCleared) leaves it null. */
   ending: Exclude<HuntEnding, "cleared"> | null;
 
@@ -95,13 +97,13 @@ export const activeAdventurers = (hunt: Pick<Hunt, "party">): PartyMember[] => h
 
 /**
  * The hunt is won: a nest hunt when its Elder is devoured (not when the adventurers run out),
- * any other when nobody is left (and nobody frozen is still waiting to be eaten).
+ * any other when nobody is left (and no remains, frozen or roasted, are still waiting to be eaten).
  */
 export function huntCleared(hunt: Pick<Hunt, "location" | "party" | "rivals">): boolean {
   if (hunt.party.length === 0) return false;
   return hunt.location.rivalNest
     ? isNestCleared(hunt.rivals)
-    : activeAdventurers(hunt).length === 0 && uneatenFrozen(hunt.party).length === 0;
+    : activeAdventurers(hunt).length === 0 && uneatenRemains(hunt.party).length === 0;
 }
 
 /** The Founders' Fair: everyone in the mimic's room is watching the fireworks right now. */
@@ -342,6 +344,48 @@ export class Turn {
     if (location.starfall && !this.over) this.starfall();
     if (location.sinkingTurns && !this.over) this.sinking(location.sinkingTurns);
     if (location.snowbound && !this.over) this.frost();
+    if (location.eruption && !this.over) this.erupt();
+  }
+
+  // The Tear in Time: the volcano rumbles a turn ahead, then erupts (once, if this hunt rolled one).
+  // The crater room's occupants are killed; the rooms next to it are roasted (cheap meals). Small
+  // creatures there are gone. A mimic caught in it pays a toll (see eruptionToll), unless it's the Volcano.
+  private erupt() {
+    const { turn, eruptionTurn, mimicRoom } = this.hunt;
+    const zone = eruptionZone(this.hunt.location);
+    if (!zone || !eruptionTurn) return;
+    if (turn === eruptionTurn - 1) {
+      this.alert(`🌋 The ground shudders. Smoke pours from the ${zone.crater}, and the air tastes of ash. Something is coming.`);
+      return;
+    }
+    if (turn !== eruptionTurn) return;
+    const blast = [zone.crater, ...zone.edge];
+    const killed: string[] = [];
+    const roasted: string[] = [];
+    this.set({
+      eruptionTurn: null,
+      party: this.hunt.party.map(a => {
+        if (!stillInHunt(a) || !blast.includes(a.location)) return a;
+        if (a.location === zone.crater) {
+          killed.push(a.name);
+          return { ...a, isAlive: false, isAttracted: false, isBurned: true };
+        }
+        roasted.push(a.name);
+        return { ...a, isAlive: false, isAttracted: false, isRoasted: true };
+      }),
+      creatures: this.hunt.creatures.filter(c => c.isConsumed || !blast.includes(c.location)),
+    });
+    this.alert(`🌋 The mountain erupts! Fire pours down the ${zone.crater} and spills into the ${zone.edge.join(" and ")}.`);
+    if (killed.length) this.alert(`${killed.join(", ")} ${killed.length === 1 ? "is" : "are"} swallowed by the fire. Nothing is left.`);
+    if (roasted.length) this.alert(`${roasted.join(", ")} ${roasted.length === 1 ? "falls" : "fall"} in the ash, roasted where they stood. A meal, for anyone who wants one.`);
+    if (!blast.includes(mimicRoom)) return;
+    if (this.form?.id === ERUPTION_PROOF_FORM) {
+      this.info(`The fire pours over you, and you pour it right back. You are the mountain, after all.`);
+      return;
+    }
+    const toll = eruptionToll(this.character, this.random);
+    this.update(toll.changes);
+    this.alert(`🔥 The eruption catches you too. ${toll.line}`);
   }
 
   // The Founders' Fair: a volley over a random room every few turns, distracting it and the rooms

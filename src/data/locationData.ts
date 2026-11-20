@@ -109,6 +109,12 @@ interface LocationDef {
    * has wandered in from elsewhere, badly out of place: the Tear in Time's lost travelers.
    */
   readonly strays?: { readonly chance: number };
+  /**
+   * The Tear in Time: each hunt has `chance` that the volcano erupts, once, on a turn between
+   * `turns` (inclusive), with a warning the turn before. Anyone in the `crater` room is killed;
+   * anyone next to it is roasted (a cheap meal, like a frozen one). See Turn.erupt.
+   */
+  readonly eruption?: { readonly chance: number; readonly turns: readonly [number, number]; readonly crater: string };
 }
 
 const LOCATION_DATA = [
@@ -737,6 +743,7 @@ const LOCATION_DATA = [
     // The one who tore it open, stranded on the wrong side of their own spell
     realMonsters: { chance: 1 / 12, names: ["Time Caster"] },
     strays: { chance: 0.25 },
+    eruption: { chance: 0.5, turns: [4, 10], crater: "Smoking Slopes" },
     locationCreatures: [
       { id: "dawn_horse", name: "Dawn Horse", ap: 3, discipline: 2, description: "A horse no bigger than a dog. It will be bigger, in a few million years." },
       { id: "archaeopteryx", name: "Archaeopteryx", ap: 2, discipline: 2, description: "Half bird, half lizard, wholly unsure about flying." },

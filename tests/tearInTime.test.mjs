@@ -88,4 +88,66 @@ export default async function ({ gameData: m, ok }) {
   ok(fits('apex_volcano', 'Smoking Slopes') > 0 && fits('apex_cave', 'Cave Mouth') > 0 && fits('apex_trex_carcass', 'Tar Pits') > 0 && fits('apex_colossus', 'The Tear') > 0,
     'each Primordial form has somewhere it fits in: the Volcano on the slopes, the Cave at the cave mouth, the carcass in the tar pits, the Colossus by the Tear');
   ok(fits('apex_roadside_inn', 'The Tear') < 0, '…unlike an inn');
+
+  // ---------- the eruption ----------
+  const seq = (...values) => { let i = 0; return () => values[Math.min(i++, values.length - 1)]; };
+  ok(tear.eruption.chance === 0.5 && tear.eruption.crater === 'Smoking Slopes', 'half of all hunts at the Tear see the volcano erupt, from the Smoking Slopes');
+  ok(m.rollEruption(tear, seq(0.4, 0)) === tear.eruption.turns[0] && m.rollEruption(tear, seq(0.4, 0.999)) === tear.eruption.turns[1], '…on a turn rolled when the hunt starts, within its window');
+  ok(m.rollEruption(tear, () => 0.6) === null && m.rollEruption(m.LOCATIONS.find((l) => l.id === 'manor'), () => 0) === null, '…or not at all (and never anywhere else)');
+  const zone = m.eruptionZone(tear);
+  ok(zone.crater === 'Smoking Slopes' && [...zone.edge].sort().join() === 'Cave Mouth,Tar Pits', 'it reaches the Smoking Slopes and the rooms next to them (the Tar Pits and the Cave Mouth)');
+  ok(m.startHunt(apex(), tear, 'The Tear', () => 0).eruptionTurn === tear.eruption.turns[0] && m.startHunt(apex(), tear, 'The Tear', () => 0.99).eruptionTurn === null, 'a hunt rolls its eruption when it starts');
+
+  const person = (name, location, over = {}) => ({
+    id: name, name, type: 'Hunter', group: 'beyondApex', discipline: 2, baseSuspicion: 1, suspicion: 1, constitution: 3,
+    interactionStyle: 'touch', location, isAlive: true, isConsumed: false, isAttracted: false, quirks: [],
+    alluringQualities: { materials: [], traits: [], tags: [] },
+    perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 0, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
+    lootMaterials: [], lootTraits: [], partialLoot: [], ...over,
+  });
+  const atTear = (over = {}) => ({
+    location: tear, mimicRoom: 'The Tear', rivals: [], suspicion: 0, bounty: false, sickness: null, actionCount: 0,
+    starFragment: null, fireworksRoom: null, ending: null, stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null, seed: 1, recorded: false,
+    party: [person('Slope Walker', 'Smoking Slopes'), person('Tar Wader', 'Tar Pits'), person('Cave Dweller', 'Cave Mouth'), person('Far Off', 'Fern Thicket')],
+    creatures: [{ uid: 'c1', name: 'Fern Lizard', location: 'Tar Pits', rooms: ['Tar Pits'], ap: 2, discipline: 3, isConsumed: false }, { uid: 'c2', name: 'Dawn Horse', location: 'The Tear', rooms: ['The Tear'], ap: 3, discipline: 2, isConsumed: false }],
+    ...over,
+  });
+  // Waiting with everyone staying put (random above STAY_CHANCE... below it, nobody moves)
+  const still = { random: () => m.STAY_CHANCE / 2, now: new Date('2026-11-20T12:00:00Z') };
+  const rumble = m.wait(atTear({ turn: 3, eruptionTurn: 5 }), apex(), still);
+  ok(rumble.log.some((l) => l.message.includes('The ground shudders')) && rumble.hunt.party.every((a) => m.stillInHunt(a)), 'the turn before: the ground shudders (a warning), and nothing happens yet');
+  const boom = m.wait(atTear({ turn: 4, eruptionTurn: 5 }), apex(), still);
+  const who = (n) => boom.hunt.party.find((a) => a.name === n);
+  ok(boom.log.some((l) => l.message.includes('The mountain erupts')), 'then it erupts');
+  ok(who('Slope Walker').isBurned && !who('Slope Walker').isRoasted && !m.uneatenRemains(boom.hunt.party).some((a) => a.name === 'Slope Walker'), 'whoever was on the Smoking Slopes is gone: nothing left to eat');
+  ok(who('Tar Wader').isRoasted && who('Cave Dweller').isRoasted && m.uneatenRemains(boom.hunt.party).length === 2, 'whoever was next to them is roasted: a meal, lying where they fell');
+  ok(m.stillInHunt(who('Far Off')), 'anyone further away is untouched');
+  ok(boom.hunt.creatures.map((c) => c.name).join() === 'Dawn Horse', 'small creatures in the blast are gone too (the lizard in the Tar Pits; the horse at the Tear is fine)');
+  ok(boom.hunt.eruptionTurn === null && !m.wait(boom.hunt, apex(), still).log.some((l) => l.message.includes('erupts')), 'once per hunt: it doesn\'t go again');
+  ok(!boom.hunt.ending && !m.huntCleared({ ...boom.hunt, party: boom.hunt.party.filter((a) => a.name !== 'Far Off') }), 'roasted meals left uneaten keep the hunt going');
+
+  // A mimic caught in it
+  ok(!('mass' in boom.changes) && !('adhesion' in boom.changes), 'a mimic well clear of it pays nothing');
+  const caught = m.wait(atTear({ turn: 4, eruptionTurn: 5, mimicRoom: 'Tar Pits' }), apex({ adhesion: 4, plausibility: 4, patience: 4 }), { ...still, random: seq(m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, m.STAY_CHANCE / 2, 0.1) });
+  ok(caught.log.some((l) => l.message.startsWith('🔥 The eruption catches you too.')), 'a mimic caught at the edge is hurt…');
+  const volcano = m.wait(atTear({ turn: 4, eruptionTurn: 5, mimicRoom: 'Tar Pits' }), apex({ forms: [ref('apex_volcano')], branchTier: 'Primordial' }), still);
+  ok(volcano.log.some((l) => l.message.includes('You are the mountain')) && !volcano.log.some((l) => l.message.includes('catches you')), '…unless it\'s wearing the Volcano: it is the mountain');
+  const massHit = m.eruptionToll({ mass: 60, plausibility: 3, adhesion: 3, patience: 3 }, () => 0.1);
+  ok(massHit.changes.mass === 59 && Object.keys(massHit.changes).join() === 'mass', 'the toll, one time in four: 1 mass');
+  const statHit = m.eruptionToll({ mass: 60, plausibility: 4, adhesion: 4, patience: 4 }, seq(0.5, 0.99, 0, 0, 0));
+  const lostPoints = ['plausibility', 'adhesion', 'patience'].reduce((n, st) => n + (4 - (statHit.changes[st] ?? 4)), 0);
+  ok(lostPoints === 3 && statHit.changes.plausibility === 1 && !('mass' in statHit.changes), 'otherwise 2–3 stat points, each from a random stat (here all three from one)');
+  const spread = m.eruptionToll({ mass: 60, plausibility: 4, adhesion: 4, patience: 4 }, seq(0.5, 0.99, 0, 0.5, 0.99));
+  ok(['plausibility', 'adhesion', 'patience'].every((st) => spread.changes[st] === 3), '…or spread across them');
+  const floor = m.eruptionToll({ mass: 60, plausibility: 1, adhesion: 1, patience: 2 }, seq(0.5, 0.99, 0, 0, 0));
+  ok(floor.changes.patience === 1 && !('plausibility' in floor.changes) && !('adhesion' in floor.changes), 'nothing goes below 1');
+  ok(m.eruptionToll({ mass: 1, plausibility: 1, adhesion: 1, patience: 1 }, () => 0.1).changes.mass === 1, '…mass included');
+
+  // Eating the roasted
+  const roast = who('Tar Wader');
+  const feast = m.eatRemains({ ...boom.hunt, mimicRoom: 'Tar Pits' }, apex(), roast.id, still);
+  ok(feast.hunt.party.find((a) => a.id === roast.id).isConsumed && feast.character.assimilationPoints === m.remainsMealAp(roast), 'a roasted adventurer is a cheap meal (half the usual)');
+  ok(feast.log.some((l) => l.message.includes("still warm from the mountain's fire")), '…still warm');
+  const burnedUp = who('Slope Walker');
+  ok(m.eatRemains({ ...boom.hunt, mimicRoom: 'Smoking Slopes' }, apex(), burnedUp.id, still).log.length === 0, 'there\'s nothing to eat of anyone burned up');
 }
