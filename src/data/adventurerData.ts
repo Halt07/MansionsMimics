@@ -1285,6 +1285,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Cave Hunter", type: "Hunter", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
+    // Spoiled meat is no meal, and a carcass draws bigger predators than he wants to meet
+    repelledBy: { traits: ["Foul"] },
     quirks: ["Prods anything unfamiliar with a spear", "Sniffs the air before stepping into a clearing"],
     appliedQuirk: "{name} jabs the {form} with the butt of a spear, and waits to see if it jabs back.",
     alluringQualities: { materials: ["Horn", "Obsidian", "Boarhide"], traits: ["Bloodstained", "Tally Marks"], tags: ["Defensive"] },
@@ -1316,7 +1318,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Traces every new shape on the cave wall", "Stares a long time at outlines"],
     appliedQuirk: "{name} squints at the {form}, then starts sketching it in ochre.",
-    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript"], tags: ["Decor"] },
+    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript", "Earthy"], tags: ["Decor"] },
     perceptionAffinity: { material: 2, structure: 3, weight: 0, text: 3, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 0, presence: 1 },
     lootMaterials: ["Limestone"],
     lootTraits: ["Etched"],
@@ -1350,7 +1352,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Hunts in short, silent dashes", "Tilts its head at anything that might be breathing"],
     appliedQuirk: "{name} circles the {form} twice, nostrils flaring.",
-    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained"], tags: ["Dining"] },
+    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained", "Foul"], tags: ["Dining"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 3, environmental: 3, acoustic: 3, presence: 5 },
     lootMaterials: ["Boarhide"],
     lootTraits: ["Bloodstained"],

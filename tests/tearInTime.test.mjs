@@ -33,6 +33,10 @@ export default async function ({ gameData: m, ok }) {
   ok(roster.some((t) => t.name === m.TIME_CASTER && t.type === 'Wizard'), '…the Time Caster among them, a magic user');
   const hunter = roster.find((t) => t.name === 'Cave Hunter');
   ok(hunter.companion?.options.map((o) => o.nameSuffix).join() === "'s Wolf" && hunter.companion.chance > 0, 'a Cave Hunter may bring a half-tamed wolf');
+  const named = (n) => roster.find((t) => t.name === n);
+  ok(named('Raptor').alluringQualities.traits.includes('Foul') && named('Cave Hunter').repelledBy.traits.includes('Foul'),
+    'Foul: a Raptor follows the smell of rot, and a Cave Hunter keeps clear of it');
+  ok(named('Cave Painter').alluringQualities.traits.includes('Earthy'), 'a Cave Painter is drawn to the smell of earth (the ochre and clay they paint with)');
   ok(tear.locationCreatures.some((c) => c.name === 'Compsognathus') && m.creatureEmoji('Compsognathus') === '🦖', 'compsognathuses scurry about (as little dinosaurs)');
   const drawn = new Set();
   for (let i = 0; i < 300; i++) m.generateParty(tear, 'Apex', 60).forEach((p) => drawn.add(p.name));
