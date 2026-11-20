@@ -106,12 +106,19 @@ export interface SmallCreature extends LocationCreature {
   location: RoomName;
 }
 
-// Hunters, elites and giant-kin fill up to 2 "elite" slots (Greater+ only).
+// Hunters, elites and giant-kin fill the "elite" slots: 2 from Greater, 3 at Apex (word of a
+// mimic that size gets around, and the people who come looking are the dangerous kind).
 // Everyone else — including tier-gated monsters — fills the common slots.
 const ELITE_GROUPS: readonly AdventurerGroupId[] = ["huntersElites", "giantKin"];
 
+/** How many of a party's places can go to elites, by the mimic's tier. */
+export function eliteSlots(tier: Tier): number {
+  if (tier === "Apex") return 3;
+  return TIER_ORDER.indexOf(tier) >= TIER_ORDER.indexOf("Greater") ? 2 : 0;
+}
+
 /**
- * A normal party for a location: any adventurers it always has, then (Greater+) up to 2 elites,
+ * A normal party for a location: any adventurers it always has, then (Greater+) a few elites (see eliteSlots),
  * then a random mix of everyone else eligible. Some locations save slots for their locals
  * (`nativeShare`), and a location's real monsters never come this way (see addRealMonster).
  */
@@ -134,7 +141,7 @@ export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass
     common.push(...elite);
     elite.length = 0;
   }
-  const eliteCount = tierIdx >= TIER_ORDER.indexOf("Greater") ? Math.min(2, elite.length) : 0;
+  const eliteCount = Math.min(eliteSlots(mimicTier || "Minor"), elite.length);
   const shuffledCommon = shuffle(common, random);
   const shuffledElite = shuffle(elite, random);
 

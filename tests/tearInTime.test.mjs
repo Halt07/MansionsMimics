@@ -34,6 +34,10 @@ export default async function ({ gameData: m, ok }) {
   const hunter = roster.find((t) => t.name === 'Cave Hunter');
   ok(hunter.companion?.options.map((o) => o.nameSuffix).join() === "'s Wolf" && hunter.companion.chance > 0, 'a Cave Hunter may bring a half-tamed wolf');
   const named = (n) => roster.find((t) => t.name === n);
+  const resist = roster.filter((t) => t.name !== m.TIME_CASTER).map((t) => m.strikeResistDice(t));
+  ok(resist.reduce((n, d) => n + d, 0) / resist.length >= 4.3, `a hard place to hunt: its people resist a Strike with ${(resist.reduce((n, d) => n + d, 0) / resist.length).toFixed(1)} dice on average (the starter grounds, 3.3)`);
+  ok(m.strikeResistDice(named('Firekeeper')) === 3 && Math.min(...resist) === 3, '…but the Firekeeper is still an easier meal');
+  ok(named('Raptor').behavior === 'elusive' && named('Raptor').discipline === 4, 'the Raptor is elusive: an extra die, and it bolts if it slips a Strike');
   ok(named('Raptor').alluringQualities.traits.includes('Foul') && named('Cave Hunter').repelledBy.traits.includes('Foul'),
     'Foul: a Raptor follows the smell of rot, and a Cave Hunter keeps clear of it');
   ok(named('Cave Painter').alluringQualities.traits.includes('Earthy'), 'a Cave Painter is drawn to the smell of earth (the ochre and clay they paint with)');

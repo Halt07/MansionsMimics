@@ -1346,7 +1346,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   // ── The Tear in Time (Primordial's hunting ground) ──
   // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
   {
-    name: "Cave Hunter", type: "Hunter", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
+    name: "Cave Hunter", type: "Hunter", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
     // Spoiled meat is no meal, and a carcass draws bigger predators than he wants to meet
     repelledBy: { traits: ["Foul"] },
@@ -1360,12 +1360,12 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     companion: {
       chance: 0.5,
       options: [
-        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 3, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
+        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 4, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
       ],
     },
   },
   {
-    name: "Firekeeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
+    name: "Firekeeper", type: "Commoner", discipline: 3, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     repelledBy: { traits: ["Cold to Touch"] },
     quirks: ["Never lets the fire go out", "Warms anything that looks cold"],
@@ -1377,7 +1377,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a fire-blackened stick", "a pouch of tinder", "a scorched fur mitten"],
   },
   {
-    name: "Cave Painter", type: "Bard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    name: "Cave Painter", type: "Bard", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Traces every new shape on the cave wall", "Stares a long time at outlines"],
     appliedQuirk: "{name} squints at the {form}, then starts sketching it in ochre.",
@@ -1388,7 +1388,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a lump of red ochre", "a charcoal-stained finger bone", "a brush of moss and fat"],
   },
   {
-    name: "Tribal Elder", type: "Druid", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    name: "Tribal Elder", type: "Druid", discipline: 5, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "beyondApex", locations: ["tear_in_time"],
     quirks: ["Speaks to the spirit in every stone", "Leaves offerings on anything strange"],
     appliedQuirk: "{name} lays a bundle of herbs on the {form} and murmurs to it.",
@@ -1399,7 +1399,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a string of carved bone beads", "a bundle of dried herbs", "a feathered headdress"],
   },
   {
-    name: "Woolly Mammoth", type: "Beast", discipline: 3, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
+    name: "Woolly Mammoth", type: "Beast", discipline: 4, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
     repelledBy: { traits: ["Smoky"] },
     quirks: ["Rubs its flank against anything solid", "Trumpets at whatever won't get out of its way"],
@@ -1413,6 +1413,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Raptor", type: "Beast", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "touch",
     group: "beyondApex", locations: ["tear_in_time"],
+    // Fast and jumpy: an extra die against a Strike, and gone from the room if it slips one
+    behavior: "elusive",
     quirks: ["Hunts in short, silent dashes", "Tilts its head at anything that might be breathing"],
     appliedQuirk: "{name} circles the {form} twice, nostrils flaring.",
     alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained", "Foul"], tags: ["Dining"] },

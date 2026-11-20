@@ -9,6 +9,10 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
 - **Should "every X" achievements stick once earned?** Connoisseur (every adventurer eaten), Master of Disguise (every material and trait), Curiosity Cabinet (every variant), For All Seasons and Seasoned Traveler are worked out from what the mimic has done, not saved when earned, so new content (an adventurer, trait, variant, holiday or seasonal location) takes them away until the mimic catches up. Fine while there are no outside players; before there are, decide between keeping that (new content gives veterans something to chase) and saving them once earned, the way Peak of the Apex is.
 
+## Difficulty
+
+- **Veterans at the Apex grounds.** If Apex hunting still feels easy, give the ordinary adventurers at Apex-only grounds (the Border Guardhouse, Ruined City Quarter, Abandoned Castle, Lonely Moor) +1 Discipline: only seasoned travelers make it that far out. A location setting (say `veterans: 1`) applied when the party is drawn, so other grounds could use it too. Simulated: with the third elite slot already in, it takes the average resist from about 4.1 to 4.5 dice (a 6-Adhesion mimic landing about 81% of Strikes, down from 84%). The Codex would want to say so, since it shows each adventurer's own Discipline.
+
 ## New hunting grounds for the middle tiers
 
 Minor, Lesser, Standard and Greater mimics all hunted the same five starter grounds (the Abandoned Manor, Wizard's Tower, Haunted Roadside Inn, Cursed Chapel and Noble Estate); nothing new opens until Grand, which jumps to nine. New grounds at Standard and Greater would fill that gap, and show new players early that there's much more out there to find.
