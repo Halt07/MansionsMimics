@@ -29,7 +29,7 @@ A hidden tier for players who keep going after the Peak of the Apex (mass 40). T
 - **Two hidden achievements per branch**, absent from the achievement list until earned:
   - one for reaching the tier. Sovereign's is **Ruler of All Mimics**, so the devolving line on the welcome-back notice echoes it; the achievement stays earned after devolving, like the others;
   - one more for each: eating the Time Caster for Primordial; Eternal's and Sovereign's are still to be decided.
-- **Built so far:** the branch tiers (`BRANCH_TIERS`, saved as `branchTier`, shown in place of Apex on Home, the character sheet and the game page); taking and losing them (`branchTierChange`, `tearInTimeOpen`, `becomePrimordial` in `src/data/stats.ts`), with Sovereign remembered in `sovereignReached`. Not yet: the achievements, Eternal's slower decay, and the branches' locations and forms (so nothing can become Primordial yet).
+- **Built so far:** the branch tiers (`BRANCH_TIERS`, saved as `branchTier`, shown in place of Apex on Home, the character sheet and the game page); taking and losing them (`sovereignOnGrowth`, `branchOnOpening`, `tearInTimeOpen`, `becomePrimordial` in `src/data/stats.ts`), with Sovereign remembered in `sovereignReached`. Not yet: the achievements, Eternal's slower decay, and the branches' locations and forms (so nothing can become Primordial yet).
 - **Already tracked** (in the save, from now on, so mimics are on their way before the tiers exist): `timeTearCounter` (magic users eaten in a time form) and `decayFreeDate` (when the current stretch without decay began), with `TIME_FORMS` and `ETERNAL_DECAY_FREE_DAYS` in `src/data/stats.ts`.
 - **Open questions:**
   - Eternal's and Sovereign's other forms (up to 3 each besides the Colossus).
