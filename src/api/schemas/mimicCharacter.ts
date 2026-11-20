@@ -14,7 +14,7 @@
  */
 import { z } from 'zod';
 import {
-  ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
+  ALL_MATERIALS, ALL_TRAITS, BRANCH_TIERS, STARTING_TYPES, TIER_ORDER, TRAITS,
 } from '@/data/vocabulary';
 import { FORM_IDS, LOCATIONS, MAX_FORMS, type LocationId } from '@/data/gameData';
 
@@ -44,6 +44,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   // Spaces at either end are trimmed, and any run of spaces inside becomes one: "  Old   Hatbox " is "Old Hatbox"
   name: z.string().trim().min(1, 'Name is required').transform(name => name.replace(/\s+/g, ' ')),
   tier: TierSchema.default('Minor'),
+  /** The branch tier past Apex this mimic has taken (BRANCH_TIERS), or null. Its `tier` stays Apex. */
+  branchTier: z.enum(BRANCH_TIERS).nullable().default(null),
   startingType: z.enum(STARTING_TYPES).optional(),
   mass: z.number().default(2),
   digestiveCapacity: z.number().default(5),

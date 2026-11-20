@@ -39,7 +39,7 @@ entries as decisions are made, with the reason if one was given.
 - **A location's map only appears once you've hunted there.** Until then it shows a fogged "mystery map".
 
 - **Magic users, for the Tear in Time, are the Wizard and Fey types, plus the Tiefling Hexblade** (`isMagicUser` in `src/data/stats.ts`). That's the Arcane Scholar, Hedge Witch, Elven Arcanist, Grand Arcanist, Pact-Bound Warlock, Doubting Scholar and Astronomer; the Fey Changeling and Swamp Hag; and the Hexblade, whose pact magic is a warlock's in all but name. Other casters (the Draconic Bounty Hunter, Giant-Blood Shaman, Pilgrim Elder) don't count. It gives the types a real use: a new caster that should count is made a Wizard or Fey, and only a clear case like the Hexblade is named as an exception.
-- **A tier beyond Apex (if added) stays hidden until a mimic reaches it.** It's a reward for players who keep going, so the Codex's tier list, the achievement list and the upgrade screen don't mention it beforehand. Its absence isn't a missing entry. (The tier itself is still only an idea; see "Beyond Apex" in IDEAS.md.)
+- **The branch tiers beyond Apex (Eternal, Primordial, Sovereign) stay hidden until a mimic reaches one.** They're a reward for players who keep going, so they're kept in their own list, apart from `TIER_ORDER`, and the Codex's tier list, the achievement list and the upgrade screen don't mention them beforehand. Their absence isn't a missing entry. Once one is reached, the Codex may show it, with a teaser that there's more out there. (See "Beyond Apex" in IDEAS.md.)
 
 ## Room map
 

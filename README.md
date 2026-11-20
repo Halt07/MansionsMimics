@@ -23,7 +23,7 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 
 | File | Contains |
 |---|---|
-| `vocabulary.ts` | Word lists: tiers, materials, traits, tags, senses, adventurer types |
+| `vocabulary.ts` | Word lists: tiers (and the hidden branch tiers past Apex), materials, traits, tags, senses, adventurer types |
 | `mimicData.ts` | Forms (and each variant's base form), appearance limits, starting stats, tier config, magic effects, sicknesses |
 | `adventurerData.ts` | Adventurer groups and templates, companions, behaviors, AP rewards, loot fallbacks; who's still in the hunt |
 | `locationData.ts` | Hunting grounds, rooms, local creatures, room/form modifiers |
@@ -41,7 +41,7 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | `events.ts` | Location events: rival mimics, the Sinking Ship, and the seasonal locations' twists |
 | `devotion.ts` | Devotion at the Hollow Reliquary: who's ready, the offerings, and the whole ceremony |
 | `mealPrep.ts` | Setting up a hunt: the party, companions, small creatures, sickness |
-| `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats; the records kept for the tiers beyond Apex |
+| `stats.ts` | Effective stats, mass decay (and what's changed when a mimic is opened again), upgrades, achievements and lifetime stats; the records kept for the branch tiers beyond Apex, and the tier a mimic is shown as |
 | `codex.ts` | What the Codex knows: adventurers met and eaten, hunting grounds found |
 | `easterEggs.ts` | Name remarks, the cat that knows, the spiderweb, quirks and other flavor |
 | `huntReportData.ts` | The end-of-hunt report (Guild notices, verses, gossip, and location-specific versions) |

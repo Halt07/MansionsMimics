@@ -37,4 +37,11 @@ export default async function ({ gameData: m, ok }) {
   ok(m.getActiveForm(wearing)?.id === 'lesser_chest', 'the active form is the one at activeFormIndex');
   ok(m.getActiveForm(mimic()) === null && m.getActiveForm(null) === null, 'no forms, no active form');
   ok(m.STAT_CAP === 6, 'stats cap at 6');
+
+  // ---------- the branch tiers past Apex (shown, not used by the rules) ----------
+  ok(m.BRANCH_TIERS.join() === 'Eternal,Primordial,Sovereign' && !m.BRANCH_TIERS.some((t) => m.TIER_ORDER.includes(t)), 'three branch tiers, kept out of the tier order');
+  ok(m.BRANCH_TIERS.every((t) => m.BRANCH_TIER_CONFIG[t].description && m.BRANCH_TIER_CONFIG[t].lore), '…each described, with lore');
+  ok(m.displayTier({ tier: 'Grand', branchTier: null }) === 'Grand' && m.tierFlavor({ tier: 'Grand', branchTier: null }).lore === m.TIER_CONFIG.Grand.lore, 'no branch: the tier is shown as it is');
+  ok(m.displayTier({ tier: 'Apex', branchTier: 'Eternal' }) === 'Eternal' && m.tierFlavor({ tier: 'Apex', branchTier: 'Eternal' }).description === m.BRANCH_TIER_CONFIG.Eternal.description,
+    'a branch mimic is shown by its branch, described and with lore of its own');
 }

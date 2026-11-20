@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TIER_ORDER, TIER_CONFIG } from "@/data/gameData";
+import { displayTier, tierFlavor, TIER_ORDER } from "@/data/gameData";
 import { AchievementBadges } from "../components/game/Achievements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -140,7 +140,7 @@ export default function Home() {
                       <div className="flex items-center gap-1 shrink-0">
                         <AchievementBadges character={char} />
                         <span className="text-xs px-2 py-0.5 rounded border border-primary/30 bg-primary/5 text-primary font-cinzel">
-                          {char.tier}
+                          {displayTier(char)}
                         </span>
                         <button
                           onClick={() => setPendingDelete(char)}
@@ -153,7 +153,7 @@ export default function Home() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mb-3">
-                      {TIER_CONFIG[char.tier].description}
+                      {tierFlavor(char).description}
                     </p>
                     <div className="flex gap-2 text-xs text-muted-foreground">
                       <span>PL: {char.plausibility}</span>
@@ -203,7 +203,7 @@ export default function Home() {
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl mb-1">🏆</div>
                     <h3 className="font-cinzel text-primary mb-0.5">{char.name}</h3>
-                    <p className="text-xs text-muted-foreground">Mass {char.mass} · Apex Tier</p>
+                    <p className="text-xs text-muted-foreground">Mass {char.mass} · {displayTier(char)} Tier</p>
                     <p className="text-[11px] text-muted-foreground/60 mt-1 flavor-text italic">
                       PL {char.plausibility} · AD {char.adhesion} · PA {char.patience}
                     </p>

@@ -6,7 +6,7 @@
 // ============================================================
 import {
   MATERIALS, TIER_ORDER,
-  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
+  type BranchTier, type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
   type MaterialRarity, type StartingType, type Tier, type UtilityTag,
 } from "./vocabulary";
 import type { HolidayId } from "./holidays";
@@ -1238,6 +1238,18 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
   Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 15, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
   Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 20, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
   Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 28, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
+};
+
+/** The branch tiers past Apex. A branch mimic is still Apex in size and rules; the branch adds to it. */
+export interface BranchTierConfig {
+  readonly description: string;
+  readonly lore: string;
+}
+
+export const BRANCH_TIER_CONFIG: Record<BranchTier, BranchTierConfig> = {
+  Eternal:    { description: "The mimic that never ends",  lore: "Empires rise around it and crumble to dust. It is still there, waiting for the next one." },
+  Primordial: { description: "The first mimic",           lore: "Before the first chest was ever built, something on this world was already pretending to be something else." },
+  Sovereign:  { description: "Ruler of All Mimics",       lore: "Every crate that holds its breath, every chest that waits too patiently, answers to it." },
 };
 
 // ============================================================

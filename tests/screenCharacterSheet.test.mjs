@@ -22,6 +22,8 @@ export default async function ({ gameData: m, load, ok }) {
   sheet({ name: 'Hatbox' });
   ok(screen.getByText('Hatbox', { exact: true }) && has(m.nameFlavor('Hatbox')), 'its name, with any remark on it');
   ok(has('Lesser Origin · Lesser Tier') && has(m.TIER_CONFIG.Lesser.lore), 'its origin, tier and lore');
+  sheet({ tier: 'Apex', mass: 60, branchTier: 'Primordial' });
+  ok(has('Lesser Origin · Primordial Tier') && has(m.BRANCH_TIER_CONFIG.Primordial.lore) && !has('Apex Tier'), 'a branch mimic shows its branch tier and lore, not Apex');
   sheet({ name: 'Grendel' });
   ok(!has('legend in no time'), 'an unremarkable name gets no remark');
 

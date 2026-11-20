@@ -88,11 +88,16 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       await saveMimic(db, { name, tier: 'Apex', mass: 40, apexPeakReached: true, plausibility: 6 });
     }
     await saveMimic(db, { name: 'Small Fry' });
+    await saveMimic(db, { name: 'Usurper', tier: 'Apex', mass: 100, apexPeakReached: true, branchTier: 'Sovereign' });
     await open();
     const hall = screen.getByRole('heading', { name: 'Peak of the Apex' }).parentElement;
     const legends = [...hall.querySelectorAll('h3')].map((h) => h.textContent);
-    ok(legends.join() === 'Leviathan,Behemoth,Colossus', 'the hall of fame: the three latest to reach the peak');
+    ok(legends.join() === 'Usurper,Leviathan,Behemoth', 'the hall of fame: the three latest to reach the peak');
     ok(hall.textContent.includes('Mass 40 · Apex Tier') && hall.textContent.includes('PL 6'), '…with their mass and stats');
+    ok(hall.textContent.includes('Mass 100 · Sovereign Tier'), '…a branch mimic by its branch tier');
+    const usurper = screen.getAllByRole('heading', { level: 3, name: 'Usurper' }).map((h) => h.closest('.rounded-xl')).find((c) => !hall.contains(c));
+    ok(within(usurper).getByText('Sovereign') && usurper.textContent.includes(m.BRANCH_TIER_CONFIG.Sovereign.description) && !within(usurper).queryByText('Apex'),
+      'its card shows the branch tier, described, not Apex');
     ok(!legends.includes('Small Fry'), '…and nobody who has not');
   });
 }

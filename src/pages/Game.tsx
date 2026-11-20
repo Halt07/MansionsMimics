@@ -6,7 +6,7 @@ import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@
 import {
   ALL_FORMS, STAT_CAP, VARIANT_FORMS, ACHIEVEMENTS,
   getAdjacentRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
-  getActiveForm, applyUpgrade, type UpgradeChoice,
+  getActiveForm, applyUpgrade, displayTier, type UpgradeChoice,
   activeAdventurers, huntCleared, beginHunt, relocate, lure, strike, canStrike, wait,
   eatCreature, eatStar, eatFrozen, changeForm, changeAppearance,
   type Hunt, type LogLine, type TurnResult,
@@ -469,7 +469,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
           </Link>
           <div className="h-4 w-px bg-border" />
           <span className="font-cinzel text-foreground text-sm">{character.name}</span>
-          <Badge variant="outline" className="border-primary/30 text-primary text-[11px]">{character.tier}</Badge>
+          <Badge variant="outline" className="border-primary/30 text-primary text-[11px]">{displayTier(character)}</Badge>
         </div>
         <div className="flex items-center gap-2">
           {/* The character sheet, over everything: a modal dialog (focus moves in and stays there, and

@@ -41,6 +41,8 @@ export default async function ({ gameData: m, db: dbModule, storage, load, ok })
       }
       ok(opened.every(Boolean), 'each of the eight sections opens from the side, marked as the one open');
       ok(section('Mechanics').getAttribute('aria-current') === 'true' && !section('Overview').hasAttribute('aria-current'), '…and announced as the current one');
+      await user.click(section('Tiers'));
+      ok(m.TIER_ORDER.every((t) => reads(t)) && !m.BRANCH_TIERS.some((t) => reads(t)), 'the tiers: Minor to Apex, and not a word about the hidden branch tiers');
 
       // ---------- whose discoveries ----------
       const [a, b] = m.ADVENTURER_TEMPLATES.filter((x) => !x.minTier);

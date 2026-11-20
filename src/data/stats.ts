@@ -4,8 +4,8 @@
 // the lifetime stats on the character sheet. Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type CombatStat, type LearnableTrait, type Material, type Tier } from "./vocabulary";
-import { ALL_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
+import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type CombatStat, type LearnableTrait, type Material, type Tier, type BranchTier } from "./vocabulary";
+import { ALL_FORMS, BRANCH_TIER_CONFIG, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
 import { ADVENTURER_TEMPLATES } from "./adventurerData";
 import { LOCATIONS, type LocationId } from "./locationData";
 import { HOLIDAYS, today, type HolidayId } from "./holidays";
@@ -324,6 +324,10 @@ export function withBiggestMeal(
 export const TIME_FORMS: readonly FormId[] = ["minor_hourglass", "greater_midnight_orb", "greater_grandfather_clock", "apex_clocktower"];
 /** Days without losing mass to decay that Eternal will ask for. */
 export const ETERNAL_DECAY_FREE_DAYS = 45;
+/** The Tear in Time opens once an Apex mimic has eaten this many magic users in a time form... */
+export const TIME_TEAR_MAGIC_USERS = 50;
+/** ...and reached this much mass. */
+export const TIME_TEAR_MASS = 50;
 
 /** Adventurer types whose members are all magic users. */
 export const MAGIC_USER_TYPES: readonly string[] = ["Wizard", "Fey"];
@@ -342,6 +346,21 @@ export function withTimeTear(
   const worn = character.forms[character.activeFormIndex]?.formId;
   const counts = !!worn && TIME_FORMS.includes(worn) && isMagicUser(member);
   return character.timeTearCounter + (counts ? 1 : 0);
+}
+
+/**
+ * The tier to show the player: the branch tier once the mimic has one, otherwise its tier. Only
+ * for display (Home's cards, the character sheet, the game page); the rules keep using `tier`,
+ * which stays Apex for a branch mimic.
+ */
+export function displayTier(character: Pick<MimicCharacter, "tier" | "branchTier">): Tier | BranchTier {
+  return character.branchTier ?? character.tier;
+}
+
+/** The description and lore for the tier shown by displayTier. */
+export function tierFlavor(character: Pick<MimicCharacter, "tier" | "branchTier">): { description: string; lore: string } {
+  const { description, lore } = character.branchTier ? BRANCH_TIER_CONFIG[character.branchTier] : TIER_CONFIG[character.tier];
+  return { description, lore };
 }
 
 /** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */

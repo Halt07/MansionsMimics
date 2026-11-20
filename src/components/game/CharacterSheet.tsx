@@ -1,5 +1,5 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ACHIEVEMENTS, lifetimeStats, nameFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
+import { ACHIEVEMENTS, displayTier, lifetimeStats, nameFlavor, tierFlavor, TIER_CONFIG, ALL_FORMS, MATERIAL_RARITY, MATERIAL_COLORS, effectiveFormTier, formTier } from "@/data/gameData";
 import HolidayBadge from "./HolidayBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +33,9 @@ export default function CharacterSheet({ character, onClose }: CharacterSheetPro
           {nameFlavor(character.name) && (
             <p className="text-xs text-muted-foreground/80 italic flavor-text">{nameFlavor(character.name)}</p>
           )}
-          <p className="text-xs text-muted-foreground">{character.startingType} Origin · {character.tier} Tier</p>
+          <p className="text-xs text-muted-foreground">{character.startingType} Origin · {displayTier(character)} Tier</p>
           {/* Lore */}
-          <p className="flavor-text text-xs text-muted-foreground/70 italic">{cfg.lore}</p>
+          <p className="flavor-text text-xs text-muted-foreground/70 italic">{tierFlavor(character).lore}</p>
         </div>
         {onClose && (
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground">

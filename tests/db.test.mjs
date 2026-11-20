@@ -65,6 +65,7 @@ async function run(dbModule, storage, ok) {
   storage.set(KEY, JSON.stringify(recs));
   const old = await M.get('old1');
   ok(old.mass === 2 && old.forms.length === 0 && old.currentAppearance.surfaceTraits.length === 0, 'record missing fields loads with defaults');
+  ok(old.branchTier === null && old.timeTearCounter === 0 && old.decayFreeDate === undefined, '…including no branch tier, and nothing toward one yet');
   const all = await M.list();
   ok(all.length === 3 && !all.some((r) => r.id === 'bad1'), 'corrupt record skipped in list');
   try { await M.get('bad1'); ok(false, 'get corrupt record'); } catch (e) { ok(e instanceof ValidationError, 'get corrupt record throws ValidationError'); }

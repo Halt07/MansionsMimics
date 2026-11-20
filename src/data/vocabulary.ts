@@ -8,6 +8,13 @@
 // ── Tiers ──
 export const TIER_ORDER = ["Minor", "Lesser", "Standard", "Greater", "Grand", "Apex"] as const;
 export type Tier = (typeof TIER_ORDER)[number];
+/**
+ * The hidden tiers past Apex: three branches, not further rungs. They're kept apart from
+ * TIER_ORDER, so a branch mimic stays Apex for every rule that works on tiers, and the Codex's
+ * tier list doesn't give them away (see "Beyond Apex" in IDEAS.md).
+ */
+export const BRANCH_TIERS = ["Eternal", "Primordial", "Sovereign"] as const;
+export type BranchTier = (typeof BRANCH_TIERS)[number];
 
 /** The tiers a new mimic can start at. */
 export const STARTING_TYPES = ["Minor", "Lesser"] as const;

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
+import { displayTier } from "@/data/gameData";
 import { ChevronDown, Home } from "lucide-react";
 import OverviewSection from "@/components/game/codex/OverviewSection";
 import TiersSection from "@/components/game/codex/TiersSection";
@@ -63,7 +64,7 @@ export default function Codex() {
               className="appearance-none cursor-pointer rounded-full border border-primary/30 bg-primary/5 py-1 pl-3 pr-7 text-xs font-cinzel text-primary hover:bg-primary/10 focus:outline-none focus:ring-1 focus:ring-primary/50"
             >
               <option value={ALL_MIMICS}>All mimics</option>
-              {characters.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.tier}</option>)}
+              {characters.map((c) => <option key={c.id} value={c.id}>{c.name} · {displayTier(c)}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 w-3 h-3 text-primary" />
           </label>
