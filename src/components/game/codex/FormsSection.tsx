@@ -1,15 +1,20 @@
 import { useState } from "react";
 import {
   ALL_FORMS, TIER_ORDER, MASTER_FORMS, type Tier, HOLIDAYS, SEASONAL_FORMS, activeHolidays, isInSeason,
-  MAX_FORMS, MAX_FORMS_ABOVE_TIER, plural, seasonEnd, today,
+  MAX_FORMS, MAX_FORMS_ABOVE_TIER, formDescription, plural, seasonEnd, today, type BranchTier, type Form,
 } from "@/data/gameData";
 import HolidayBadge from "@/components/game/HolidayBadge";
 import { ChompCard } from "@/components/game/CardChomp";
 import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { CodexReader } from "./CodexReader";
 
 /** Every form by tier, plus a Current Season tab while a holiday is on. */
-export default function FormsSection() {
+export default function FormsSection({ knowers }: Pick<CodexReader, "knowers">) {
+  // A branch tier's own forms are listed only if a mimic being read for is on that branch, and
+  // described as that branch tells them (see "Beyond Apex" in IDEAS.md)
+  const branchOf = (form: Pick<Form, "branches">): BranchTier | null =>
+    knowers.map(k => k.branchTier).find(b => !!b && !!form.branches?.includes(b)) ?? null;
   // A tier, or "season": the seasonal forms in season right now (that tab only exists while a
   // holiday is on; out of season the forms stay a surprise)
   const [selectedTier, setSelectedTier] = useState<Tier | "season">("Minor");
@@ -17,7 +22,7 @@ export default function FormsSection() {
   const seasonForms = SEASONAL_FORMS
     .filter((f) => isInSeason(f.holiday, today()))
     .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
-  const codexForms = selectedTier === "season" ? seasonForms : MASTER_FORMS[selectedTier];
+  const codexForms = selectedTier === "season" ? seasonForms : MASTER_FORMS[selectedTier].filter(f => !f.branches || branchOf(f));
   return (
     <div>
         <h2 className="font-cinzel text-2xl text-foreground mb-2">Forms</h2>
@@ -80,7 +85,10 @@ export default function FormsSection() {
                       : `Variant of ${ALL_FORMS.find((f) => f.id === form.variantOf)?.name} — unlocked by learning any of: ${(form.unlockedBy ?? []).join(", ")}`}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
+                {"branches" in form && form.branches && (
+                  <p className="tear-badge text-[11px] font-cinzel mb-1">🌀 Beyond the Apex · {form.branches.join(", ")} only</p>
+                )}
+                <p className="text-xs text-muted-foreground mb-2">{formDescription(form, "branches" in form ? branchOf(form) : null)}</p>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {form.utilityTags.map((t) =>
               <span key={t} className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{t}</span>

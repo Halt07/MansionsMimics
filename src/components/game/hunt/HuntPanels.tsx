@@ -1,5 +1,5 @@
 import {
-  ALL_FORMS, STAR_FRAGMENT, creatureEmoji, effectiveFormTier, formBurn, formTier, frozenMealAp, uneatenFrozen,
+  ALL_FORMS, STAR_FRAGMENT, creatureEmoji, effectiveFormTier, formBurn, formDescription, formTier, frozenMealAp, uneatenFrozen,
   type PartyMember, type RoomName, type SmallCreature,
 } from "@/data/gameData";
 import { useHunt } from "./HuntContext";
@@ -36,7 +36,7 @@ export function FormSwitcher({ onChange }: { onChange: (formIndex: number) => vo
               </div>
             </div>
             <HolidayBadge form={form} />
-            <p className="text-[11px] text-muted-foreground mt-0.5">{form.description}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{formDescription(form, character.branchTier)}</p>
             <div className="mt-1"><BurnBadge huntsLeft={formBurn(character, form.id)} /></div>
           </button>
         );

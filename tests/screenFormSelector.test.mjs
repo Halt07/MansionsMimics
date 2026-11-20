@@ -96,6 +96,17 @@ export default async function ({ gameData: m, load, storage, ok }) {
     const seasonal = m.getSeasonalForms('Lesser', new Date(2026, 9, 31));
     ok(has('✨ Seasonal (count as your own tier, no penalty)') && seasonal.length > 0 && seasonal.every((f) => cardFor(f.name)), "on All Hallows' Eve, its forms are offered");
     ok(cardFor(seasonal[0].name).textContent.includes(`${m.HOLIDAYS.halloween.icon} ${m.HOLIDAYS.halloween.name} · until ${m.seasonEnd('halloween')}`), '…with how long they last');
+
+    // ---------- the branch forms ----------
+    const primordialForms = ['Colossus', 'Volcano', 'T. Rex Carcass', 'Cave'];
+    open(mimic({ tier: 'Apex', mass: 60 }));
+    ok(!primordialForms.some((n) => cardNames().includes(n)), 'a plain Apex mimic is offered none of the branch forms');
+    open(mimic({ tier: 'Apex', mass: 60, branchTier: 'Primordial' }));
+    ok(primordialForms.every((n) => cardNames().includes(n)), 'a Primordial one: all four of its forms');
+    const colossus = m.ALL_FORMS.find((f) => f.id === 'apex_colossus');
+    ok(cardFor('Colossus').textContent.includes(colossus.branchDescriptions.Primordial), '…the Colossus told as a primeval idol');
+    open(mimic({ tier: 'Apex', mass: 60, branchTier: 'Sovereign' }));
+    ok(cardFor('Colossus').textContent.includes(colossus.branchDescriptions.Sovereign) && !cardNames().includes('Volcano'), 'a Sovereign: only the Colossus, as a monument to the Mimic King');
   } finally {
     onDate(storage, null);
   }

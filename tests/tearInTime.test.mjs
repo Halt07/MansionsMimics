@@ -78,4 +78,10 @@ export default async function ({ gameData: m, ok }) {
   const { materials, traits } = m.obtainableMaterialsAndTraits();
   ok(roster.every((t) => t.lootMaterials.every((x) => materials.has(x)) && t.lootTraits.every((x) => traits.has(x))),
     '…and they teach only what can be learned elsewhere, so Master of Disguise doesn\'t need them either');
+
+  // ---------- dressing for it: the Primordial forms where they belong ----------
+  const fits = (formId, room) => m.getRoomContextMod(formId, 'tear_in_time', room).plausibility;
+  ok(fits('apex_volcano', 'Smoking Slopes') > 0 && fits('apex_cave', 'Cave Mouth') > 0 && fits('apex_trex_carcass', 'Tar Pits') > 0 && fits('apex_colossus', 'The Tear') > 0,
+    'each Primordial form has somewhere it fits in: the Volcano on the slopes, the Cave at the cave mouth, the carcass in the tar pits, the Colossus by the Tear');
+  ok(fits('apex_roadside_inn', 'The Tear') < 0, '…unlike an inn');
 }

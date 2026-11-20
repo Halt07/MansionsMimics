@@ -31,7 +31,7 @@ larger jobs are hooks beside them: `useLoadedMimic`, and in `hunt/`, `useDevotio
 | `holidays.ts` | Holiday seasons and the dates they run |
 | `gameData.ts` | The front door: re-exports everything in this folder, so the app and the tests import from here. The modules themselves import from each other directly (never through this file), so nothing loops back |
 | `core.ts` | The core rules: rooms, dice and shuffling, magic materials and what a mimic knows, choosing what to wear, burns, which locations are open |
-| `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, form-tier penalties |
+| `forms.ts` | Which forms a mimic can take: tiers and mass, the one-form-above rule, variants, seasonal forms, branch forms, form-tier penalties |
 | `hunt.ts` | A hunt in progress (`Hunt`) and what every turn shares (`Turn`): suspicion and being found out, meals, the end of a turn |
 | `turns.ts` | Each hunt action, from starting the hunt to Relocate, Lure, Strike, Wait, eating, and changing form or look |
 | `lure.ts` | Luring, and the stealth and allure checks |
