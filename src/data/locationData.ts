@@ -714,6 +714,7 @@ const LOCATION_DATA = [
       { id: "archaeopteryx", name: "Archaeopteryx", ap: 2, discipline: 2, description: "Half bird, half lizard, wholly unsure about flying." },
       { id: "tar_beetle", name: "Tar-Pit Beetle", ap: 1, discipline: 1, description: "Glossy black, and stuck to something most of the time.", rooms: ["Tar Pits", "Fern Thicket", "Smoking Slopes"] },
       { id: "fern_lizard", name: "Fern Lizard", ap: 2, discipline: 3, description: "Quick, green, and convinced it's the biggest thing in the jungle." },
+      { id: "compsognathus", name: "Compsognathus", ap: 2, discipline: 3, description: "A dinosaur no bigger than a chicken, and twice as nosy." },
     ],
   },
 ] as const satisfies readonly LocationDef[];

@@ -108,6 +108,7 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bLamb\b/, "🐑"],
   [/\b(Warhorse|Horse)\b/, "🐎"],
   [/\bLizard\b/, "🦎"],
+  [/\bCompsognathus\b/, "🦖"],
   [/\bElemental\b/, "🌩️"],
 ];
 /** Fallback when no word in the name matches. */

@@ -1292,6 +1292,12 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Obsidian", "Horn", "Boarhide"],
     lootTraits: ["Tally Marks"],
     partialLoot: ["a flint spearhead", "a strip of hide wrapping", "a necklace of teeth"],
+    companion: {
+      chance: 0.5,
+      options: [
+        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 3, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
+      ],
+    },
   },
   {
     name: "Firekeeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",

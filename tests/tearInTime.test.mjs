@@ -31,6 +31,9 @@ export default async function ({ gameData: m, ok }) {
   const roster = m.ADVENTURER_TEMPLATES.filter((t) => t.locations?.includes('tear_in_time'));
   ok(roster.length === 7 && roster.every((t) => m.isHiddenAdventurer(t)), 'its own seven adventurers, all hidden (Beyond the Apex)');
   ok(roster.some((t) => t.name === m.TIME_CASTER && t.type === 'Wizard'), '…the Time Caster among them, a magic user');
+  const hunter = roster.find((t) => t.name === 'Cave Hunter');
+  ok(hunter.companion?.options.map((o) => o.nameSuffix).join() === "'s Wolf" && hunter.companion.chance > 0, 'a Cave Hunter may bring a half-tamed wolf');
+  ok(tear.locationCreatures.some((c) => c.name === 'Compsognathus') && m.creatureEmoji('Compsognathus') === '🦖', 'compsognathuses scurry about (as little dinosaurs)');
   const drawn = new Set();
   for (let i = 0; i < 300; i++) m.generateParty(tear, 'Apex', 60).forEach((p) => drawn.add(p.name));
   ok([...drawn].every((n) => roster.some((t) => t.name === n) || n.includes("'s")) && !drawn.has(m.TIME_CASTER),
@@ -53,7 +56,7 @@ export default async function ({ gameData: m, ok }) {
   ok(!('branchTier' in again.changes) && !again.log.some((l) => l.message === m.BRANCH_TIER_LINES.Primordial), 'back again as Primordial: nothing more to become');
   const withStray = m.beginHunt(apex(), tear, 'The Tear', { random: () => 0 });
   const stray = withStray.hunt.party.find((p) => p.id.startsWith('stray_'));
-  ok(stray && withStray.log.some((l) => l.message === `The ${stray.name} looks badly lost. They must have stumbled through after you.`), 'a stray is pointed out: lost, and following you through');
+  ok(stray && withStray.log.some((l) => l.message === `The ${stray.name} looks badly lost. They must have stumbled through the Tear after you.`), 'a stray is pointed out: lost, and following you through');
 
   // ---------- the Time Caster ----------
   ok(m.branchMealRecords(apex(), { name: m.TIME_CASTER, type: 'Wizard' }).timeCasterEaten === true, 'eating the Time Caster is remembered');
