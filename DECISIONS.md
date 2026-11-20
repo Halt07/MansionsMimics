@@ -29,6 +29,8 @@ entries as decisions are made, with the reason if one was given.
 - **Gaps in seasonal form coverage are accepted:** Minor mimics have no Midsummer Revel or Harvest Feast form. People aren't likely to stay Minor through the whole holiday season.
 - **Honeyamber doesn't track which creatures it lured.** It just makes them wander more, and toward you.
 
+- **Guild Mark and Maker's Mark appeal to mostly different people.** Guild Mark is the trade's seal (artificers and merchants); Maker's Mark is one craftsman's name, a sign of quality the guild's stamp doesn't give (royalty, collectors, and the few makers who sign their own work). At most half of either trait's fans may also like the other; `tests/traits.test.mjs` checks it.
+
 ## Codex
 
 - **Locations stay "???" until found:** Advanced, Giant and Adept ones until a mimic is big

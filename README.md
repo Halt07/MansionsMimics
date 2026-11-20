@@ -103,7 +103,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `magic.test.mjs` | Magic material effects and arcane residue |
 | `appearance.test.mjs` | Choosing what to wear in a slot: on, off, swapping, a full slot |
 | `honeyamber.test.mjs` | Honeyamber drawing small creatures toward the mimic |
-| `traits.test.mjs` | Forms' built-in traits and flaw data |
+| `traits.test.mjs` | Forms' built-in traits and flaw data; who likes, dislikes and teaches each symbolic mark |
 | `scents.test.mjs` | Scent traits: all learned, slots by tier, who reacts, allure |
 | `rooms.test.mjs` | Room modifiers: per-location keys, variant overrides, only wearable forms |
 | `roomLayouts.test.mjs` | Floor plans: one cell per room, doors only between connected rooms |

@@ -36,7 +36,7 @@ export const ALL_MATERIALS = [
 // wearing a form that has them. Both kinds count when adventurers are lured or put off.
 export const TRAITS = {
   surface: ["Polished", "Tarnished", "Rough-Hewn", "Smooth", "Gilded", "Etched", "Inlaid", "Lacquered", "Soft", "Wrinkled", "Pitted", "Mossy"],
-  symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
+  symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark", "Maker's Mark", "Ward Sign", "Thieves' Mark", "Tally Marks"],
   condition: ["Worn", "Pristine", "Cracked", "Weathered", "Dusty", "Bloodstained", "Shadowed Presence", "Faint Glow"],
   /** How the object smells. All scents are learned; Minor mimics can't wear one. */
   scent: ["Musty", "Fresh", "Fragrant", "Foul", "Smoky", "Briny", "Earthy"],
