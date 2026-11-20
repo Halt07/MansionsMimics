@@ -20,4 +20,11 @@ export default async function ({ gameData: m, ok }) {
   const foul = m.calcAllureBreakdown(crate, { scentTraits: ['Foul'] }, ghoul);
   const fresh = m.calcAllureBreakdown(crate, { scentTraits: ['Fresh'] }, ghoul);
   ok(foul.liked.includes('Foul') && fresh.disliked.includes('Fresh'), 'a Ghoul is drawn to Foul and put off by Fresh');
+
+  // ---------- who notices smells ----------
+  const scentOf = (a) => [...a.alluringQualities.traits, ...(a.repelledBy?.traits ?? [])].filter((t) => m.TRAITS.scent.includes(t));
+  const elites = m.ADVENTURER_TEMPLATES.filter((a) => a.group === 'huntersElites');
+  ok(elites.length > 0 && elites.every((a) => scentOf(a).length > 0), 'every hunter and elite reacts to some scent (trackers have noses)');
+  const freshFans = m.ADVENTURER_TEMPLATES.filter((a) => a.alluringQualities.traits.includes('Fresh')).map((a) => a.name);
+  ok(freshFans.includes("Founder's Heir") && freshFans.includes('Paranoid Cleric') && freshFans.length >= 5, `Fresh draws ${freshFans.length}, the Founder's Heir and the Paranoid Cleric among them`);
 }

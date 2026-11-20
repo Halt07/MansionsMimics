@@ -9,6 +9,27 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
 - **Should "every X" achievements stick once earned?** Connoisseur (every adventurer eaten), Master of Disguise (every material and trait), Curiosity Cabinet (every variant), For All Seasons and Seasoned Traveler are worked out from what the mimic has done, not saved when earned, so new content (an adventurer, trait, variant, holiday or seasonal location) takes them away until the mimic catches up. Fine while there are no outside players; before there are, decide between keeping that (new content gives veterans something to chase) and saving them once earned, the way Peak of the Apex is.
 
+## New hunting grounds for the middle tiers
+
+Minor, Lesser, Standard and Greater mimics all hunt the same five starter grounds (the Abandoned Manor, Wizard's Tower, Haunted Roadside Inn, Cursed Chapel and Noble Estate); nothing new opens until Grand, which jumps to nine. New grounds at Standard and Greater would fill that gap, and show new players early that there's much more out there to find.
+
+- **The Port City of Lonmouth (Standard).** A permanent coastal ground, so Briny matters all the time and not just on the rare Sinking Ship (today only the Sinking Ship and the Mimic Nest are Coastal). Rooms like the docks, a fish market, a harbormaster's office, a tavern, a warehouse and a smugglers' cave; sailors, fishwives, dockhands, a harbormaster, smugglers; gulls, crabs and harbor cats. Some of them like Briny, and some (the Gnomish Tinkerer-Hunter, whose gadgets rust) dislike it. No twist: it's an ordinary hunting ground.
+- **One or two more at Standard or Greater,** to give the middle tiers some variety. Not yet decided.
+
+## More for Briny
+
+Briny is the thinnest scent (3 adventurers drawn, 1 put off), and it only matters where there's water.
+
+- **A moat at The Hollow Court** (Sovereign's ground), with a water beast in it that likes Briny.
+- **A sunken city as a rare location** (rather than as Eternal's ground, which is leaning toward The Long After). Its adventurers are the ones who can get down there: merfolk, fish-men, divers in diving suits or bells. **Its twist: currents.** Every so often a current sweeps through and pushes everything in a room (small creatures, adventurers, and the mimic itself) into another room, sometimes as far as two rooms away. Like the falling stars, a warning a turn ahead (the water starts to pull) would let the player brace or use it.
+- Lonmouth (above) is the main fix.
+
+## Twists for future locations
+
+Ideas for a location's twist (like the Lodge's cold or the Fair's fireworks), not yet tied to a place. Better suited to a rare, branch or seasonal location than an ordinary one.
+
+- **The tide.** Every few turns the water rises and floods the lower rooms: anyone there has to move up or be swept out, and a mimic waiting in one is underwater until it ebbs. Would suit a coastal rare location, a sea cave, or the Hollow Court's moat.
+
 ## Beyond Apex: Eternal, Primordial or Sovereign
 
 A hidden tier for players who keep going after the Peak of the Apex (mass 40). Today an Apex mimic can keep growing forever (120 AP per +2 mass) with nothing more to earn; this gives that grind somewhere to go.
