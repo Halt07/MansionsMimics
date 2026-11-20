@@ -38,6 +38,8 @@ entries as decisions are made, with the reason if one was given.
   their holiday. Before that, the Codex knows only how many there are.
 - **A location's map only appears once you've hunted there.** Until then it shows a fogged "mystery map".
 
+- **A tier beyond Apex (if added) stays hidden until a mimic reaches it.** It's a reward for players who keep going, so the Codex's tier list, the achievement list and the upgrade screen don't mention it beforehand. Its absence isn't a missing entry. (The tier itself is still only an idea; see "Beyond Apex" in IDEAS.md.)
+
 ## Room map
 
 - **Rival mimic markers** are a crate, chest, barrel, chair, book or brick, picked at random. When a rival "wears your shape", it only copies your look if your form is one of those (or a variant of one); any other form leaves its random disguise alone, and that's fine.

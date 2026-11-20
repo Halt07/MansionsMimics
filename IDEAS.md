@@ -8,6 +8,23 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 - **Mass and AP progress on Home.** Show them on each mimic's card, not just PL/AD/PA.
 - **Seeded daily hunt.** Everyone gets the same location and party that day, which gives a reason to come back.
 
+## Beyond Apex: Eternal, Primordial or Sovereign
+
+A hidden tier for players who keep going after the Peak of the Apex (mass 40). Today an Apex mimic can keep growing forever (120 AP per +2 mass) with nothing more to earn; this gives that grind somewhere to go.
+
+- **A fork, not a rung.** A mimic becomes **Eternal**, **Primordial** or **Sovereign**, one at a time. Whichever it qualifies for first locks out the others (the one exception is a fallen Sovereign, below), which gives devoted players a reason to raise more mimics to see the other paths.
+- **Eternal: the mimic that never ends.** Earned by endurance (for example a long streak of hunts or days without losing mass to decay). Its reward: mass decay becomes rarer (longer than the usual `MASS_DECAY_DAYS` of 3 between losses) or stops altogether.
+- **Primordial: the original horror.** A choice rather than something that just happens. Once a mimic meets the prerequisites (still undecided; perhaps something about consumption, such as having eaten every adventurer type), the Tear in Time appears among its hunting grounds. It becomes Primordial only when it goes through to hunt there, with flavor text about being the very first mimic in history. Until then it can ignore the Tear and take another path, which closes the Tear for good. Its reward beyond the location is still open; something about appetite would mirror Eternal's.
+- **Sovereign: the mimic that is the building.** Earned by reaching 100 mass, which gives Apex's "26–99" mass range in the Codex its meaning: 99 is the last Apex mass. The only tier that can be lost: if mass decay takes a Sovereign below 100, it devolves back to Apex, and has to grow back to reclaim it. Devolving shows as a line on the "welcome back" mass-decay notice, about the mimic losing its standing as Ruler of All Mimics. (Eternal, the decay-proof path, is the opposite trade-off.)
+- **A fallen Sovereign may take another path.** Back at Apex, it can still become Eternal or Primordial, and keeps the Sovereign achievement if it does. But taking one closes Sovereign for good: it can't grow back to it. Until it takes one, it can still grow back to Sovereign.
+- **Each branch gets its own content:** one hunting ground, with adventurers found nowhere else, and 2 or 3 forms. One form might be shared across the branches.
+- **Primordial's hunting ground: the Tear in Time.** A rip in space and time opens onto a prehistoric world, with dinosaurs, mammoths and cave-dwelling hunters. Now and then an ordinary adventurer who stumbled through the same tear turns up too, badly out of place. Far rarer still is the one who opened the tear in the first place: the Time Caster, a time wizard or warlock stranded (or exploring) on the far side of their own spell. The mimic quite literally becomes the first mimic ever to exist on the planet.
+- **Two hidden achievements per branch**, absent from the achievement list until earned:
+  - one for reaching the tier. Sovereign's is **Ruler of All Mimics**, so the devolving line on the welcome-back notice echoes it; the achievement stays earned after devolving, like the others;
+  - one more for each: eating the Time Caster for Primordial; Eternal's and Sovereign's are still to be decided.
+- **Open questions:**
+  - Eternal's threshold, and the prerequisites that open the Tear in Time.
+
 ## Seasonal locations
 
 Like the Snowbound Lodge: open to every tier while their holiday is in season, each with its own twist. Drafted so far: the Snowbound Lodge (Midwinter), Stargazers' Hill (Night of Falling Stars) the Founders' Fair (Founders' Day) and Spell or Sweet Street (All Hallows' Eve).
