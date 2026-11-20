@@ -63,6 +63,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   apexPeakReached: z.boolean().default(false),
   /** True once the mimic has been Sovereign (Ruler of All Mimics), even if it has since lost it. */
   sovereignReached: z.boolean().default(false),
+  /** True once the mimic has eaten the Time Caster at the Tear in Time (A Stitch in Time). */
+  timeCasterEaten: z.boolean().default(false),
   /** Names of the Cloud Kingdom giants this mimic has consumed whole (for Titanic Feast). */
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */

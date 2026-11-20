@@ -4,7 +4,7 @@
 // the seasonal locations' cold, falling stars, fireworks and door-to-door procession. (Devotion
 // at the Hollow Reliquary has its own module, ./devotion.) Re-exported from ./gameData.
 // ============================================================
-import { ADVENTURER_TEMPLATES, getApReward, stillInHunt, type PartyMember, type Treasure } from "./adventurerData";
+import { ADVENTURER_TEMPLATES, getApReward, isHiddenAdventurer, stillInHunt, type PartyMember, type Treasure } from "./adventurerData";
 import { getAdjacentRooms, getRoomDistance, shuffle } from "./core";
 import type { HuntLocation, RoomName } from "./locationData";
 import { type Form, type FormId } from "./mimicData";
@@ -65,6 +65,28 @@ export function addRealMonster(
     ...t, id: `real_${t.name.replace(/\W+/g, "_")}_${party.length}`, suspicion: t.baseSuspicion,
     isAlive: true, isConsumed: false, isAttracted: false, location: room,
   }];
+}
+
+/**
+ * Maybe add a stray (with the location's `strays.chance`): an ordinary adventurer from the
+ * world the mimic knows (not tied to any location, not giant-kin) who has wandered somewhere they
+ * don't belong, like the Tear in Time. Returns the party and the stray, if one came.
+ */
+export function addStray(
+  party: readonly PartyMember[], location: HuntLocation, tier: Tier, mass: number, random: () => number = Math.random,
+): { party: PartyMember[]; stray: PartyMember | null } {
+  if (!location.strays || random() >= location.strays.chance) return { party: [...party], stray: null };
+  const tierIdx = TIER_ORDER.indexOf(tier);
+  const options = ADVENTURER_TEMPLATES.filter(t => !t.locations && t.group !== "giantKin" && !isHiddenAdventurer(t) &&
+    (!t.minTier || TIER_ORDER.indexOf(t.minTier) <= tierIdx) && (!t.minMass || mass >= t.minMass));
+  if (options.length === 0) return { party: [...party], stray: null };
+  const t = options[Math.floor(random() * options.length)];
+  const room = location.rooms[Math.floor(random() * location.rooms.length)];
+  const stray: PartyMember = {
+    ...t, id: `stray_${t.name.replace(/\W+/g, "_")}_${party.length}`, suspicion: t.baseSuspicion,
+    isAlive: true, isConsumed: false, isAttracted: false, location: room,
+  };
+  return { party: [...party, stray], stray };
 }
 
 /** Who they really are (for the Codex and the reveal), costume or not. */

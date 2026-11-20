@@ -74,7 +74,7 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\bMouse\b/, "🐁"],
   [/\bRat\b/, "🐀"],
   [/\bBat\b/, "🦇"],
-  [/\b(Crow|Gull|Parrot|Pigeon)\b/, "🐦"],
+  [/\b(Crow|Gull|Parrot|Pigeon|Archaeopteryx)\b/, "🐦"],
   [/\bDove\b/, "🕊️"],
   [/\bEagle\b/, "🦅"],
   [/\bGosling\b/, "🪿"],
@@ -106,7 +106,8 @@ const CREATURE_EMOJI: readonly [RegExp, string][] = [
   [/\b(Weasel|Ermine)\b/, "🦡"], // no weasel emoji; the badger is family
   [/\bCrab\b/, "🦀"],
   [/\bLamb\b/, "🐑"],
-  [/\bWarhorse\b/, "🐎"],
+  [/\b(Warhorse|Horse)\b/, "🐎"],
+  [/\bLizard\b/, "🦎"],
   [/\bElemental\b/, "🌩️"],
 ];
 /** Fallback when no word in the name matches. */

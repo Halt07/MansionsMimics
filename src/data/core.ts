@@ -226,6 +226,8 @@ export function isLocationAvailable(
   date: Date = today(),
 ): boolean {
   if (location.holiday) return isInSeason(location.holiday, date);
+  // A branch tier's own ground opens by the mimic's progress, not its size (see branchLocationOpen)
+  if (location.branch) return false;
   if (location.rare && rareLocation?.id !== location.id) return false;
   return meetsLocationRequirements(location, tier, mass);
 }

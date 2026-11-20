@@ -21,7 +21,7 @@ import { resolveLure } from "./lure";
 import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
 import { ALL_FORMS, type Form } from "./mimicData";
 import { VANISHING_LINES, moveCreatures, moveParty, rivalAteFirst } from "./movement";
-import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, lureRange, withBiggestMeal, withFormUsed, withTimeTear } from "./stats";
+import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, becomePrimordial, branchMealRecords, lureRange, withBiggestMeal, withFormUsed } from "./stats";
 import {
   COLLAPSE_BONUS_AP, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
   resolveRivalStrike, resolveSwallow, strikeCandidates, strikeDice, strikeWitnesses, type Witnesses,
@@ -50,6 +50,13 @@ export function beginHunt(character: MimicCharacter, location: HuntLocation, roo
   t.update(start.changes);
   const { party, rivals, creatures, sickness, startForm, burned } = start;
 
+  // Through the Tear in Time for the first time: the very first mimic in history
+  const primordial = location.branch === "Primordial" ? becomePrimordial(character) : null;
+  if (primordial) {
+    t.update(primordial.changes);
+    t.evolve(primordial.line);
+  }
+
   if (start.bounty) {
     t.alert(`⚠️ A bounty has been placed on the mimic known as "${character.name}". Hunters from across the realm have come to collect.`);
     t.alert(`${party.length} bounty hunters are sweeping ${the(location.name)} — they know exactly what they are looking for.`);
@@ -74,6 +81,7 @@ export function beginHunt(character: MimicCharacter, location: HuntLocation, roo
   party.forEach(a => t.info(a.costume
     ? `Someone dressed as a ${a.costume} is at the ${a.location}.`
     : `${a.name} (${a.type}) — currently in the ${a.location}.`));
+  if (start.stray) t.info(`The ${start.stray.name} looks badly lost. They must have stumbled through the Tear after you.`);
   if (start.openedRare) {
     t.system(`✦ Whispers reach you of somewhere new: ${start.openedRare.name}. It won't stay within reach for long.`);
   }
@@ -343,7 +351,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
       adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
       partyMembersEaten: character.partyMembersEaten + 1,
       biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, meal),
-      timeTearCounter: withTimeTear(character, unmask(target)),
+      ...branchMealRecords(character, unmask(target)),
     };
     t.patchMember(target.id, () => ({ isConsumed: true, isAlive: false }));
   } else {
@@ -437,7 +445,7 @@ function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, s
     adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(target)]),
     partyMembersEaten: character.partyMembersEaten + 1,
     biggestMeal: withBiggestMeal(character.biggestMeal, unmask(target).name, total),
-    timeTearCounter: withTimeTear(character, unmask(target)),
+    ...branchMealRecords(character, unmask(target)),
   });
 }
 
@@ -576,7 +584,7 @@ export function eatFrozen(hunt: Hunt, character: MimicCharacter, id: string, opt
     adventurersEaten: withDiscovered(character.adventurersEaten, [unmask(body)]),
     partyMembersEaten: character.partyMembersEaten + 1,
     biggestMeal: withBiggestMeal(character.biggestMeal, unmask(body).name, ap),
-    timeTearCounter: withTimeTear(character, unmask(body)),
+    ...branchMealRecords(character, unmask(body)),
   });
   return t.finish();
 }

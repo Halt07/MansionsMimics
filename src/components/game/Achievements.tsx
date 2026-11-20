@@ -18,6 +18,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   eternal:           { text: "text-indigo-300", box: "bg-indigo-400/10 border-indigo-400/40" },
   primordial:        { text: "text-red-400",    box: "bg-red-500/10 border-red-500/40" },
   rulerOfAllMimics:  { text: "text-yellow-400", box: "bg-yellow-500/10 border-yellow-500/40" },
+  stitchInTime:      { text: "text-sky-300",    box: "bg-sky-400/10 border-sky-400/40" },
 };
 
 /**

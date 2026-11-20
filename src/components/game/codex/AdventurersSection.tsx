@@ -1,4 +1,4 @@
-import { ADVENTURER_TEMPLATES, ADVENTURER_GROUPS, pooledDiscoveries, discoveryLevel } from "@/data/gameData";
+import { ADVENTURER_GROUPS, codexAdventurers, pooledDiscoveries, discoveryLevel } from "@/data/gameData";
 import Collapsible from "./Collapsible";
 import AdventurerEntry, { AdventurerTitle } from "./AdventurerEntry";
 import type { CodexReader } from "./CodexReader";
@@ -7,8 +7,9 @@ import type { CodexReader } from "./CodexReader";
 export default function AdventurersSection({ viewedMimic, knowers }: CodexReader) {
   // Adventurers are only described once a mimic has met them (see codex.ts)
   const discoveries = pooledDiscoveries(knowers);
-  const metCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length;
-  const eatenCount = ADVENTURER_TEMPLATES.filter(a => discoveryLevel(discoveries, a.name) === "eaten").length;
+  const listed = codexAdventurers(discoveries);
+  const metCount = listed.filter(a => discoveryLevel(discoveries, a.name) !== "unknown").length;
+  const eatenCount = listed.filter(a => discoveryLevel(discoveries, a.name) === "eaten").length;
   return (
     <div className="space-y-4">
       <h2 className="font-cinzel text-2xl text-foreground mb-4">Adventurer Templates</h2>
@@ -19,10 +20,10 @@ export default function AdventurersSection({ viewedMimic, knowers }: CodexReader
         The Codex only knows what {viewedMimic ? <span className="text-foreground">{viewedMimic.name}</span> : "your mimics"} {viewedMimic ? "has" : "have"} learned: an adventurer is described once {viewedMimic ? "it has" : "one of them has"} <span className="text-foreground">met</span> one in a hunt, and what it craves and despises is revealed once {viewedMimic ? "it has" : "one has"} <span className="text-foreground">eaten</span> one. Switch whose knowledge you're reading with the pill at the top.
       </p>
       <p className="text-xs font-cinzel text-primary mb-2">
-        Met {metCount}/{ADVENTURER_TEMPLATES.length} · Eaten {eatenCount}/{ADVENTURER_TEMPLATES.length}
+        Met {metCount}/{listed.length} · Eaten {eatenCount}/{listed.length}
       </p>
       {ADVENTURER_GROUPS.map((group, groupIndex) => {
-        const members = ADVENTURER_TEMPLATES.filter((adv) => adv.group === group.id);
+        const members = listed.filter((adv) => adv.group === group.id);
         if (members.length === 0) return null;
         return (
           <Collapsible

@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  HOLIDAYS, LOCATIONS, TIER_ORDER, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, plural, seasonEnd, today,
+  HOLIDAYS, LOCATIONS, TIER_ORDER, branchLocationOpen, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, plural, seasonEnd, today,
   type Holiday, type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,24 @@ function seasonalHintFor(character: MimicCharacter): { holiday: Holiday; names: 
   return { holiday: HOLIDAYS[holiday], names: names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : names[0] };
 }
 
+/**
+ * The SVG filter that tears the Tear in Time card's glowing rim (see .tear-card in index.css):
+ * turbulence that slowly churns, displacing the rim's edge. Drawn once, wherever the card is.
+ */
+function TearFilter() {
+  const still = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  return (
+    <svg width="0" height="0" aria-hidden="true" focusable="false" className="absolute">
+      <filter id="tear-rip" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.035 0.09" numOctaves="2" seed="7" result="noise">
+          {!still && <animate attributeName="baseFrequency" dur="9s" values="0.035 0.09;0.05 0.12;0.035 0.09" repeatCount="indefinite" />}
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+  );
+}
+
 interface LocationSelectProps {
   onChoose: (location: HuntLocation) => void;
   onChooseForms: () => void;
@@ -27,9 +45,11 @@ interface LocationSelectProps {
 /** Setup: pick where to hunt (the grounds this mimic can reach today). Seasonal grounds come first, then rare ones. */
 export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps) {
   const { character } = useHunt();
-  const locations = LOCATIONS.filter(loc => isLocationAvailable(loc, character.tier, character.mass, character.rareLocation));
+  const locations = LOCATIONS.filter(loc =>
+    isLocationAvailable(loc, character.tier, character.mass, character.rareLocation) || branchLocationOpen(loc, character));
   const seasonalHint = seasonalHintFor(character);
-  const sorted = [...locations].sort((a, b) => Number(!!b.holiday) - Number(!!a.holiday) || Number(!!b.rare) - Number(!!a.rare));
+  const sorted = [...locations].sort((a, b) =>
+    Number(!!b.branch) - Number(!!a.branch) || Number(!!b.holiday) - Number(!!a.holiday) || Number(!!b.rare) - Number(!!a.rare));
   // Each card is named by its place, and described by its status, what it is and its party size
   const ids = useId();
   return (
@@ -49,6 +69,7 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
           {" "}· Something in the air: you could take the shape of {seasonalHint.names}. <span className="text-primary">Choose forms →</span>
         </button>
       )}
+      {sorted.some(loc => loc.branch) && <TearFilter />}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {sorted.map(loc => {
           const id = (part: string) => `${ids}-${loc.id}-${part}`;
@@ -57,7 +78,7 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
               key={loc.id}
               {...asButton(() => onChoose(loc), { labelledBy: id("name"), describedBy: [id("status"), id("about"), id("size")] })}
               data-holiday={loc.holiday}
-              className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.holiday ? "holiday-card border-border" : loc.rare
+              className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.branch ? "tear-card" : loc.holiday ? "holiday-card border-border" : loc.rare
                 ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
                 : "border-border hover:border-primary/40"}`}
             >
@@ -67,6 +88,13 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
                   {loc.holiday && (
                     <p className="holiday-badge text-[11px] font-cinzel uppercase tracking-wide mb-1">
                       {HOLIDAYS[loc.holiday].icon} {HOLIDAYS[loc.holiday].name} · open to all until {seasonEnd(loc.holiday)}
+                    </p>
+                  )}
+                  {loc.branch && (
+                    <p className="tear-badge text-[11px] font-cinzel uppercase tracking-wide mb-1">
+                      🌀 Beyond the Apex · {character.branchTier === loc.branch
+                        ? "where it all began"
+                        : `step through and you become ${loc.branch}. The other paths close behind you`}
                     </p>
                   )}
                   {loc.rare && character.rareLocation && (

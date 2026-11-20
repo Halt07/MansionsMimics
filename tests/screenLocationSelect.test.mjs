@@ -44,6 +44,18 @@ export default async function ({ gameData: m, load, storage, ok }) {
     choose(mimic({ tier: 'Grand', mass: 60 }));
     ok(!has('Wilderness territories unlock') && offered().includes('hidden_grove'), 'at Grand: the wilderness is open');
 
+    // ---------- the Tear in Time ----------
+    choose(mimic({ tier: 'Apex', mass: 60, timeTearCounter: 49 }));
+    ok(!offered().includes('tear_in_time') && !document.getElementById('tear-rip'), 'not yet earned: no Tear, not even its filter');
+    choose(mimic({ tier: 'Apex', mass: 60, timeTearCounter: 50 }));
+    ok(offered()[0] === 'tear_in_time' && cardOf('tear_in_time').classList.contains('tear-card'), 'once earned: the Tear comes first, with its own torn, glowing card');
+    ok(document.getElementById('tear-rip')?.tagName === 'filter', '…and the filter that tears its edge');
+    ok(cardOf('tear_in_time').textContent.includes('step through and you become Primordial. The other paths close behind you'), '…warning that going through is a choice for good');
+    choose(mimic({ tier: 'Apex', mass: 60, branchTier: 'Primordial' }));
+    ok(offered()[0] === 'tear_in_time' && cardOf('tear_in_time').textContent.includes('where it all began'), 'a Primordial mimic: always open, its own ground');
+    choose(mimic({ tier: 'Apex', mass: 60, timeTearCounter: 50, branchTier: 'Eternal' }));
+    ok(!offered().includes('tear_in_time'), 'an Eternal one never sees it');
+
     // ---------- a rare ground ----------
     choose(mimic({ tier: 'Standard', mass: 12, rareLocation: { id: 'hollow_reliquary', huntsLeft: 2 } }));
     ok(offered()[0] === 'hollow_reliquary', 'an open rare ground comes first');

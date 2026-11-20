@@ -10,7 +10,9 @@ export default async function ({ gameData: m, load, ok }) {
   const { default: AdventurersSection } = await load('/src/components/game/codex/AdventurersSection.tsx');
   const { default: AdventurerEntry, AdventurerTitle } = await load('/src/components/game/codex/AdventurerEntry.tsx');
   const user = userEvent.setup();
-  const all = m.ADVENTURER_TEMPLATES;
+  // Everyone the Codex lists before anything is met (the hidden Beyond the Apex group waits to be met)
+  const all = m.ADVENTURER_TEMPLATES.filter((a) => !m.isHiddenAdventurer(a));
+  const hidden = m.ADVENTURER_TEMPLATES.filter((a) => m.isHiddenAdventurer(a));
   const knower = (met = [], eaten = []) => ({ name: 'Testy', adventurersMet: met, adventurersEaten: eaten });
   const section = (knowers, viewedMimic = null) => s.show(AdventurersSection, { viewedMimic, knowers }).container;
   const entry = (adv, level) => s.show(AdventurerEntry, { adv, level }).container.textContent;
@@ -28,6 +30,7 @@ export default async function ({ gameData: m, load, ok }) {
   ok(blank.textContent.includes(`Met 0/${all.length} · Eaten 0/${all.length}`), 'nothing met: 0 of every adventurer');
   ok(screen.getAllByRole('button').filter((b) => b.textContent.startsWith('???')).length === opening.length, 'the first group starts open, every one in it "???"');
   ok(all.every((a) => !blank.textContent.includes(named(a))), '…with no names given away');
+  ok(!blank.textContent.includes('Beyond the Apex') && hidden.length > 0, 'the hidden adventurers are not even listed: no Beyond the Apex group, and not counted');
   await user.click(button('???'));
   ok(has("You haven't crossed paths with this one yet."), 'opening an unmet one: no stats, just a hint');
   await user.click(button(secondGroup.label));

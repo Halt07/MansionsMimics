@@ -6,8 +6,8 @@
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type CombatStat, type LearnableTrait, type Material, type Tier, type BranchTier } from "./vocabulary";
 import { ALL_FORMS, BRANCH_TIER_CONFIG, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
-import { ADVENTURER_TEMPLATES } from "./adventurerData";
-import { LOCATIONS, type LocationId } from "./locationData";
+import { ADVENTURER_TEMPLATES, isHiddenAdventurer } from "./adventurerData";
+import { LOCATIONS, type HuntLocation, type LocationId } from "./locationData";
 import { HOLIDAYS, today, type HolidayId } from "./holidays";
 import { hasMagic, knowsTrait } from "./core";
 import {
@@ -244,11 +244,36 @@ export function tearInTimeOpen(character: Pick<MimicCharacter, "tier" | "branchT
     && character.timeTearCounter >= TIME_TEAR_MAGIC_USERS && character.mass >= TIME_TEAR_MASS;
 }
 
+/**
+ * Whether a branch tier's own hunting ground is open to this mimic: to one on its way to that
+ * branch (for Primordial, while the Tear is open to it), or already on it.
+ */
+export function branchLocationOpen(
+  location: Pick<HuntLocation, "branch">, character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">,
+): boolean {
+  if (!location.branch) return false;
+  if (character.branchTier) return character.branchTier === location.branch;
+  return location.branch === "Primordial" && tearInTimeOpen(character);
+}
+
 /** Going through the Tear in Time to hunt: the mimic becomes Primordial (null if the Tear isn't open to it). */
 export function becomePrimordial(
   character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">,
 ): { changes: Partial<MimicCharacter>; line: string } | null {
   return tearInTimeOpen(character) ? { changes: { branchTier: "Primordial" }, line: BRANCH_TIER_LINES.Primordial } : null;
+}
+
+/** The Tear in Time's rare visitor, who opened it: eating them is A Stitch in Time. */
+export const TIME_CASTER = "Time Caster";
+
+/**
+ * What eating `member` adds to the records the branch tiers keep: the Tear in Time's counter
+ * (see withTimeTear), and whether this was the Time Caster. Pass them unmasked.
+ */
+export function branchMealRecords(
+  character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
+): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten">> {
+  return { timeTearCounter: withTimeTear(character, member), ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}) };
 }
 
 /** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
@@ -268,12 +293,12 @@ export const CANNIBAL_MIMICS = 10;
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
   "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler" |
-  "eternal" | "primordial" | "rulerOfAllMimics";
+  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
   "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed" |
-  "locationHuntCounts" | "branchTier" | "sovereignReached">;
+  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -283,7 +308,8 @@ type AchievementProgress = Pick<MimicCharacter,
 export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<LearnableTrait> } {
   const materials = new Set<Material>();
   const traits = new Set<LearnableTrait>();
-  for (const t of ADVENTURER_TEMPLATES) {
+  // Not the hidden adventurers: only one branch tier can ever meet them
+  for (const t of ADVENTURER_TEMPLATES.filter(t => !isHiddenAdventurer(t))) {
     t.lootMaterials.forEach(x => materials.add(x));
     t.lootTraits.forEach(x => traits.add(x));
     t.treasure?.materials.forEach(x => materials.add(x));
@@ -366,7 +392,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     id: "connoisseur", name: "Connoisseur", icon: "🍽️",
     description: "Eat at least one of every kind of adventurer (companions don't count). The Codex tracks your progress.",
     flavor: (n) => `There is no one left that ${n} hasn't tasted. It has opinions about all of them.`,
-    isEarned: (c) => ADVENTURER_TEMPLATES.every(t => c.adventurersEaten.includes(t.name)),
+    // Not the hidden ones, who only one branch tier can ever meet
+    isEarned: (c) => ADVENTURER_TEMPLATES.filter(t => !isHiddenAdventurer(t)).every(t => c.adventurersEaten.includes(t.name)),
   },
   {
     id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
@@ -413,6 +440,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: "Go through the Tear in Time and become the very first mimic in history.",
     flavor: (n) => `Long before the first chest was built, ${n} was already pretending to be something else.`,
     isEarned: (c) => c.branchTier === "Primordial",
+  },
+  {
+    id: "stitchInTime", name: "A Stitch in Time", icon: "🕰️", hidden: true,
+    description: "At the Tear in Time, eat the Time Caster: the one who tore it open in the first place. They don't come by often.",
+    flavor: (n) => `${n} ate the only one who knew the way home. Whatever happens next, it has already happened.`,
+    isEarned: (c) => c.timeCasterEaten,
   },
   {
     id: "rulerOfAllMimics", name: "Ruler of All Mimics", icon: "👑", hidden: true,

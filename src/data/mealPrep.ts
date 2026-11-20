@@ -12,7 +12,7 @@ import {
   BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
 } from "./core";
 import {
-  addRealMonster, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
+  addRealMonster, addStray, dressParty, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";
 import { STAT_CAP, getActiveForm, withCount, withFormUsed } from "./stats";
 import { withDiscovered } from "./codex";
@@ -268,6 +268,8 @@ export interface HuntStart {
   burned: { location: boolean; form: boolean };
   /** A rare location that just came within reach (for the next hunts). */
   openedRare: HuntLocation | null;
+  /** An ordinary adventurer lost somewhere they don't belong (see addStray), if one came. */
+  stray: PartyMember | null;
   /** What to save on the character now: burns tick down, the rare location, discovery, hunt counts. */
   changes: Partial<MimicCharacter>;
 }
@@ -276,10 +278,12 @@ export interface HuntStart {
 export function startHunt(
   character: MimicCharacter, location: HuntLocation, room: RoomName, random: () => number = Math.random,
 ): HuntStart {
-  // Rare locations tell their own story: no bounty hunters or rival mimics there
-  const bounty = !location.rare && shouldTriggerBountyHunt(character.mass, random);
+  // Rare and branch locations tell their own story: no bounty hunters or rival mimics there (at
+  // the Tear in Time, there are no other mimics yet)
+  const ownStory = !!location.rare || !!location.branch;
+  const bounty = !ownStory && shouldTriggerBountyHunt(character.mass, random);
   const rivalTier = TIER_ORDER.indexOf(character.tier) >= TIER_ORDER.indexOf(RIVAL_MIN_TIER);
-  const lone = !bounty && !location.rare && rivalTier && random() < RIVAL_CHANCE;
+  const lone = !bounty && !ownStory && rivalTier && random() < RIVAL_CHANCE;
   // The Mimic Nest always holds its nest (Elder included); elsewhere maybe a lone rival
   const rivals = location.rivalNest
     ? placeRivals(location, room, rollNestKinds(location, random), random)
@@ -291,7 +295,8 @@ export function startHunt(
     ? generateBountyParty(location, character.mass, random)
     : generateParty(location, character.tier, character.mass, random), location, random);
   const withMonster = bounty ? base : addRealMonster(base, location, character.tier, character.mass, random);
-  const dressed = location.costumes ? dressParty(withMonster, random) : withMonster;
+  const { party: withStray, stray } = addStray(withMonster, location, character.tier, character.mass, random);
+  const dressed = location.costumes ? dressParty(withStray, random) : withStray;
   const party = location.procession ? placeProcession(dressed, location, room, random) : dressed;
   const creatures = spawnSmallCreatures(location, random);
   const sickness = rollForSickness(character, random);
@@ -314,5 +319,5 @@ export function startHunt(
     formHuntCounts: withCount(character.formHuntCounts, startForm?.id),
     locationHuntCounts: withCount(character.locationHuntCounts, location.id),
   };
-  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, changes };
+  return { bounty, party, rivals, creatures, sickness, suspicion, startForm, burned, openedRare: rare.opened, stray, changes };
 }

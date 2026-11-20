@@ -21,7 +21,14 @@ export const ADVENTURER_GROUPS = [
   { id: "supernatural", label: "Supernatural & Monstrous", description: "Undead, fey and monstrous things. Most haunt only certain locations, and several have unusual instincts that change how you hunt them." },
   { id: "huntersElites", label: "Hunters & Elites", description: "Specialists who appear once you have grown powerful enough to draw attention. Mimic hunters also form Bounty Hunt parties." },
   { id: "giantKin", label: "Giant-Kin", description: "Only found in giant-realm locations (the Giant's Castle and Cloud Kingdom Outpost). Gated by Apex tier and minimum mass. Giant-kin yield significantly more AP than standard adventurers (up to 12 per kill)." },
+  // Hidden: the branch tiers' own adventurers. Left out of the Codex until met, and out of
+  // Connoisseur and Master of Disguise (only one branch can ever meet them)
+  { id: "beyondApex", label: "Beyond the Apex", description: "What else don't you know?", hidden: true },
 ] as const;
+/** Whether this adventurer belongs to a hidden group (the branch tiers' own; see ADVENTURER_GROUPS). */
+export function isHiddenAdventurer(template: Pick<AdventurerTemplate, "group">): boolean {
+  return ADVENTURER_GROUPS.some(g => g.id === template.group && "hidden" in g && g.hidden);
+}
 export type AdventurerGroupId = (typeof ADVENTURER_GROUPS)[number]["id"];
 
 /** Qualities an adventurer reacts to: materials and traits on the mimic's look, tags on its form. */
@@ -1271,6 +1278,89 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     lootMaterials: ["Birch", "Walnut"],
     lootTraits: ["Etched", "Inlaid", "Maker's Mark"],
     partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
+  },
+
+  // ── The Tear in Time (Primordial's hunting ground) ──
+  // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
+  {
+    name: "Cave Hunter", type: "Hunter", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Prods anything unfamiliar with a spear", "Sniffs the air before stepping into a clearing"],
+    appliedQuirk: "{name} jabs the {form} with the butt of a spear, and waits to see if it jabs back.",
+    alluringQualities: { materials: ["Horn", "Obsidian", "Boarhide"], traits: ["Bloodstained", "Tally Marks"], tags: ["Defensive"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 0, magical: 0, social: 1, spatial: 3, environmental: 3, acoustic: 3, presence: 3 },
+    lootMaterials: ["Obsidian", "Horn", "Boarhide"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a flint spearhead", "a strip of hide wrapping", "a necklace of teeth"],
+  },
+  {
+    name: "Firekeeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    repelledBy: { traits: ["Cold to Touch"] },
+    quirks: ["Never lets the fire go out", "Warms anything that looks cold"],
+    appliedQuirk: "{name} sets a smouldering ember beside the {form}, to keep it warm.",
+    alluringQualities: { materials: ["Oak", "Basalt"], traits: ["Warm to Touch", "Smoky", "Ward Sign"], tags: ["Comfort"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 2, spatial: 1, environmental: 3, acoustic: 1, presence: 1 },
+    lootMaterials: ["Oak", "Basalt"],
+    lootTraits: ["Smoky"],
+    partialLoot: ["a fire-blackened stick", "a pouch of tinder", "a scorched fur mitten"],
+  },
+  {
+    name: "Cave Painter", type: "Bard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Traces every new shape on the cave wall", "Stares a long time at outlines"],
+    appliedQuirk: "{name} squints at the {form}, then starts sketching it in ochre.",
+    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript"], tags: ["Decor"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 0, text: 3, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 0, presence: 1 },
+    lootMaterials: ["Limestone"],
+    lootTraits: ["Etched"],
+    partialLoot: ["a lump of red ochre", "a charcoal-stained finger bone", "a brush of moss and fat"],
+  },
+  {
+    name: "Tribal Elder", type: "Druid", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Speaks to the spirit in every stone", "Leaves offerings on anything strange"],
+    appliedQuirk: "{name} lays a bundle of herbs on the {form} and murmurs to it.",
+    alluringQualities: { materials: ["Bloodoak", "Horn"], traits: ["Carved", "Earthy", "Sacred Symbol"], tags: ["Religious"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 3, social: 2, spatial: 1, environmental: 2, acoustic: 1, presence: 4 },
+    lootMaterials: ["Bloodoak"],
+    lootTraits: ["Earthy"],
+    partialLoot: ["a string of carved bone beads", "a bundle of dried herbs", "a feathered headdress"],
+  },
+  {
+    name: "Woolly Mammoth", type: "Beast", discipline: 3, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    repelledBy: { traits: ["Smoky"] },
+    quirks: ["Rubs its flank against anything solid", "Trumpets at whatever won't get out of its way"],
+    appliedQuirk: "{name} leans its whole shaggy weight against the {form}.",
+    alluringQualities: { materials: ["Wool", "Oak", "Birch"], traits: ["Rough-Hewn", "Mossy"], tags: ["Rural"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 4, text: 0, magical: 0, social: 1, spatial: 2, environmental: 3, acoustic: 2, presence: 2 },
+    lootMaterials: ["Wool", "Horn"],
+    lootTraits: ["Mossy"],
+    partialLoot: ["a tuft of russet wool", "a chip of tusk ivory", "a clump of matted fur"],
+  },
+  {
+    name: "Raptor", type: "Beast", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Hunts in short, silent dashes", "Tilts its head at anything that might be breathing"],
+    appliedQuirk: "{name} circles the {form} twice, nostrils flaring.",
+    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained"], tags: ["Dining"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 3, environmental: 3, acoustic: 3, presence: 5 },
+    lootMaterials: ["Boarhide"],
+    lootTraits: ["Bloodstained"],
+    partialLoot: ["a curved sickle claw", "a scrap of feathered hide", "a serrated tooth"],
+  },
+  {
+    // Rare: joins only now and then (the Tear in Time's realMonsters); eating it is A Stitch in Time
+    name: "Time Caster", type: "Wizard", discipline: 6, baseSuspicion: 5, constitution: 3, interactionStyle: "spell",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Checks a pocket watch that runs backwards", "Keeps muttering about the way home"],
+    appliedQuirk: "{name} frowns at the {form}: \"You weren't here yesterday. Or tomorrow.\"",
+    alluringQualities: { materials: ["Brass", "Aether Crystal"], traits: ["Runescript", "Arcane Sigil", "Faint Glow"], tags: ["Knowledge"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 3, magical: 5, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 4 },
+    lootMaterials: ["Aether Crystal", "Brass"],
+    lootTraits: ["Arcane Sigil"],
+    partialLoot: ["a cracked hourglass", "a page of impossible arithmetic", "a sleeve of star-spangled robe"],
   },
 ];
 
