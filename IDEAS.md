@@ -11,10 +11,9 @@ A running list of things that could make Mansions & Mimics more fun. Nothing her
 
 ## New hunting grounds for the middle tiers
 
-Minor, Lesser, Standard and Greater mimics all hunt the same five starter grounds (the Abandoned Manor, Wizard's Tower, Haunted Roadside Inn, Cursed Chapel and Noble Estate); nothing new opens until Grand, which jumps to nine. New grounds at Standard and Greater would fill that gap, and show new players early that there's much more out there to find.
+Minor, Lesser, Standard and Greater mimics all hunted the same five starter grounds (the Abandoned Manor, Wizard's Tower, Haunted Roadside Inn, Cursed Chapel and Noble Estate); nothing new opens until Grand, which jumps to nine. New grounds at Standard and Greater would fill that gap, and show new players early that there's much more out there to find.
 
-- **The Port City of Lonmouth (Standard).** A permanent coastal ground, so Briny matters all the time and not just on the rare Sinking Ship (today only the Sinking Ship and the Mimic Nest are Coastal). Rooms like the docks, a fish market, a harbormaster's office, a tavern, a warehouse and a smugglers' cave; sailors, fishwives, dockhands, a harbormaster, smugglers; gulls, crabs and harbor cats. Some of them like Briny, and some (the Gnomish Tinkerer-Hunter, whose gadgets rust) dislike it. No twist: it's an ordinary hunting ground.
-- **One or two more at Standard or Greater,** to give the middle tiers some variety. Not yet decided.
+- **One or two more new hunting grounds at Standard or Greater,** to give the middle tiers some variety. Not yet decided. They'll join Lonmouth in the Codex's Uncommon group.
 
 ## More for Briny
 
@@ -28,6 +27,8 @@ Briny is the thinnest scent (3 adventurers drawn, 1 put off), and it only matter
 
 Ideas for a location's twist (like the Lodge's cold or the Fair's fireworks), not yet tied to a place. Better suited to a rare, branch or seasonal location than an ordinary one.
 
+- **A room that comes and goes.** A ship comes in to dock: for a few turns it's a room you can move into (with whoever is aboard), then it casts off and the room is gone. A mimic aboard when it leaves sails away with it, and the hunt is over. A gamble: a few turns of fresh prey, against getting carried off before you've eaten.
+- **New arrivals.** Every N turns a ship (or coach, or caravan) arrives with more adventurers or commoners, so the hunt can run longer than usual because people keep coming. Needs a cap on the number of arrivals in a hunt, and on how many people can be there at once (new ones wait until there's room).
 - **The tide.** Every few turns the water rises and floods the lower rooms: anyone there has to move up or be swept out, and a mimic waiting in one is underwater until it ebbs. Would suit a coastal rare location, a sea cave, or the Hollow Court's moat.
 
 ## Beyond Apex: Eternal, Primordial or Sovereign

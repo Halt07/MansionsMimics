@@ -10,6 +10,9 @@ export default async function ({ gameData: m, ok }) {
   ok(group('adept').length > 0 && group('adept').every((id) => byId(id).minTier === 'Apex' && byId(id).minMass > giantCastle.minMass), `Adept grounds unlock after it (${group('adept').join(', ')})`);
   ok(group('rare').every((id) => byId(id).rare) && group('rare').length === m.LOCATIONS.filter((l) => l.rare).length, 'every rare location is in the Rare group');
   ok(m.LOCATIONS.every((l) => m.LOCATION_GROUPS.some((g) => g.id === m.locationGroup(l))), 'every location lands in a listed group');
+  ok(m.LOCATION_GROUPS.map((g) => g.id).join() === 'common,uncommon,advanced,giant,adept,rare,seasonal,beyond', 'in order: Common, Uncommon, Advanced, Giant, Adept, Rare, Seasonal, Beyond the Apex');
+  ok(group('uncommon').includes('lonmouth') && group('uncommon').every((id) => ['Standard', 'Greater'].includes(byId(id).minTier)), `Uncommon: the Standard and Greater grounds (${group('uncommon').join(', ')})`);
+  ok(m.locationGroup(byId('tear_in_time')) === 'beyond', 'the branch tiers\' own grounds have a group of their own, Beyond the Apex');
 
   const mimic = (tier, mass, counts = {}) => ({ tier, mass, locationHuntCounts: counts });
   const know = (id, ...cs) => m.locationKnowledge(byId(id), cs);

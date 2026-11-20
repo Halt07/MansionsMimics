@@ -228,6 +228,34 @@ const LOCATION_DATA = [
     ],
   },
 
+  // ── The first ground past the starter five: Standard+ ──
+  {
+    id: "lonmouth", name: "Port City of Lonmouth", minTier: "Standard",
+    description: "A busy harbor town of tarred docks, fish stalls and salt-stained warehouses, where cargo comes and goes on every tide.",
+    flavorText: "Nobody counts the crates twice. Nobody notices when there's one more than yesterday.",
+    rooms: ["Wharf Warehouse", "Harbormaster's Office", "Fish Market", "The Salted Gull", "The Docks", "Smugglers' Cave"],
+    roomGraph: {
+      "Wharf Warehouse":       ["Fish Market"],
+      "Harbormaster's Office": ["Fish Market", "The Salted Gull"],
+      "Fish Market":           ["Wharf Warehouse", "Harbormaster's Office", "The Docks"],
+      "The Salted Gull":       ["Harbormaster's Office", "The Docks"],
+      "The Docks":             ["Fish Market", "The Salted Gull", "Smugglers' Cave"],
+      "Smugglers' Cave":       ["The Docks"],
+    },
+    partySize: [4, 5], suspicionGrowthRate: 1,
+    advantageTags: ["Coastal", "Storage", "Dining"],
+    imageHint: "a busy harbor town at dusk: tarred docks, fish stalls, warehouses and a smoky tavern above the water",
+    // Two places in each party go to the town's own people
+    nativeShare: 2,
+    locationCreatures: [
+      { id: "harbor_gull", name: "Harbor Gull", ap: 1, discipline: 2, description: "Loud, bold, and always after someone's fish.", rooms: ["The Docks", "Fish Market", "Wharf Warehouse"] },
+      { id: "dock_crab", name: "Dock Crab", ap: 1, discipline: 2, description: "Sideways, snappish, and impossible to sweep off the boards.", rooms: ["The Docks", "Smugglers' Cave", "Fish Market"] },
+      { id: "harbor_cat", name: "Harbor Cat", ap: 2, discipline: 2, description: "Fat on fish scraps and answerable to no one." },
+      { id: "bilge_rat", name: "Bilge Rat", ap: 1, discipline: 1, description: "Came ashore with the last ship and never went back.", rooms: ["Wharf Warehouse", "Smugglers' Cave", "The Salted Gull"] },
+      { id: "wharf_seal", name: "Wharf Seal", ap: 3, discipline: 2, description: "Sunning itself on the boards, waiting for the fishwives to drop something.", rooms: ["The Docks", "Fish Market"], max: 1 },
+    ],
+  },
+
   // ── Grand+ outdoor / wilderness locations ──
   {
     id: "hidden_grove", name: "Hidden Grove", minTier: "Grand",
@@ -863,6 +891,31 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              // Its own entry, so it doesn't inherit the Crate's bonus (it's a seasonal variant)
                              "lesser_firework_crate":   { plausibility: 0, note: "Fireworks stored with the weapons: nobody is sure that's allowed." },
                              "greater_throne":          { plausibility: -2, note: "A throne in an armory is deeply suspicious." } },
+  },
+  // ── Port City of Lonmouth · Standard+ mimics · wearable forms: Lesser–Apex (Minor with Thimblewood) ──
+  lonmouth: {
+    "Wharf Warehouse":       { "lesser_crate":            { plausibility: 2, note: "Crates stacked to the rafters, waiting for a ship." },
+                               "lesser_barrel":           { plausibility: 1, note: "Barrels of salt pork and pitch." },
+                               "greater_bed":             { plausibility: -2, note: "A bed in a warehouse? Somebody would ask who sleeps there." } },
+    "Harbormaster's Office": { "standard_writing_desk":   { plausibility: 2, note: "The harbormaster's desk, buried in manifests." },
+                               "standard_bookshelf":      { plausibility: 1, note: "Shelves of ledgers and tide tables." },
+                               "greater_grandfather_clock": { plausibility: 1, note: "The office clock, keeping time for the tides." },
+                               "lesser_barrel":           { plausibility: -1, note: "Cargo has no business in the office." } },
+    "Fish Market":           { "lesser_crate":            { plausibility: 1, note: "A crate of the morning's catch." },
+                               "lesser_barrel":           { plausibility: 1, note: "A barrel of salted herring." },
+                               "standard_writing_desk":   { plausibility: -1, note: "A writing desk among the fish stalls?" } },
+    "The Salted Gull":       { "standard_dining_table":   { plausibility: 2, note: "The tavern's long table, sticky with ale." },
+                               "lesser_chair":            { plausibility: 1, note: "One more chair in a crowded tavern." },
+                               "standard_grand_chair":    { plausibility: 1, note: "The landlord's own chair by the fire." },
+                               "lesser_barrel":           { plausibility: 1, note: "An ale barrel behind the bar." },
+                               "minor_goblet":            { plausibility: 1, note: "A tankard left on a table." } },
+    "The Docks":             { "lesser_crate":            { plausibility: 1, note: "Cargo waiting to be loaded." },
+                               "lesser_barrel":           { plausibility: 1, note: "Barrels rolled off the last ship." },
+                               "lesser_rum_cask":         { plausibility: 2, note: "Rum, straight off the boat." },
+                               "greater_piano":           { plausibility: -2, note: "A piano on the docks, waiting for the tide?" } },
+    "Smugglers' Cave":       { "lesser_chest":            { plausibility: 2, note: "Every smugglers' cave has a chest in it." },
+                               "lesser_rum_cask":         { plausibility: 2, note: "Contraband rum, waiting for a dark night." },
+                               "standard_wardrobe":       { plausibility: -2, note: "A wardrobe, in a sea cave?" } },
   },
   // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──
   hidden_grove: {

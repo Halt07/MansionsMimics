@@ -1280,6 +1280,69 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
   },
 
+  // ── Port City of Lonmouth (Standard+; two places in each party are theirs) ──
+  {
+    name: "Fishwife", type: "Commoner", discipline: 2, baseSuspicion: 2, constitution: 3, interactionStyle: "sight",
+    group: "commoners", locations: ["lonmouth"],
+    repelledBy: { traits: ["Fragrant"] },
+    quirks: ["Prices everything she lays eyes on", "Can smell a bad catch from across the market"],
+    appliedQuirk: "{name} sizes up the {form} as if deciding what it would fetch at market.",
+    alluringQualities: { materials: ["Oak", "Burlap", "Linen"], traits: ["Briny", "Smoky", "Worn"], tags: ["Storage", "Dining"] },
+    perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 2, spatial: 1, environmental: 2, acoustic: 1, presence: 1 },
+    lootMaterials: ["Burlap", "Linen"],
+    lootTraits: ["Briny"],
+    partialLoot: ["a scaling knife", "a salt-stiff apron", "a basket of herring"],
+  },
+  {
+    name: "Dockhand", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
+    group: "commoners", locations: ["lonmouth"],
+    quirks: ["Lifts anything to see how heavy it is", "Whistles shanties at work"],
+    appliedQuirk: "{name} grabs the {form} by a corner and tries to heave it onto a cart.",
+    alluringQualities: { materials: ["Oak", "Iron", "Burlap"], traits: ["Reinforced", "Iron-Banded", "Briny"], tags: ["Storage", "Structural"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 4, text: 0, magical: 0, social: 1, spatial: 1, environmental: 1, acoustic: 1, presence: 1 },
+    lootMaterials: ["Iron", "Burlap"],
+    lootTraits: ["Pitted"],
+    partialLoot: ["a cargo hook", "a coil of hemp rope", "a sweat-stained neckerchief"],
+  },
+  {
+    // The Smuggler's opposite: drawn to the Guild Mark, put off by the Thieves' Mark
+    name: "Harbormaster", type: "Nobility", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "commoners", locations: ["lonmouth"],
+    repelledBy: { traits: ["Thieves' Mark"] },
+    quirks: ["Checks every crate against the manifest", "Never misses a docking fee"],
+    appliedQuirk: "{name} squints at the {form}, then at a manifest, then back at the {form}.",
+    alluringQualities: { materials: ["Brass", "Mahogany"], traits: ["Locked", "Polished", "Guild Mark"], tags: ["Storage", "Authority"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 3, magical: 0, social: 2, spatial: 2, environmental: 1, acoustic: 0, presence: 2 },
+    lootMaterials: ["Brass", "Mahogany"],
+    lootTraits: ["Guild Mark"],
+    partialLoot: ["a brass spyglass", "a page of the harbor ledger", "a tricorn hat"],
+  },
+  {
+    // The Harbormaster's opposite: drawn to the Thieves' Mark, put off by the Guild Mark
+    name: "Smuggler", type: "Rogue", discipline: 3, baseSuspicion: 3, constitution: 3, interactionStyle: "touch",
+    group: "common", locations: ["lonmouth"],
+    repelledBy: { traits: ["Guild Mark"] },
+    quirks: ["Knocks on things to find the hollow ones", "Keeps one eye on the harbormaster"],
+    appliedQuirk: "{name} raps on the {form}, listening for a false bottom.",
+    alluringQualities: { materials: ["Oak", "Tanned Hide"], traits: ["Thieves' Mark", "Locked", "Briny"], tags: ["Storage", "Valuable"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 2, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 2, presence: 2 },
+    lootMaterials: ["Tanned Hide", "Smoked Glass"],
+    lootTraits: ["Thieves' Mark"],
+    partialLoot: ["a false-bottomed flask", "a length of tarred rope", "a note in a smuggler's cipher"],
+  },
+  {
+    name: "Sailor on Shore Leave", type: "Warrior", discipline: 2, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
+    group: "common", locations: ["lonmouth"],
+    repelledBy: { traits: ["Fresh"] },
+    quirks: ["Can't walk straight on dry land", "Sings louder after every tavern"],
+    appliedQuirk: "{name} stumbles into the {form} and apologizes to it.",
+    alluringQualities: { materials: ["Oak", "Linen", "Brass"], traits: ["Briny", "Tally Marks", "Smoky"], tags: ["Dining", "Entertainment"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 2, spatial: 1, environmental: 2, acoustic: 2, presence: 1 },
+    lootMaterials: ["Linen", "Brass"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a knot of old rigging", "a sailor's earring", "a battered tin cup"],
+  },
+
   // ── The Tear in Time (Primordial's hunting ground) ──
   // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
   {

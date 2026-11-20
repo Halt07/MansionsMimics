@@ -1014,6 +1014,32 @@ button:disabled .key-hint { opacity: 0.4; }
 .tear-card:hover::before { filter: url(#tear-rip) drop-shadow(0 0 10px rgb(125 211 252 / 0.9)); }
 .tear-badge { color: #7dd3fc; text-shadow: 0 0 6px rgb(56 189 248 / 0.6); }
 
+/* The Codex's "What else don't you know?" under Beyond the Apex: a slow shimmer through the three
+   branches' colors (Eternal's indigo, the Tear's blue, Sovereign's gold), so a mimic that has
+   found one branch glimpses colors that aren't its own. */
+.beyond-teaser {
+  /* Only as wide as its words, so each band of color covers them completely */
+  display: inline-block;
+  /* Solid bands (Eternal's indigo, the Tear's blue, Sovereign's gold) with blends only between
+     them. The text shows a fifth of it at a time, so at 0%, 50% and 100% it's one solid color. */
+  background: linear-gradient(90deg,
+    #a5b4fc 0%, #a5b4fc 20%, #7dd3fc 40%, #7dd3fc 60%, #fbbf24 80%, #fbbf24 100%);
+  background-size: 500% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 4px rgb(125 211 252 / 0.35));
+  animation: beyond-shimmer 21s ease-in-out infinite;
+}
+/* Rest on each color, sweep to the next: indigo, blue, gold, blue, and round again */
+@keyframes beyond-shimmer {
+  0%, 12%   { background-position: 0% 50%; }
+  25%, 37%  { background-position: 50% 50%; }
+  50%, 62%  { background-position: 100% 50%; }
+  75%, 87%  { background-position: 50% 50%; }
+  100%      { background-position: 0% 50%; }
+}
+
 @keyframes tear-shift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -1023,5 +1049,5 @@ button:disabled .key-hint { opacity: 0.4; }
   50% { box-shadow: 0 0 22px rgb(129 140 248 / 0.5); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tear-card, .tear-card::before { animation: none; }
+  .tear-card, .tear-card::before, .beyond-teaser { animation: none; }
 }
