@@ -546,7 +546,7 @@
   transition: border-color 0.3s ease;
 }
 .sidebar-view-card:hover,
-.sidebar-view-card:focus-visible {
+.sidebar-view-card:has(.view-toggle:focus-visible) {
   border-color: hsl(var(--primary) / 0.4);
   outline: none;
 }
@@ -560,7 +560,7 @@
   transition: color 0.3s ease, text-shadow 0.3s ease, filter 0.3s ease;
 }
 .sidebar-view-card:hover .view-toggle-icon,
-.sidebar-view-card:focus-visible .view-toggle-icon {
+.sidebar-view-card:has(.view-toggle:focus-visible) .view-toggle-icon {
   color: hsl(var(--primary));
   text-shadow: 0 0 6px hsl(var(--primary) / 0.8), 0 0 12px hsl(var(--primary) / 0.4);
 }
@@ -577,7 +577,7 @@
   border-radius: 0.5px;
 }
 .sidebar-view-card:hover .view-toggle-map,
-.sidebar-view-card:focus-visible .view-toggle-map {
+.sidebar-view-card:has(.view-toggle:focus-visible) .view-toggle-map {
   filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.9));
 }
 
@@ -976,3 +976,52 @@
   opacity: 0.8;
 }
 button:disabled .key-hint { opacity: 0.4; }
+
+/* ============================================================
+   THE TEAR IN TIME
+   Its hunting-ground card is a rip in the world: a glowing rim of shifting blues whose edge is
+   torn by an SVG turbulence filter (#tear-rip, drawn once by TearFilter in LocationSelect).
+   CSS filters run before masks, so the rim can't be a masked ring like the holiday cards':
+   instead ::before is the glow, a little bigger than the card and roughened by the filter, and
+   ::after repaints the card's own background over it, leaving only the ragged rim showing.
+   ============================================================ */
+.tear-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  border-color: transparent !important;
+  animation: tear-glow 5s ease-in-out infinite;
+}
+.tear-card::before,
+.tear-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.tear-card::before {
+  inset: -5px;
+  background: linear-gradient(115deg, #1e3a8a, #38bdf8, #a5f3fc, #6366f1, #0ea5e9, #22d3ee, #1e40af);
+  background-size: 300% 300%;
+  filter: url(#tear-rip) drop-shadow(0 0 6px rgb(56 189 248 / 0.75));
+  animation: tear-shift 7s ease-in-out infinite;
+}
+.tear-card::after {
+  inset: 0;
+  background: hsl(var(--card));
+}
+.tear-card:hover::before { filter: url(#tear-rip) drop-shadow(0 0 10px rgb(125 211 252 / 0.9)); }
+.tear-badge { color: #7dd3fc; text-shadow: 0 0 6px rgb(56 189 248 / 0.6); }
+
+@keyframes tear-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes tear-glow {
+  0%, 100% { box-shadow: 0 0 14px rgb(56 189 248 / 0.35); }
+  50% { box-shadow: 0 0 22px rgb(129 140 248 / 0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tear-card, .tear-card::before { animation: none; }
+}

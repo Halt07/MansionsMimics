@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { db } from "@/api/db";
@@ -6,16 +6,18 @@ import { toast } from "@/components/ui/use-toast";
 import type { Appearance, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   STARTING_STATS, STARTING_TYPES, STARTING_MATERIALS, STARTING_TRAITS, TIER_CONFIG, MASTER_FORMS, TIER_ORDER, isVariantForm,
-  canAddForm, nameFlavor, MAX_FORMS_ABOVE_TIER, effectiveFormTier, getSeasonalForms, today,
+  canAddForm, nameFlavor, MAX_FORMS, MAX_FORMS_ABOVE_TIER, STARTING_FORMS, effectiveFormTier, getSeasonalForms, toggleChoice, today,
   type Form, type Material, type StartingType,
 } from "@/data/gameData";
 import HolidayBadge, { holidayCardProps } from "../components/game/HolidayBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { asButton, FOCUS_RING } from "@/lib/asButton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
 import StatBar from "../components/game/StatBar";
+import ChoiceSection from "../components/game/ChoiceSection";
 
 const STEPS = ["Origin", "Name", "Forms", "Appearance", "Confirm"];
 
@@ -28,6 +30,12 @@ const withField = <F extends keyof Appearance>(a: Appearance, field: F, value: A
 export default function CharacterCreation() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  // The step's title labels its field (on the Name step, the name box is "Name"), and the line
+  // under the box describes it
+  const stepTitleId = useId();
+  const nameHintId = useId();
+  // Origin and form cards are named by their heading and described by what matters about them
+  const cardIds = useId();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -73,7 +81,7 @@ export default function CharacterCreation() {
   const canProceed = () => {
     if (step === 0) return !!origin;
     if (step === 1) return name.trim().length >= 2;
-    if (step === 2) return selectedForms.length === 2;
+    if (step === 2) return selectedForms.length === STARTING_FORMS;
     if (step === 3) return appearance.primaryMaterials.length > 0;
     return true;
   };
@@ -81,28 +89,21 @@ export default function CharacterCreation() {
   const toggleForm = (form: Form) => {
     if (selectedForms.find(f => f.id === form.id)) {
       setSelectedForms(selectedForms.filter(f => f.id !== form.id));
-    } else if (selectedForms.length < 2 && canAddForm(selectedForms, form, startingTier)) {
+    } else if (selectedForms.length < STARTING_FORMS && canAddForm(selectedForms, form, startingTier)) {
       setSelectedForms([...selectedForms, form]);
     }
   };
 
   // Starting mimics may pick one trait per category
-  const toggleTrait = <F extends TraitField>(category: F, trait: Appearance[F][number]) => {
-    const current: Appearance[F][number][] = appearance[category];
-    if (current.includes(trait)) {
-      setAppearance(withField(appearance, category, current.filter(t => t !== trait) as Appearance[F]));
-    } else if (current.length < 1) {
-      setAppearance(withField(appearance, category, [...current, trait] as Appearance[F]));
-    }
-  };
+  const toggleTrait = <F extends TraitField>(category: F, trait: Appearance[F][number]) =>
+    setAppearance(withField(appearance, category, toggleChoice(appearance[category] as Appearance[F][number][], trait, 1) as Appearance[F]));
 
   // Starting mimics may pick one material per slot, so a new pick replaces the old one.
-  const toggleMaterial = (field: "primaryMaterials" | "secondaryMaterials", mat: Material) => {
-    setAppearance(withField(appearance, field, appearance[field].includes(mat) ? [] : [mat]));
-  };
+  const toggleMaterial = (field: "primaryMaterials" | "secondaryMaterials", mat: Material) =>
+    setAppearance(withField(appearance, field, toggleChoice(appearance[field], mat, 1, { swap: true })));
 
   const handleCreate = async () => {
-    if (!origin || !name.trim() || selectedForms.length < 2) return;
+    if (!origin || !name.trim() || selectedForms.length < STARTING_FORMS) return;
     setSaving(true);
     setSaveError(null);
     const stats = STARTING_STATS[origin];
@@ -169,7 +170,7 @@ export default function CharacterCreation() {
             </div>
           ))}
         </div>
-        <p className="text-center text-xs text-muted-foreground font-cinzel tracking-widest uppercase mb-6">{STEPS[step]}</p>
+        <p id={stepTitleId} className="text-center text-xs text-muted-foreground font-cinzel tracking-widest uppercase mb-6">{STEPS[step]}</p>
 
         {/* STEP 0: Origin */}
         {step === 0 && (
@@ -183,12 +184,14 @@ export default function CharacterCreation() {
               return (
                 <Card
                   key={type}
-                  onClick={() => handleOriginSelect(type)}
-                  className={`cursor-pointer transition-all border-2 ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}
+                  {...asButton(() => handleOriginSelect(type), {
+                    pressed: isSelected, labelledBy: `${cardIds}-${type}-name`, describedBy: [`${cardIds}-${type}-traits`, `${cardIds}-${type}-lore`],
+                  })}
+                  className={`cursor-pointer transition-all border-2 ${FOCUS_RING} ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="font-cinzel text-xl text-foreground">{type} Mimic</CardTitle>
+                      <CardTitle id={`${cardIds}-${type}-name`} className="font-cinzel text-xl text-foreground">{type} Mimic</CardTitle>
                       {isSelected && <Check className="w-5 h-5 text-primary" />}
                     </div>
                   </CardHeader>
@@ -204,7 +207,7 @@ export default function CharacterCreation() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-2 font-cinzel uppercase tracking-wide">Traits</p>
-                        <ul className="space-y-1 text-xs text-muted-foreground">
+                        <ul id={`${cardIds}-${type}-traits`} className="space-y-1 text-xs text-muted-foreground">
                           {type === "Minor" ? (
                             <>
                               <li className="flex gap-1"><span className="text-green-400">✓</span> High plausibility — hard to detect</li>
@@ -223,7 +226,7 @@ export default function CharacterCreation() {
                         </ul>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground/70 border-t border-border pt-3 flavor-text italic">
+                    <div id={`${cardIds}-${type}-lore`} className="text-xs text-muted-foreground/70 border-t border-border pt-3 flavor-text italic">
                       {type === "Minor"
                         ? "The patient predator. It has waited in dark corners for centuries, perfecting the art of stillness."
                         : "The hungry predator. It sacrificed subtlety for raw hunger — larger, faster to consume, but cruder in its imitation."}
@@ -245,10 +248,12 @@ export default function CharacterCreation() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Enter your mimic's name..."
+              aria-labelledby={stepTitleId}
+              aria-describedby={nameHintId}
               className="text-center text-xl font-cinzel bg-card border-border focus:border-primary h-14 text-foreground"
               maxLength={32}
             />
-            <p className="text-xs text-muted-foreground">Adventurers will never know this name. It is yours alone.</p>
+            <p id={nameHintId} className="text-xs text-muted-foreground">Adventurers will never know this name. It is yours alone.</p>
           </div>
         )}
 
@@ -256,7 +261,7 @@ export default function CharacterCreation() {
         {step === 2 && (
           <div>
             <p className="text-center text-muted-foreground text-sm mb-2">
-              Choose <strong className="text-foreground">2 starting forms</strong>. You may adopt up to 3 forms later as you grow.
+              Choose <strong className="text-foreground">{STARTING_FORMS} starting forms</strong>. You may adopt up to {MAX_FORMS} forms later as you grow.
             </p>
             <p className="text-center text-xs text-muted-foreground/60 mb-2 flavor-text italic">
               Forms from your tier, plus one tier above or below. Only {MAX_FORMS_ABOVE_TIER} may come from the tier above.
@@ -270,17 +275,22 @@ export default function CharacterCreation() {
               {availableForms.map(form => {
                 const isSelected = selectedForms.find(f => f.id === form.id);
                 const blockedByAboveRule = !isSelected && !canAddForm(selectedForms, form, startingTier);
-                const disabled = !isSelected && (selectedForms.length >= 2 || blockedByAboveRule);
+                const disabled = !isSelected && (selectedForms.length >= STARTING_FORMS || blockedByAboveRule);
                 const formTierIdx = TIER_ORDER.indexOf(effectiveFormTier(form, startingTier));
                 const holidayProps = holidayCardProps(form);
                 const myTierIdx = TIER_ORDER.indexOf(startingTier);
                 const tierDiff = formTierIdx - myTierIdx;
+                const id = (part: string) => `${cardIds}-${form.id}-${part}`;
+                const why = blockedByAboveRule && selectedForms.length < STARTING_FORMS;
                 return (
                   <Card
                     key={form.id}
-                    onClick={() => !disabled && toggleForm(form)}
+                    {...asButton(() => toggleForm(form), {
+                      disabled, pressed: !!isSelected, labelledBy: id("name"),
+                      describedBy: [tierDiff !== 0 && id("tier"), !!form.holiday && id("season"), id("about"), why && id("why")],
+                    })}
                     data-holiday={holidayProps["data-holiday"]}
-                    className={`${holidayProps.className} cursor-pointer transition-all border-2 ${
+                    className={`${holidayProps.className} cursor-pointer transition-all border-2 ${FOCUS_RING} ${
                       isSelected ? "border-primary bg-primary/5" :
                       disabled ? "border-border opacity-40 cursor-not-allowed" :
                       "border-border bg-card hover:border-primary/30"
@@ -289,16 +299,16 @@ export default function CharacterCreation() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-cinzel text-foreground">{form.name}</h3>
-                          {tierDiff === 1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400">–2 Plaus.</span>}
-                          {tierDiff === -1 && <span className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400">–1 Pat.</span>}
+                          <h3 id={id("name")} className="font-cinzel text-foreground">{form.name}</h3>
+                          {tierDiff === 1 && <span id={id("tier")} className="text-[10px] px-1.5 py-0.5 rounded border border-orange-400/30 text-orange-400"><span aria-hidden>–2 Plaus.</span><span className="sr-only">–2 Plausibility (from the tier above)</span></span>}
+                          {tierDiff === -1 && <span id={id("tier")} className="text-[10px] px-1.5 py-0.5 rounded border border-yellow-400/30 text-yellow-400"><span aria-hidden>–1 Pat.</span><span className="sr-only">–1 Patience (from the tier below)</span></span>}
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
-                      {form.holiday && <p className="mb-1"><HolidayBadge form={form} /></p>}
-                      <p className="text-xs text-muted-foreground mb-2">{form.description}</p>
-                      {blockedByAboveRule && selectedForms.length < 2 && (
-                        <p className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
+                      {form.holiday && <p id={id("season")} className="mb-1"><HolidayBadge form={form} /></p>}
+                      <p id={id("about")} className="text-xs text-muted-foreground mb-2">{form.description}</p>
+                      {why && (
+                        <p id={id("why")} className="text-[11px] text-orange-400 mb-2">You already chose a form from the tier above.</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="text-[11px] border-primary/20 text-primary bg-primary/5">
@@ -314,7 +324,7 @@ export default function CharacterCreation() {
                 );
               })}
             </div>
-            {selectedForms.length === 2 && (
+            {selectedForms.length === STARTING_FORMS && (
               <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary text-center font-cinzel">
                 ✓ {selectedForms.map(f => f.name).join(" & ")} selected
               </div>
@@ -330,69 +340,31 @@ export default function CharacterCreation() {
                 Choose your starting appearance. You can only use materials you have <em>consumed or observed</em>.
               </p>
               <p className="text-center text-xs text-muted-foreground/60 flavor-text italic mb-4">
-                As a Minor mimic you start with: Oak, Iron, Cotton.
+                As a {origin ?? "Minor"} mimic you start with: {STARTING_MATERIALS[origin ?? "Minor"].join(", ")}.
               </p>
             </div>
 
-            {/* Primary material */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Primary Material (required)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_MATERIALS[origin || "Minor"].map(mat => (
-                  <button
-                    key={mat}
-                    onClick={() => toggleMaterial("primaryMaterials", mat)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      appearance.primaryMaterials.includes(mat)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {mat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Surface trait */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Surface Trait (optional, max 1)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_TRAITS.surface.map(trait => (
-                  <button
-                    key={trait}
-                    onClick={() => toggleTrait("surfaceTraits", trait)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      (appearance.surfaceTraits || []).includes(trait)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {trait}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Condition trait */}
-            <div>
-              <p className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide mb-2">Condition Trait (optional, max 1)</p>
-              <div className="flex flex-wrap gap-2">
-                {STARTING_TRAITS.condition.map(trait => (
-                  <button
-                    key={trait}
-                    onClick={() => toggleTrait("conditionTraits", trait)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                      (appearance.conditionTraits || []).includes(trait)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {trait}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ChoiceSection
+              size="md"
+              heading="Primary Material (required)"
+              choices={STARTING_MATERIALS[origin || "Minor"].map(mat => ({
+                key: mat, label: mat, on: appearance.primaryMaterials.includes(mat), onToggle: () => toggleMaterial("primaryMaterials", mat),
+              }))}
+            />
+            <ChoiceSection
+              size="md"
+              heading="Surface Trait (optional, max 1)"
+              choices={STARTING_TRAITS.surface.map(trait => ({
+                key: trait, label: trait, on: appearance.surfaceTraits.includes(trait), onToggle: () => toggleTrait("surfaceTraits", trait),
+              }))}
+            />
+            <ChoiceSection
+              size="md"
+              heading="Condition Trait (optional, max 1)"
+              choices={STARTING_TRAITS.condition.map(trait => ({
+                key: trait, label: trait, on: appearance.conditionTraits.includes(trait), onToggle: () => toggleTrait("conditionTraits", trait),
+              }))}
+            />
 
             {appearance.primaryMaterials.length === 0 && (
               <div className="flex items-center gap-2 text-xs text-orange-400 bg-orange-400/10 border border-orange-400/20 rounded p-3">

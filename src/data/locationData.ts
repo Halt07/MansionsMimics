@@ -3,7 +3,7 @@
 // Hunting grounds: rooms, room graphs, local creatures, and how forms fit each room.
 // Room helpers (distance, adjacency, context modifiers) live in ./gameData.
 // ============================================================
-import type { Tier, UtilityTag } from "./vocabulary";
+import type { BranchTier, Tier, UtilityTag } from "./vocabulary";
 import type { FormId } from "./mimicData";
 import type { HolidayId } from "./holidays";
 
@@ -97,6 +97,18 @@ interface LocationDef {
    * costume. They never turn up any other way, so they're kept out of the normal party draw.
    */
   readonly realMonsters?: { readonly chance: number; readonly names: readonly string[] };
+  /**
+   * A branch tier's own hunting ground (see "Beyond Apex" in IDEAS.md): open only to a mimic on
+   * its way to that branch, or already on it (see branchLocationOpen), never through tier and
+   * mass alone, and kept out of the Codex until a mimic has hunted there. No bounty hunters or
+   * rival mimics come here.
+   */
+  readonly branch?: BranchTier;
+  /**
+   * Each hunt has `chance` that an ordinary adventurer (any template not tied to a location)
+   * has wandered in from elsewhere, badly out of place: the Tear in Time's lost travelers.
+   */
+  readonly strays?: { readonly chance: number };
 }
 
 const LOCATION_DATA = [
@@ -675,6 +687,36 @@ const LOCATION_DATA = [
       },
     },
   },
+  // ── Beyond the Apex ──
+  {
+    id: "tear_in_time", name: "The Tear in Time", minTier: "Apex", minMass: 50,
+    description: "A rip in the world, its edges crackling blue, opening onto a jungle from before anyone was there to see it.",
+    flavorText: "Nothing on this side has ever met a mimic. Nothing here has ever had a reason to doubt a rock.",
+    rooms: ["The Tear", "Fern Thicket", "Tar Pits", "Mammoth Trail", "Cave Mouth", "Smoking Slopes"],
+    roomGraph: {
+      "The Tear":       ["Fern Thicket", "Mammoth Trail"],
+      "Fern Thicket":   ["The Tear", "Tar Pits"],
+      "Tar Pits":       ["Fern Thicket", "Mammoth Trail", "Smoking Slopes"],
+      "Mammoth Trail":  ["The Tear", "Tar Pits", "Cave Mouth"],
+      "Cave Mouth":     ["Mammoth Trail", "Smoking Slopes"],
+      "Smoking Slopes": ["Tar Pits", "Cave Mouth"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 2,
+    advantageTags: ["Rural", "Structural"],
+    imageHint: "a glowing blue tear in the air over a steaming prehistoric jungle, a smoking volcano behind",
+    exclusiveRoster: true,
+    branch: "Primordial",
+    // The one who tore it open, stranded on the wrong side of their own spell
+    realMonsters: { chance: 1 / 12, names: ["Time Caster"] },
+    strays: { chance: 0.25 },
+    locationCreatures: [
+      { id: "dawn_horse", name: "Dawn Horse", ap: 3, discipline: 2, description: "A horse no bigger than a dog. It will be bigger, in a few million years." },
+      { id: "archaeopteryx", name: "Archaeopteryx", ap: 2, discipline: 2, description: "Half bird, half lizard, wholly unsure about flying." },
+      { id: "tar_beetle", name: "Tar-Pit Beetle", ap: 1, discipline: 1, description: "Glossy black, and stuck to something most of the time.", rooms: ["Tar Pits", "Fern Thicket", "Smoking Slopes"] },
+      { id: "fern_lizard", name: "Fern Lizard", ap: 2, discipline: 3, description: "Quick, green, and convinced it's the biggest thing in the jungle." },
+      { id: "compsognathus", name: "Compsognathus", ap: 2, discipline: 3, description: "A dinosaur no bigger than a chicken, and twice as nosy." },
+    ],
+  },
 ] as const satisfies readonly LocationDef[];
 
 /** Every location id, derived from the location data above. */
@@ -818,6 +860,8 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "minor_book":              { plausibility: 1, note: "Books are at home in a study." } },
     "Armory":              { "lesser_chest":            { plausibility: 1, note: "Armories often have storage chests." },
                              "lesser_crate":            { plausibility: 1, note: "Equipment crates are normal in armories." },
+                             // Its own entry, so it doesn't inherit the Crate's bonus (it's a seasonal variant)
+                             "lesser_firework_crate":   { plausibility: 0, note: "Fireworks stored with the weapons: nobody is sure that's allowed." },
                              "greater_throne":          { plausibility: -2, note: "A throne in an armory is deeply suspicious." } },
   },
   // ── Hidden Grove · Grand+ mimics · wearable forms: Greater–Apex (Standard with Thimblewood) ──
@@ -923,6 +967,23 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
                              "giant_goblet":            { plausibility: 1, note: "Giant goblets stacked for the next feast." } },
     "High Nest":           { "giant_pillow":            { plausibility: 1, note: "Soft enough to be part of the nest." } },
     "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." } },
+  },
+  // ── The Tear in Time · Primordial's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
+  // Nothing has been built yet: anything made by later hands looks wildly out of place
+  tear_in_time: {
+    "The Tear":            { "apex_clocktower":         { plausibility: 1, note: "Half in and half out of the Tear: it might have fallen through with you." },
+                             "apex_roadside_inn":       { plausibility: -2, note: "An inn at the dawn of time? There's nobody to serve." } },
+    "Fern Thicket":        { "apex_castle_gate":        { plausibility: -2, note: "A castle gate in a fern jungle, a million years before castles." },
+                             "grand_carriage":          { plausibility: -2, note: "Nobody here has invented the wheel." } },
+    "Tar Pits":            { "apex_stable":             { plausibility: -2, note: "A stable, for animals nobody has tamed." },
+                             "grand_small_outhouse":    { plausibility: -2, note: "Nobody here has invented the outhouse either." } },
+    "Mammoth Trail":       { "apex_watchtower":         { plausibility: -2, note: "A stone tower on a mammoth trail, built by no one." },
+                             "apex_abandoned_cottage":  { plausibility: -2, note: "Abandoned by whom? No one has built a cottage yet." } },
+    "Cave Mouth":          { "greater_wall":            { plausibility: 1, note: "Just more of the cave wall." },
+                             "greater_statue":          { plausibility: 1, note: "A rough stone figure at the cave mouth: somebody's idol." },
+                             "apex_chapel":             { plausibility: -2, note: "A chapel, long before anyone built one for anything." } },
+    "Smoking Slopes":      { "apex_lighthouse":         { plausibility: -2, note: "A lighthouse on a volcano, miles from any sea." },
+                             "grand_chandelier":        { plausibility: -2, note: "Crystal and candles on a smoking slope?" } },
   },
   // ── Lonely Moor Shelter · Apex mimics only · wearable forms: Grand–Apex (Greater with Thimblewood) ──
   lonely_moor: {

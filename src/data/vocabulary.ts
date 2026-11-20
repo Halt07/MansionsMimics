@@ -8,6 +8,13 @@
 // ── Tiers ──
 export const TIER_ORDER = ["Minor", "Lesser", "Standard", "Greater", "Grand", "Apex"] as const;
 export type Tier = (typeof TIER_ORDER)[number];
+/**
+ * The hidden tiers past Apex: three branches, not further rungs. They're kept apart from
+ * TIER_ORDER, so a branch mimic stays Apex for every rule that works on tiers, and the Codex's
+ * tier list doesn't give them away (see "Beyond Apex" in IDEAS.md).
+ */
+export const BRANCH_TIERS = ["Eternal", "Primordial", "Sovereign"] as const;
+export type BranchTier = (typeof BRANCH_TIERS)[number];
 
 /** The tiers a new mimic can start at. */
 export const STARTING_TYPES = ["Minor", "Lesser"] as const;
@@ -36,7 +43,7 @@ export const ALL_MATERIALS = [
 // wearing a form that has them. Both kinds count when adventurers are lured or put off.
 export const TRAITS = {
   surface: ["Polished", "Tarnished", "Rough-Hewn", "Smooth", "Gilded", "Etched", "Inlaid", "Lacquered", "Soft", "Wrinkled", "Pitted", "Mossy"],
-  symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark"],
+  symbolic: ["Runescript", "Sacred Symbol", "Heraldic Crest", "Arcane Sigil", "Guild Mark", "Maker's Mark", "Ward Sign", "Thieves' Mark", "Tally Marks"],
   condition: ["Worn", "Pristine", "Cracked", "Weathered", "Dusty", "Bloodstained", "Shadowed Presence", "Faint Glow"],
   /** How the object smells. All scents are learned; Minor mimics can't wear one. */
   scent: ["Musty", "Fresh", "Fragrant", "Foul", "Smoky", "Briny", "Earthy"],

@@ -4,7 +4,8 @@
  * - `.parse()` validates a record and fills in defaults for missing fields, so saves
  *   made before a field existed still load correctly.
  * - The objects are strict: unknown keys (e.g. a misspelled field name in an
- *   `update()` call) are rejected rather than silently stored or dropped.
+ *   `update()` call) are rejected rather than silently stored or dropped. Reading an older
+ *   save is forgiving instead: what no longer fits is dropped (see fitToSchema in db.ts).
  * - Tiers, materials, traits and form ids must be real game names (from the game
  *   vocabulary and form data), so a save can't hold a misspelled or unknown name.
  * - The TypeScript types below are inferred from the schema; don't write them by hand.
@@ -13,9 +14,9 @@
  */
 import { z } from 'zod';
 import {
-  ALL_MATERIALS, ALL_TRAITS, STARTING_TYPES, TIER_ORDER, TRAITS,
+  ALL_MATERIALS, ALL_TRAITS, BRANCH_TIERS, STARTING_TYPES, TIER_ORDER, TRAITS,
 } from '@/data/vocabulary';
-import { FORM_IDS, LOCATIONS, type LocationId } from '@/data/gameData';
+import { FORM_IDS, LOCATIONS, MAX_FORMS, type LocationId } from '@/data/gameData';
 
 const TierSchema = z.enum(TIER_ORDER);
 const MaterialSchema = z.enum(ALL_MATERIALS);
@@ -40,8 +41,11 @@ const AppearanceSchema = z.strictObject({
 
 /** Fields the game controls. Used to validate `create()` input. */
 export const MimicCharacterFieldsSchema = z.strictObject({
-  name: z.string().trim().min(1, 'Name is required'),
+  // Spaces at either end are trimmed, and any run of spaces inside becomes one: "  Old   Hatbox " is "Old Hatbox"
+  name: z.string().trim().min(1, 'Name is required').transform(name => name.replace(/\s+/g, ' ')),
   tier: TierSchema.default('Minor'),
+  /** The branch tier past Apex this mimic has taken (BRANCH_TIERS), or null. Its `tier` stays Apex. */
+  branchTier: z.enum(BRANCH_TIERS).nullable().default(null),
   startingType: z.enum(STARTING_TYPES).optional(),
   mass: z.number().default(2),
   digestiveCapacity: z.number().default(5),
@@ -50,13 +54,17 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   plausibility: z.number().default(3),
   assimilationPoints: z.number().default(0),
   baseAllure: z.number().default(2),
-  forms: z.array(FormRefSchema).max(3, 'A mimic can hold at most 3 forms').default([]),
+  forms: z.array(FormRefSchema).max(MAX_FORMS, `A mimic can hold at most ${MAX_FORMS} forms`).default([]),
   activeFormIndex: z.number().int().min(0).default(0),
   learnedMaterials: z.array(MaterialSchema).default([]),
   learnedTraits: z.array(z.enum(ALL_TRAITS)).default([]),
   currentAppearance: AppearanceSchema.default(() => AppearanceSchema.parse({})),
   /** True when the mimic has reached mass 40 at Apex tier. */
   apexPeakReached: z.boolean().default(false),
+  /** True once the mimic has been Sovereign (Ruler of All Mimics), even if it has since lost it. */
+  sovereignReached: z.boolean().default(false),
+  /** True once the mimic has eaten the Time Caster at the Tear in Time (A Stitch in Time). */
+  timeCasterEaten: z.boolean().default(false),
   /** Names of the Cloud Kingdom giants this mimic has consumed whole (for Titanic Feast). */
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */
@@ -111,10 +119,32 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   titanicFeastReached: z.boolean().default(false),
   /** ISO timestamp of the last time the mimic consumed something (used for mass decay). */
   lastFedAt: z.iso.datetime().optional(),
+  /** Magic users eaten while wearing a time form (toward the Tear in Time; see withTimeTear). */
+  timeTearCounter: z.number().int().min(0).default(0),
+  /** When the current stretch without losing mass to decay began (toward Eternal; see welcomeBack). */
+  decayFreeDate: z.iso.datetime().optional(),
   /** What the hunt's left sidebar shows: the room map or the party list (clicking it switches). */
   sidebarView: z.enum(["map", "party"]).default("map"),
   isActive: z.boolean().default(true),
 });
+
+/**
+ * Before an older save is fitted to the schema (see fitToSchema in db.ts): forms the game no
+ * longer has are dropped here, keeping the form being worn still worn even if one before it in
+ * the list went (dropping it in the general pass would leave the index pointing at the wrong one).
+ */
+export function keepWornForm(raw: unknown): { record: unknown; dropped: string[] } {
+  if (raw === null || typeof raw !== 'object' || !('forms' in raw) || !Array.isArray(raw.forms)) return { record: raw, dropped: [] };
+  const known = new Set<string>(FORM_IDS);
+  const forms = raw.forms as unknown[];
+  const idOf = (ref: unknown) => (ref !== null && typeof ref === 'object' && 'formId' in ref ? String(ref.formId) : null);
+  const index = 'activeFormIndex' in raw && typeof raw.activeFormIndex === 'number' ? raw.activeFormIndex : 0;
+  const wornId = idOf(forms[index]);
+  const kept = forms.filter((ref) => known.has(idOf(ref) ?? ''));
+  if (kept.length === forms.length) return { record: raw, dropped: [] };
+  const dropped = forms.flatMap((ref, i) => (kept.includes(ref) ? [] : [`forms.${i}`]));
+  return { record: { ...raw, forms: kept, activeFormIndex: Math.max(0, kept.findIndex((ref) => idOf(ref) === wornId)) }, dropped };
+}
 
 /** A stored record: game fields plus the fields the data layer manages. */
 export const MimicCharacterSchema = MimicCharacterFieldsSchema.extend({

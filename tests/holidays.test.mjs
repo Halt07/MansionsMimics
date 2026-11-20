@@ -10,6 +10,11 @@ export default async function ({ gameData: m, ok, log }) {
   ok(m.isInSeason('halloween', day(10, 3)) && m.isInSeason('halloween', day(11, 1)), 'All Hallows\' Eve runs Oct 3 through Nov 1');
   ok(!m.isInSeason('halloween', day(10, 2)) && !m.isInSeason('halloween', day(11, 2)), '…and not a day either side');
   ok(m.isInSeason('christmas', day(12, 10)) && m.isInSeason('christmas', day(12, 30)), 'Midwinter runs Dec 10 through Dec 30');
+  // Lunar New Year moves (Jan 21 – Feb 20), so its season covers every date it can fall on (see DECISIONS.md)
+  ok(m.isInSeason('lunar_new_year', day(1, 21)) && m.isInSeason('lunar_new_year', day(2, 20)), 'the Lantern Festival runs Jan 21 through Feb 20');
+  ok(!m.isInSeason('lunar_new_year', day(1, 20)) && !m.isInSeason('lunar_new_year', day(2, 21)), '…and not a day either side');
+  const newYears = [[2026, 2, 17], [2027, 2, 6], [2028, 1, 26], [2029, 2, 13], [2030, 2, 3], [2031, 1, 23], [2033, 1, 31]];
+  ok(newYears.every(([y, mo, d]) => m.isInSeason('lunar_new_year', new Date(y, mo - 1, d))), '…so it always includes Lunar New Year (2026 to 2033, early and late)');
   ok(!m.isInSeason('christmas', day(12, 9)) && !m.isInSeason('christmas', day(12, 31)), '…and not a day either side');
   const [ts, te] = [m.HOLIDAYS.thanksgiving.start, m.HOLIDAYS.thanksgiving.end];
   ok(m.isInSeason('thanksgiving', day(...ts)) && m.isInSeason('thanksgiving', day(...te)) && !m.isInSeason('thanksgiving', day(ts[0], ts[1] - 1)), `Harvest Feast runs ${m.seasonRange('thanksgiving')}`);
@@ -28,7 +33,7 @@ export default async function ({ gameData: m, ok, log }) {
   ok(tight.length === 0, `at least 5 days between seasons (${tight.join(', ')})`);
   let quiet = 0;
   for (let d = new Date(2026, 0, 1); d.getFullYear() === 2026; d.setDate(d.getDate() + 1)) if (!m.activeHolidays(d).length) quiet++;
-  ok(quiet >= 180, `most of the year has no seasonal forms (${quiet} quiet days)`);
+  ok(quiet >= 170, `about half the year has no seasonal forms (${quiet} quiet days)`);
   const overlaps = [];
   for (let d = new Date(2026, 0, 1); d.getFullYear() === 2026; d.setDate(d.getDate() + 1)) {
     if (m.activeHolidays(d).length > 1) overlaps.push(d.toDateString());

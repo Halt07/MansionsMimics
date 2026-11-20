@@ -1,14 +1,17 @@
 // ============================================================
 // MANSIONS & MIMICS — Location events
-// The twists particular locations (and some hunts) bring: rival mimics, the Sinking Ship,
-// Devotion at the Hollow Reliquary, and the seasonal locations' cold, falling stars, fireworks
-// and door-to-door procession. Re-exported from ./gameData.
+// The twists particular locations (and some hunts) bring: rival mimics, the Sinking Ship, and
+// the seasonal locations' cold, falling stars, fireworks and door-to-door procession. (Devotion
+// at the Hollow Reliquary has its own module, ./devotion.) Re-exported from ./gameData.
 // ============================================================
-import { TIER_ORDER, type Material, type TeachableTrait, type Tier, type Trait } from "./vocabulary";
+import { ADVENTURER_TEMPLATES, getApReward, isHiddenAdventurer, stillInHunt, type PartyMember, type Treasure } from "./adventurerData";
+import { getAdjacentRooms, getRoomDistance, shuffle } from "./core";
+import type { HuntLocation, RoomName } from "./locationData";
 import { type Form, type FormId } from "./mimicData";
-import { ADVENTURER_TEMPLATES, type PartyMember, type Treasure } from "./adventurerData";
-import { type HuntLocation, type LocationCreature, type RoomName } from "./locationData";
-import { getAdjacentRooms, getApReward, getRoomDistance } from "./gameData";
+import { plural } from "./text";
+import {
+  TIER_ORDER, type Material, type TeachableTrait, type Tier, type Trait,
+} from "./vocabulary";
 
 // ============================================================
 // DOOR TO DOOR (Spell or Sweet Street)
@@ -28,7 +31,7 @@ export const COSTUMES = [
 export function dressParty(party: readonly PartyMember[], random: () => number = Math.random): PartyMember[] {
   const isCostume = (name: string) => (COSTUMES as readonly string[]).includes(name);
   const taken = new Set(party.map(a => a.name).filter(isCostume));
-  const pool = [...COSTUMES].filter(c => !taken.has(c)).sort(() => random() - 0.5);
+  const pool = shuffle(COSTUMES.filter(c => !taken.has(c)), random);
   let next = 0;
   return party.map(a => {
     if (isCostume(a.name)) return { ...a, costume: a.name, trueName: a.name };
@@ -64,6 +67,28 @@ export function addRealMonster(
   }];
 }
 
+/**
+ * Maybe add a stray (with the location's `strays.chance`): an ordinary adventurer from the
+ * world the mimic knows (not tied to any location, not giant-kin) who has wandered somewhere they
+ * don't belong, like the Tear in Time. Returns the party and the stray, if one came.
+ */
+export function addStray(
+  party: readonly PartyMember[], location: HuntLocation, tier: Tier, mass: number, random: () => number = Math.random,
+): { party: PartyMember[]; stray: PartyMember | null } {
+  if (!location.strays || random() >= location.strays.chance) return { party: [...party], stray: null };
+  const tierIdx = TIER_ORDER.indexOf(tier);
+  const options = ADVENTURER_TEMPLATES.filter(t => !t.locations && t.group !== "giantKin" && !isHiddenAdventurer(t) &&
+    (!t.minTier || TIER_ORDER.indexOf(t.minTier) <= tierIdx) && (!t.minMass || mass >= t.minMass));
+  if (options.length === 0) return { party: [...party], stray: null };
+  const t = options[Math.floor(random() * options.length)];
+  const room = location.rooms[Math.floor(random() * location.rooms.length)];
+  const stray: PartyMember = {
+    ...t, id: `stray_${t.name.replace(/\W+/g, "_")}_${party.length}`, suspicion: t.baseSuspicion,
+    isAlive: true, isConsumed: false, isAttracted: false, location: room,
+  };
+  return { party: [...party, stray], stray };
+}
+
 /** Who they really are (for the Codex and the reveal), costume or not. */
 export function unmask<T extends Pick<PartyMember, "name" | "trueName" | "costume">>(member: T): T {
   return member.trueName ? { ...member, name: member.trueName, costume: undefined } : member;
@@ -92,7 +117,7 @@ export function placeProcession(
   party: readonly PartyMember[], location: HuntLocation, avoid: RoomName | null, random: () => number = Math.random,
 ): PartyMember[] {
   const order = (location.procession?.order ?? location.rooms) as readonly RoomName[];
-  const free = [...order.filter(r => r !== avoid)].sort(() => random() - 0.5);
+  const free = shuffle(order.filter(r => r !== avoid), random);
   const groupSize = Math.min(party.length, random() < 0.5 ? 2 : 3);
   const [groupHouse, ...others] = free;
   return party.map((a, i) => ({
@@ -179,7 +204,7 @@ export function starfallDue(location: HuntLocation, turn: number): boolean {
 
 /** Whoever is in the fragment's room picks it up (the first one listed), carrying it as treasure. */
 export function claimStar(party: readonly PartyMember[], star: RoomName): { party: PartyMember[]; claimedBy: PartyMember | null } {
-  const claimer = party.find(a => isStillHunting(a) && a.location === star && !a.treasure);
+  const claimer = party.find(a => stillInHunt(a) && a.location === star && !a.treasure);
   if (!claimer) return { party: [...party], claimedBy: null };
   const claimedBy = { ...claimer, treasure: STAR_FRAGMENT };
   return { party: party.map(a => a.id === claimer.id ? claimedBy : a), claimedBy };
@@ -227,7 +252,7 @@ export function chillParty(party: readonly PartyMember[], location: HuntLocation
   const snow = location.snowbound;
   if (!snow) return { party: [...party], frozen, numb };
   const next = party.map(a => {
-    if (!isStillHunting(a) || a.warmth === undefined) return a;
+    if (!stillInHunt(a) || a.warmth === undefined) return a;
     const max = a.maxWarmth ?? a.warmth;
     let warmth = a.warmth;
     if (a.location !== a.warmthRoom) {
@@ -258,38 +283,33 @@ export function uneatenFrozen(party: readonly PartyMember[]): PartyMember[] {
 }
 
 // ============================================================
-// DEVOTION (The Hollow Reliquary)
-// A devoted adventurer left as the last one standing converts: it brings the mimic
-// OFFERING_COUNT small creatures from the location and leaves, ending the hunt.
-// ============================================================
-export const OFFERING_COUNT: readonly [number, number] = [4, 5];
-
-const isStillHunting = (a: PartyMember): boolean =>
-  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted;
-
-/** The devoted adventurer ready to convert: the only party member left, or null. */
-export function findDevotee(party: readonly PartyMember[]): PartyMember | null {
-  const remaining = party.filter(isStillHunting);
-  if (party.length < 2 || remaining.length !== 1) return null;
-  return remaining[0].behavior === "devotion" ? remaining[0] : null;
-}
-
-/** The small creatures a convert brings as offerings. */
-export function rollOfferings(location: HuntLocation, random: () => number = Math.random): LocationCreature[] {
-  const pool = location.locationCreatures;
-  if (pool.length === 0) return [];
-  const [min, max] = OFFERING_COUNT;
-  const count = min + Math.floor(random() * (max - min + 1));
-  return Array.from({ length: count }, () => pool[Math.floor(random() * pool.length)]);
-}
-
-// ============================================================
 // RIVAL MIMICS
 // A lone rival can lurk in an ordinary hunt; the Mimic Nest holds several, one of
 // them the Elder. Rivals hide in separate rooms, eat adventurers who wander in, and
 // are exposed when the mimic moves into their room.
 // ============================================================
 export type RivalKind = "lone" | "nest" | "elder";
+
+/**
+ * What a rival mimic is posing as once it's found (its marker on the room map), and the mimic
+ * forms that count as each (their variants too: a Rum Cask is a barrel).
+ */
+export const RIVAL_DISGUISES = [
+  { icon: "📦", name: "crate", forms: ["lesser_crate"] },
+  { icon: "🧰", name: "chest", forms: ["minor_jewelry_box", "lesser_chest", "giant_chest"] },
+  { icon: "🛢️", name: "barrel", forms: ["lesser_barrel", "giant_barrel"] },
+  { icon: "🪑", name: "chair", forms: ["lesser_chair", "standard_grand_chair", "greater_throne", "giant_throne"] },
+  { icon: "📕", name: "book", forms: ["minor_book", "giant_book"] },
+  { icon: "🧱", name: "brick", forms: ["minor_brick", "greater_wall"] },
+] as const satisfies readonly { icon: string; name: string; forms: readonly FormId[] }[];
+export type RivalDisguise = (typeof RIVAL_DISGUISES)[number];
+
+/** The disguise matching a mimic form (a crate, chest or barrel, or a variant of one), if any. */
+export function disguiseOf(form: Pick<Form, "id" | "variantOf"> | null | undefined): RivalDisguise | null {
+  if (!form) return null;
+  const is = (id: string | undefined) => !!id && RIVAL_DISGUISES.find(d => (d.forms as readonly string[]).includes(id));
+  return is(form.id) || is(form.variantOf) || null;
+}
 
 export interface RivalMimic {
   id: string;
@@ -299,6 +319,8 @@ export interface RivalMimic {
   consumed: boolean;
   /** It has eaten someone, so the player knows it's out there. */
   clueGiven: boolean;
+  /** Chosen when it's placed, and kept all hunt (even after it slips away and hides again). */
+  disguise: RivalDisguise;
 }
 
 /** Dice a rival resists a Strike with, the AP it's worth, and what the log calls it. */
@@ -320,13 +342,10 @@ export function rollNestKinds(location: HuntLocation, random: () => number = Mat
 export function placeRivals(
   location: HuntLocation, startRoom: RoomName, kinds: readonly RivalKind[], random: () => number = Math.random,
 ): RivalMimic[] {
-  const rooms = location.rooms.filter(r => r !== startRoom);
-  for (let i = rooms.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [rooms[i], rooms[j]] = [rooms[j], rooms[i]];
-  }
+  const rooms = shuffle(location.rooms.filter(r => r !== startRoom), random);
   return kinds.slice(0, rooms.length).map((kind, i) => ({
     id: `rival_${i}`, kind, room: rooms[i], revealed: false, consumed: false, clueGiven: false,
+    disguise: RIVAL_DISGUISES[Math.floor(random() * RIVAL_DISGUISES.length)],
   }));
 }
 
@@ -341,7 +360,7 @@ export function rivalEscapeRoom(
   return options.length > 0 ? options[Math.floor(random() * options.length)] : escapee.room;
 }
 
-/** The uneaten rival hiding in a room, if any. */
+/** The uneaten rival in a room, hidden or found, if any. */
 export function rivalInRoom(rivals: readonly RivalMimic[], room: RoomName | null | undefined): RivalMimic | undefined {
   return rivals.find(r => !r.consumed && r.room === room);
 }
@@ -379,6 +398,6 @@ export function sinkingWarning(totalTurns: number, turn: number): string | null 
   if (left <= 0) return null;
   if (turn === Math.floor(totalTurns / 3)) return "🌊 Water sloshes across the lower decks. The hull groans under the strain.";
   if (turn === Math.floor((totalTurns * 2) / 3)) return "🌊 The ship lists hard. Loose cargo slides, and the hold is half underwater.";
-  if (left <= 2) return `🌊 The deck is awash. ${left === 1 ? "One more turn" : "Two more turns"} before she goes under!`;
+  if (left <= 2) return `🌊 The deck is awash. ${plural(left, "One more turn", "Two more turns")} before she goes under!`;
   return null;
 }

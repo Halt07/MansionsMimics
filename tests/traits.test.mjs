@@ -1,4 +1,4 @@
-// Forms' built-in traits (structural/aura) and flaw data.
+// Forms' built-in traits (structural/aura) and flaw data, and who cares about the symbolic marks.
 export default async function ({ gameData: m, ok }) {
   const forms = m.ALL_FORMS;
   const builtInAllowed = new Set([...m.UNLEARNED_TRAITS.structural, ...m.UNLEARNED_TRAITS.aura]);
@@ -28,4 +28,27 @@ export default async function ({ gameData: m, ok }) {
   const giantChest = forms.find((f) => f.id === 'giant_chest');
   const liked = m.calcAllureBreakdown(giantChest, {}, half).liked;
   ok(liked.includes('Iron-Banded') && liked.includes('Heavy-Lidded'), "a bare Giant Chest's built-in traits lure a Half-Giant");
+
+  // ---------- the symbolic marks: who's drawn, who's put off, who teaches them ----------
+  const T = m.ADVENTURER_TEMPLATES;
+  const likers = (t) => T.filter((a) => a.alluringQualities.traits.includes(t));
+  const dislikers = (t) => T.filter((a) => a.repelledBy?.traits?.includes(t));
+  const teachers = (t) => T.filter((a) => a.lootTraits.includes(t));
+  const types = (list) => new Set(list.map((a) => a.type));
+  const only = (list, allowed) => list.length > 0 && [...types(list)].every((x) => allowed.includes(x));
+  for (const t of m.TRAITS.symbolic) {
+    ok(likers(t).length > 0 && teachers(t).length > 0, `${t}: liked by ${likers(t).length}, taught by ${teachers(t).length}`);
+  }
+  ok(only(likers('Ward Sign'), ['Commoner']) && only(dislikers('Ward Sign'), ['Undead', 'Fey']), 'Ward Sign: commoners trust it; undead and fey shy from it');
+  ok(only(likers("Thieves' Mark"), ['Rogue', 'Assassin']) && types(likers("Thieves' Mark")).has('Assassin'), "Thieves' Mark: rogues and assassins read it");
+  ok(types(dislikers("Thieves' Mark")).has('Paladin') && dislikers("Thieves' Mark").some((a) => /Guard|Watchman/.test(a.name)), '…and paladins and guards distrust it');
+  ok(only(likers('Tally Marks'), ['Warrior', 'Hunter']) && types(likers('Tally Marks')).has('Hunter'), 'Tally Marks: warriors and hunters respect a count of kills');
+  ok(only(dislikers('Tally Marks'), ['Commoner']), '…and they unsettle commoners');
+  ok(T.filter((a) => a.type === 'Artificer').every((a) => likers('Guild Mark').includes(a)) && likers('Guild Mark').some((a) => a.name === 'The High Merchant'),
+    'Guild Mark: every artificer, and the merchants');
+  ok(['The King', 'The Princess'].every((n) => likers("Maker's Mark").some((a) => a.name === n)) && !likers('Guild Mark').some((a) => ['The King', 'The Princess'].includes(a.name)),
+    "Maker's Mark: royalty want the maker's name, not the guild's");
+  const both = likers("Maker's Mark").filter((a) => likers('Guild Mark').includes(a));
+  ok(both.length * 2 <= Math.min(likers("Maker's Mark").length, likers('Guild Mark').length),
+    `Guild Mark and Maker's Mark draw mostly different people (${both.length} share both)`);
 }

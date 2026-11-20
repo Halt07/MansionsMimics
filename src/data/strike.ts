@@ -7,18 +7,80 @@
 // the dice. Re-exported from ./gameData.
 // ============================================================
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type { Material, TeachableTrait } from "./vocabulary";
-import type { Form } from "./mimicData";
-import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, type PartyMember } from "./adventurerData";
-import type { HuntLocation, RoomName } from "./locationData";
-import {
-  adhesionCheck, calcAllureInterest, consumeSuspicion, getApReward, getBiteAp, getRoomDistance, hasMagic,
-  rollBiteMaterial, rollDice,
-} from "./gameData";
+import { ADVENTURER_MATERIALS, ADVENTURER_TRAITS, getApReward, stillInHunt, type PartyMember } from "./adventurerData";
+import { getAdjacentRooms, getRoomDistance, hasMagic, rollDice, shuffle } from "./core";
 import { RIVAL_STATS, pickTreasurePrize, rivalEscapeRoom, type RivalMimic, type TreasurePrize } from "./events";
+import type { HuntLocation, RoomName } from "./locationData";
+import { calcAllureInterest, type CheckResult } from "./lure";
+import type { Form } from "./mimicData";
 import { TITANIC_FEAST_GIANTS, isTitanicFeastComplete } from "./stats";
+import type { Material, TeachableTrait } from "./vocabulary";
 
-const stillHunting = (a: PartyMember) => a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared;
+// ---------- the checks: adhesion, escaping, AP, witnesses ----------
+
+/**
+ * Suspicion added when a party member is consumed whole while others remain in the hunt.
+ * A disappearance alone is +1; anyone still in the room may have seen it happen (+2), and a crowd
+ * of 3 or more witnesses raises the alarm further (+3).
+ */
+export function consumeSuspicion(witnesses: number): number {
+  if (witnesses >= 3) return 3;
+  if (witnesses >= 1) return 2;
+  return 1;
+}
+
+/** Extra dice an Elusive adventurer rolls when resisting a Strike (or bite). */
+export const ELUSIVE_EXTRA_DICE = 1;
+
+/** Dice an adventurer resists a Strike (or bite) with: its Discipline, plus any Elusive dice. */
+export function strikeResistDice(adventurer: Pick<PartyMember, "discipline" | "behavior">): number {
+  return adventurer.discipline + (adventurer.behavior === "elusive" ? ELUSIVE_EXTRA_DICE : 0);
+}
+
+/** Where an adventurer that slipped a Strike runs to: a room next to it, never the mimic's. */
+export function escapeRoom(
+  location: HuntLocation, fromRoom: RoomName, mimicRoom: RoomName | null, random: () => number = Math.random,
+): RoomName {
+  const adjacent = getAdjacentRooms(location, fromRoom).filter(r => r !== mimicRoom);
+  const options = adjacent.length > 0 ? adjacent : location.rooms.filter(r => r !== mimicRoom && r !== fromRoom);
+  return options.length > 0 ? options[Math.floor(random() * options.length)] : fromRoom;
+}
+
+export function adhesionCheck(adhesion: number, form: Form, adventurer: PartyMember, random: () => number = Math.random): CheckResult {
+  const mimicRoll = rollDice(adhesion, random);
+  const advRoll = rollDice(strikeResistDice(adventurer), random);
+  const success = mimicRoll >= advRoll;
+  return {
+    success, mimicRoll, advRoll, suspicionChange: 0, detectedFlaws: [],
+    narrative: success
+      ? `The ${form.name} snaps shut! ${adventurer.name} is caught!`
+      : `${adventurer.name} recoils just in time, evading your grasp!`,
+  };
+}
+
+// ---------- partial bites ----------
+// Minor mimics are too small to swallow anyone whole, and Apex mimics can't swallow
+// a giant until they reach its wholeMealMass. Both bite pieces off instead.
+export const BITE_MATERIAL_CHANCE = 0.35; // chance a held bite teaches one of the target's loot materials
+
+export function needsPartialBites(
+  character: Pick<MimicCharacter, "tier" | "mass">, target: Pick<PartyMember, "wholeMealMass">,
+): boolean {
+  if (character.tier === "Minor") return true;
+  return !!target.wholeMealMass && (character.mass ?? 0) < target.wholeMealMass;
+}
+
+/** AP for one held bite: 1 for ordinary prey, 2–3 for a giant. */
+export function getBiteAp(target: Pick<PartyMember, "group">, random: () => number = Math.random): number {
+  return target.group === "giantKin" ? 2 + Math.floor(random() * 2) : 1;
+}
+
+/** Maybe learn a real material from a bite. Returns a material name or null. */
+export function rollBiteMaterial(target: Pick<PartyMember, "lootMaterials">, random: () => number = Math.random): Material | null {
+  const mats = target.lootMaterials || [];
+  if (mats.length === 0 || random() >= BITE_MATERIAL_CHANCE) return null;
+  return mats[Math.floor(random() * mats.length)];
+}
 
 // ---------- who gets struck ----------
 
@@ -32,8 +94,7 @@ export function strikeDice(adhesion: number, appearance: Partial<Appearance> | n
  * room too, since they're all staring at the sky.
  */
 export function strikeCandidates(party: readonly PartyMember[], mimicRoom: RoomName | null, skyward: boolean): PartyMember[] {
-  return party.filter(a => a.isAlive && !a.isConsumed &&
-    (a.isAttracted || (skyward && a.location === mimicRoom && !a.fled && !a.isDisappeared)));
+  return party.filter(a => stillInHunt(a) && (a.isAttracted || (skyward && a.location === mimicRoom)));
 }
 
 /** The one struck: the nearest candidate, and among the nearest, whoever likes the mimic's look most. */
@@ -62,7 +123,7 @@ export interface Witnesses {
 export function strikeWitnesses(
   party: readonly PartyMember[], target: PartyMember, mimicRoom: RoomName | null, skyward: boolean,
 ): Witnesses {
-  const others = party.filter(a => a.id !== target.id && stillHunting(a));
+  const others = party.filter(a => a.id !== target.id && stillInHunt(a));
   const inRoom = others.filter(a => a.location === mimicRoom).length;
   return { othersRemain: others.length > 0, inRoom, witnesses: skyward ? 0 : inRoom };
 }
@@ -218,8 +279,8 @@ export function rollLearning(
 ): Learning {
   const allMaterials = target.lootMaterials || ADVENTURER_MATERIALS[target.type] || [];
   const allTraits = target.lootTraits || ADVENTURER_TRAITS[target.type] || [];
-  const shuffledMats = [...allMaterials].sort(() => random() - 0.5);
-  const shuffledTraits = [...allTraits].sort(() => random() - 0.5);
+  const shuffledMats = shuffle(allMaterials, random);
+  const shuffledTraits = shuffle(allTraits, random);
   const materials = shuffledMats.slice(0, Math.max(1, Math.floor(random() * (shuffledMats.length + 1))));
   const traits = shuffledTraits.length > 0 ? shuffledTraits.slice(0, random() < 0.6 ? 1 : shuffledTraits.length) : [];
   const newMaterials = materials.filter(m => !known.learnedMaterials.includes(m));

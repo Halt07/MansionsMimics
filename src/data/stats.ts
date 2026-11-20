@@ -4,12 +4,15 @@
 // the lifetime stats on the character sheet. Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type LearnableTrait, type Material, type Tier } from "./vocabulary";
-import { ALL_FORMS, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
-import { ADVENTURER_TEMPLATES } from "./adventurerData";
-import { LOCATIONS, type LocationId } from "./locationData";
-import { HOLIDAYS, type HolidayId } from "./holidays";
-import { VARIANT_FORMS, effectiveFormTier, formTier, getFormTierPenalties, hasMagic, knowsTrait } from "./gameData";
+import { ALL_MATERIALS, LEARNABLE_TRAITS, TIER_ORDER, type CombatStat, type LearnableTrait, type Material, type Tier, type BranchTier } from "./vocabulary";
+import { ALL_FORMS, BRANCH_TIER_CONFIG, SEASONAL_FORMS, TIER_CONFIG, type Form, type FormId, type Sickness } from "./mimicData";
+import { ADVENTURER_TEMPLATES, isHiddenAdventurer } from "./adventurerData";
+import { LOCATIONS, type HuntLocation, type LocationId } from "./locationData";
+import { HOLIDAYS, today, type HolidayId } from "./holidays";
+import { hasMagic, knowsTrait } from "./core";
+import {
+  VARIANT_FORMS, dropExpiredSeasonalForms, effectiveFormTier, formsStillAllowed, formTier, getFormTierPenalties,
+} from "./forms";
 
 // ============================================================
 // EFFECTIVE STATS
@@ -104,6 +107,181 @@ export function massDecay(
   };
 }
 
+/**
+ * What's happened since a mimic was last opened: mass lost while it was away unfed (see
+ * massDecay), and seasonal forms whose season has ended slipping away (see
+ * dropExpiredSeasonalForms), and a branch tier taken or lost while it was away (see branchOnOpening:
+ * a Sovereign that has shrunk below SOVEREIGN_MASS says so on the decay notice). The mimic as it is
+ * now, what to save, and the notices to show.
+ */
+export function welcomeBack(
+  character: MimicCharacter, { now = new Date(), day = today() }: { now?: Date; day?: Date } = {},
+): {
+  character: MimicCharacter; changes: Partial<MimicCharacter>;
+  massDecayNotice: string | null; seasonNotice: string | null; branchNotice: string | null;
+} {
+  let changes: Partial<MimicCharacter> = {};
+  let massDecayNotice: string | null = null;
+  const decay = massDecay(character.mass, character.lastFedAt, now);
+  // The decay-free stretch starts the first time a mimic is opened (older saves included)...
+  if (!character.decayFreeDate) changes = { decayFreeDate: now.toISOString() };
+  if (decay) {
+    // ...and starts over from the last mass decay taken
+    changes = { mass: decay.mass, lastFedAt: decay.lastFedAt, decayFreeDate: decay.lastFedAt };
+    massDecayNotice = `You have been away for ${decay.daysAway} days without feeding. Your mass has diminished by ${decay.massLost} (now ${decay.mass}). Hunger gnaws at your form.`;
+  }
+  const dropped = dropExpiredSeasonalForms(character.forms, character.activeFormIndex, day);
+  if (dropped) changes = { ...changes, forms: dropped.forms, activeFormIndex: dropped.activeFormIndex };
+  let branchNotice: string | null = null;
+  const branch = branchOnOpening({ ...character, ...changes }, now);
+  if (branch) {
+    changes = { ...changes, ...branch.changes };
+    if (branch.lost) massDecayNotice = `${massDecayNotice ?? ""} ${branch.line}`.trim();
+    else branchNotice = branch.line;
+  }
+  return { character: { ...character, ...changes }, changes, massDecayNotice, seasonNotice: dropped?.message ?? null, branchNotice };
+}
+
+// ============================================================
+// BEYOND APEX (groundwork)
+// The hidden tiers past Apex aren't in the game yet (see "Beyond Apex" in IDEAS.md), but the
+// records they'll be judged on are kept from now on:
+// - timeTearCounter: magic users (see isMagicUser) eaten while wearing a time form (toward the Tear in Time)
+// - decayFreeDate: when the current stretch without losing mass to decay began (toward Eternal)
+// ============================================================
+/** Forms that count as time forms for the Tear in Time. */
+export const TIME_FORMS: readonly FormId[] = ["minor_hourglass", "greater_midnight_orb", "greater_grandfather_clock", "apex_clocktower"];
+/** Days without losing mass to decay that Eternal will ask for. */
+export const ETERNAL_DECAY_FREE_DAYS = 45;
+/** The Tear in Time opens once an Apex mimic has eaten this many magic users in a time form... */
+export const TIME_TEAR_MAGIC_USERS = 50;
+/** ...and reached this much mass. */
+export const TIME_TEAR_MASS = 50;
+
+/** Adventurer types whose members are all magic users. */
+export const MAGIC_USER_TYPES: readonly string[] = ["Wizard", "Fey"];
+/** Magic users of other types, by name. */
+export const MAGIC_USER_EXCEPTIONS: readonly string[] = ["Tiefling Hexblade"];
+
+/** Whether an adventurer counts as a magic user for the Tear in Time (pass them unmasked). */
+export function isMagicUser(member: { name: string; type: string }): boolean {
+  return MAGIC_USER_TYPES.includes(member.type) || MAGIC_USER_EXCEPTIONS.includes(member.name);
+}
+
+/** The Tear in Time's counter after eating `member`: one more if it's a magic user and the mimic is wearing a time form. */
+export function withTimeTear(
+  character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
+): number {
+  const worn = character.forms[character.activeFormIndex]?.formId;
+  const counts = !!worn && TIME_FORMS.includes(worn) && isMagicUser(member);
+  return character.timeTearCounter + (counts ? 1 : 0);
+}
+
+/**
+ * The tier to show the player: the branch tier once the mimic has one, otherwise its tier. Only
+ * for display (Home's cards, the character sheet, the game page); the rules keep using `tier`,
+ * which stays Apex for a branch mimic.
+ */
+export function displayTier(character: Pick<MimicCharacter, "tier" | "branchTier">): Tier | BranchTier {
+  return character.branchTier ?? character.tier;
+}
+
+/** The description and lore for the tier shown by displayTier. */
+export function tierFlavor(character: Pick<MimicCharacter, "tier" | "branchTier">): { description: string; lore: string } {
+  const { description, lore } = character.branchTier ? BRANCH_TIER_CONFIG[character.branchTier] : TIER_CONFIG[character.tier];
+  return { description, lore };
+}
+
+/** Sovereign: this much mass at Apex. Held only while the mass is: dropping below it loses the tier. */
+export const SOVEREIGN_MASS = 100;
+
+/** What's said when a mimic takes a branch tier, or (Sovereign only) loses it. */
+export const BRANCH_TIER_LINES = {
+  Eternal: "⏳ Forty-five days, and not a speck of you has faded. You have outlasted hunger itself. You are Eternal.",
+  Primordial: "🌋 You step through the Tear in Time itself, into a world where nothing has ever pretended to be anything else. Until now. You are the very first mimic in history. You have become Primordial.",
+  Sovereign: "👑 At a hundred mass, every mimic in the world turns toward you, and waits. You are Sovereign: Ruler of All Mimics.",
+  sovereignLost: "👑 Your mass has fallen below a hundred, and the mimics of the world no longer answer to you. You are no longer Ruler of All Mimics.",
+} as const;
+
+// Only an Apex mimic with no branch can take one, so a branch locks out the others. Each is taken
+// in its own way, and they can't come due together:
+// - Sovereign by growing to SOVEREIGN_MASS (sovereignOnGrowth). Mass only goes up in play, so
+//   it's always gained in front of the player. Lost when decay takes the mass below it
+//   (branchOnOpening), leaving the mimic free to take any branch again.
+// - Eternal after ETERNAL_DECAY_FREE_DAYS without decay, which pass while the player is away, so
+//   it's taken when the mimic is next opened (branchOnOpening).
+// - Primordial by hunting through the Tear in Time (tearInTimeOpen, becomePrimordial).
+
+/** Growing to `mass`: Sovereign, if that's SOVEREIGN_MASS and the mimic has no branch (null otherwise). */
+export function sovereignOnGrowth(
+  character: Pick<MimicCharacter, "tier" | "branchTier">, mass: number,
+): { changes: Partial<MimicCharacter>; line: string } | null {
+  if (character.tier !== "Apex" || character.branchTier || mass < SOVEREIGN_MASS) return null;
+  return { changes: { branchTier: "Sovereign", sovereignReached: true }, line: BRANCH_TIER_LINES.Sovereign };
+}
+
+/**
+ * What's happened to the mimic's branch while it was away (after decay has been charged): a
+ * Sovereign shrunk below SOVEREIGN_MASS loses it; a mimic with no branch that has gone
+ * ETERNAL_DECAY_FREE_DAYS without decay becomes Eternal. Null when nothing changes.
+ */
+export function branchOnOpening(
+  character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "decayFreeDate">, now: Date = new Date(),
+): { changes: Partial<MimicCharacter>; line: string; lost: boolean } | null {
+  if (character.tier !== "Apex") return null;
+  if (character.branchTier === "Sovereign" && character.mass < SOVEREIGN_MASS) {
+    return { changes: { branchTier: null }, line: BRANCH_TIER_LINES.sovereignLost, lost: true };
+  }
+  if (!character.branchTier && decayFreeDays(character.decayFreeDate, now) >= ETERNAL_DECAY_FREE_DAYS) {
+    return { changes: { branchTier: "Eternal" }, line: BRANCH_TIER_LINES.Eternal, lost: false };
+  }
+  return null;
+}
+
+/** Whether the Tear in Time is open to this mimic: Apex, no branch yet, and both of its requirements met. */
+export function tearInTimeOpen(character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">): boolean {
+  return character.tier === "Apex" && !character.branchTier
+    && character.timeTearCounter >= TIME_TEAR_MAGIC_USERS && character.mass >= TIME_TEAR_MASS;
+}
+
+/**
+ * Whether a branch tier's own hunting ground is open to this mimic: to one on its way to that
+ * branch (for Primordial, while the Tear is open to it), or already on it.
+ */
+export function branchLocationOpen(
+  location: Pick<HuntLocation, "branch">, character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">,
+): boolean {
+  if (!location.branch) return false;
+  if (character.branchTier) return character.branchTier === location.branch;
+  return location.branch === "Primordial" && tearInTimeOpen(character);
+}
+
+/** Going through the Tear in Time to hunt: the mimic becomes Primordial (null if the Tear isn't open to it). */
+export function becomePrimordial(
+  character: Pick<MimicCharacter, "tier" | "branchTier" | "mass" | "timeTearCounter">,
+): { changes: Partial<MimicCharacter>; line: string } | null {
+  return tearInTimeOpen(character) ? { changes: { branchTier: "Primordial" }, line: BRANCH_TIER_LINES.Primordial } : null;
+}
+
+/** The Tear in Time's rare visitor, who opened it: eating them is A Stitch in Time. */
+export const TIME_CASTER = "Time Caster";
+
+/**
+ * What eating `member` adds to the records the branch tiers keep: the Tear in Time's counter
+ * (see withTimeTear), and whether this was the Time Caster. Pass them unmasked.
+ */
+export function branchMealRecords(
+  character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
+): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten">> {
+  return { timeTearCounter: withTimeTear(character, member), ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}) };
+}
+
+/** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
+export function decayFreeDays(decayFreeDate: string | null | undefined, now: Date = new Date()): number {
+  if (!decayFreeDate) return 0;
+  return Math.max(0, Math.floor((now.getTime() - new Date(decayFreeDate).getTime()) / DAY_MS));
+}
+
 // ============================================================
 // ACHIEVEMENTS
 // The single list the Home badges, in-game banners and Codex all read from.
@@ -114,12 +292,13 @@ export const CANNIBAL_MIMICS = 10;
 
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
-  "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler";
+  "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler" |
+  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
   "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed" |
-  "locationHuntCounts">;
+  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -129,7 +308,8 @@ type AchievementProgress = Pick<MimicCharacter,
 export function obtainableMaterialsAndTraits(): { materials: Set<Material>; traits: Set<LearnableTrait> } {
   const materials = new Set<Material>();
   const traits = new Set<LearnableTrait>();
-  for (const t of ADVENTURER_TEMPLATES) {
+  // Not the hidden adventurers: only one branch tier can ever meet them
+  for (const t of ADVENTURER_TEMPLATES.filter(t => !isHiddenAdventurer(t))) {
     t.lootMaterials.forEach(x => materials.add(x));
     t.lootTraits.forEach(x => traits.add(x));
     t.treasure?.materials.forEach(x => materials.add(x));
@@ -156,6 +336,12 @@ export interface Achievement {
    * one have no in-game banner; every earned achievement is listed on the character sheet.
    */
   bannerLocation?: LocationId;
+  /**
+   * Kept secret (the branch tiers past Apex): left out of every list, the Codex's and the
+   * character sheet's count included, until the player has a mimic that's earned it. See
+   * achievementsShown.
+   */
+  hidden?: boolean;
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -206,7 +392,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     id: "connoisseur", name: "Connoisseur", icon: "🍽️",
     description: "Eat at least one of every kind of adventurer (companions don't count). The Codex tracks your progress.",
     flavor: (n) => `There is no one left that ${n} hasn't tasted. It has opinions about all of them.`,
-    isEarned: (c) => ADVENTURER_TEMPLATES.every(t => c.adventurersEaten.includes(t.name)),
+    // Not the hidden ones, who only one branch tier can ever meet
+    isEarned: (c) => ADVENTURER_TEMPLATES.filter(t => !isHiddenAdventurer(t)).every(t => c.adventurersEaten.includes(t.name)),
   },
   {
     id: "masterOfDisguise", name: "Master of Disguise", icon: "🎭",
@@ -241,7 +428,41 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     // Every location with a holiday, so new seasonal locations join the list on their own
     isEarned: (c) => LOCATIONS.filter(l => l.holiday).every(l => (c.locationHuntCounts?.[l.id] ?? 0) > 0),
   },
+  // ── Hidden: the branch tiers past Apex ──
+  {
+    id: "eternal", name: "Eternal", icon: "⏳", hidden: true,
+    description: `At the Apex, go ${ETERNAL_DECAY_FREE_DAYS} days without losing any mass to hunger, and become Eternal.`,
+    flavor: (n) => `${n} has outlasted hunger itself. Kingdoms will fall around it, and it will still be waiting.`,
+    isEarned: (c) => c.branchTier === "Eternal",
+  },
+  {
+    id: "primordial", name: "Primordial", icon: "🌋", hidden: true,
+    description: "Go through the Tear in Time and become the very first mimic in history.",
+    flavor: (n) => `Long before the first chest was built, ${n} was already pretending to be something else.`,
+    isEarned: (c) => c.branchTier === "Primordial",
+  },
+  {
+    id: "stitchInTime", name: "A Stitch in Time", icon: "🕰️", hidden: true,
+    description: "At the Tear in Time, eat the Time Caster: the one who tore it open in the first place. They don't come by often.",
+    flavor: (n) => `${n} ate the only one who knew the way home. Whatever happens next, it has already happened.`,
+    isEarned: (c) => c.timeCasterEaten,
+  },
+  {
+    id: "rulerOfAllMimics", name: "Ruler of All Mimics", icon: "👑", hidden: true,
+    description: `At the Apex, grow to ${SOVEREIGN_MASS} mass and become Sovereign. It stays earned even if hunger takes the throne.`,
+    flavor: (n) => `Every crate that holds its breath answers to ${n}. Or did, once.`,
+    // Kept, like the record of it, after a Sovereign shrinks below SOVEREIGN_MASS
+    isEarned: (c) => c.sovereignReached,
+  },
 ];
+
+/**
+ * The achievements to list, given whose progress counts (one mimic, or several for the Codex):
+ * every ordinary one, and a hidden one only once one of them has earned it.
+ */
+export function achievementsShown(earnedBy: readonly AchievementProgress[]): Achievement[] {
+  return ACHIEVEMENTS.filter(a => !a.hidden || earnedBy.some(c => a.isEarned(c)));
+}
 
 // ============================================================
 // LIFETIME STATS (character sheet)
@@ -304,6 +525,94 @@ export function lifetimeStats(c: Pick<MimicCharacter,
     favoriteForm: form ? { name: ALL_FORMS.find(f => f.id === form.key)?.name ?? form.key, hunts: form.count } : null,
     favoriteHuntingGround: place ? { name: LOCATIONS.find(l => l.id === place.key)?.name ?? place.key, hunts: place.count } : null,
   };
+}
+
+// ============================================================
+// UPGRADES
+// What the mimic can spend its AP on once it reaches its tier's threshold: grow (+2 mass,
+// tier-up past the tier's top mass) or raise a stat (+1, up to STAT_CAP). Pure: Game writes
+// the log and saves the changes.
+// ============================================================
+export type UpgradeChoice = "mass" | CombatStat;
+
+/** Mass gained per growth upgrade. */
+export const MASS_PER_UPGRADE = 2;
+/** The Peak of the Apex: this much mass at Apex. */
+export const APEX_PEAK_MASS = 40;
+
+export type UpgradeResult =
+  /** A stat already at STAT_CAP: nothing changes, no AP spent. */
+  | { kind: "capped"; stat: CombatStat }
+  /** +1 to a stat. */
+  | { kind: "stat"; stat: CombatStat; value: number; changes: Partial<MimicCharacter> }
+  /** More mass, same tier. */
+  | {
+      kind: "grew"; mass: number; apexPeak: boolean;
+      /** What's said if growing made the mimic Sovereign (see sovereignOnGrowth). */
+      branchLine: string | null;
+      changes: Partial<MimicCharacter>;
+    }
+  /** Grown past the tier's top mass: on to the next tier. */
+  | {
+      kind: "evolved"; tier: Tier; mass: number;
+      /** The highest stat gives a point to the strain of growth (never below 1). */
+      weakened: { stat: CombatStat; value: number };
+      hatboxToLegend: boolean;
+      /** Some forms no longer fit the new size and are gone (pick replacements). */
+      formsLost: boolean;
+      changes: Partial<MimicCharacter>;
+    };
+
+/**
+ * Spend AP on one upgrade. Growing costs the tier's apToEvolve; a stat costs its apToUpgrade.
+ * On a tier-up the highest stat (one of them at random, if tied) drops by 1, and forms that no
+ * longer fit (at the new size, with Thimblewood still shrinking it, on `date`) are lost.
+ */
+export function applyUpgrade(
+  character: MimicCharacter, choice: UpgradeChoice, date: Date = today(), random: () => number = Math.random,
+): UpgradeResult {
+  const cfg = TIER_CONFIG[character.tier];
+
+  if (choice !== "mass") {
+    if (character[choice] >= STAT_CAP) return { kind: "capped", stat: choice };
+    const value = character[choice] + 1;
+    return { kind: "stat", stat: choice, value, changes: { [choice]: value, assimilationPoints: character.assimilationPoints - cfg.apToUpgrade } };
+  }
+
+  const assimilationPoints = character.assimilationPoints - cfg.apToEvolve;
+  const grown = character.mass + MASS_PER_UPGRADE;
+  const nextTier: Tier | undefined = TIER_ORDER[TIER_ORDER.indexOf(character.tier) + 1];
+  if (!nextTier || grown <= cfg.massRange[1]) {
+    // Peak of the Apex: crossing the line at Apex (not landing in Apex by evolving)
+    const apexPeak = character.tier === "Apex" && grown >= APEX_PEAK_MASS && character.mass < APEX_PEAK_MASS;
+    const branch = sovereignOnGrowth(character, grown);
+    return {
+      kind: "grew", mass: grown, apexPeak, branchLine: branch?.line ?? null,
+      changes: { mass: grown, assimilationPoints, tier: character.tier, ...(apexPeak ? { apexPeakReached: true } : {}), ...branch?.changes },
+    };
+  }
+
+  const mass = TIER_CONFIG[nextTier].massRange[0];
+  const changes: Partial<MimicCharacter> = { mass, assimilationPoints, tier: nextTier };
+  const hatboxToLegend = earnsHatboxToLegend(character, nextTier);
+  if (hatboxToLegend) changes.hatboxToLegendReached = true;
+
+  const stats: CombatStat[] = ["plausibility", "adhesion", "patience"];
+  const top = Math.max(...stats.map(s => character[s]));
+  const highest = stats.filter(s => character[s] === top);
+  const stat = highest[Math.floor(random() * highest.length)];
+  const weakened = { stat, value: Math.max(1, top - 1) };
+  changes[stat] = weakened.value;
+
+  const kept = formsStillAllowed(character.forms, formTier({ ...character, tier: nextTier }), mass, character, date);
+  const formsLost = kept.length < character.forms.length;
+  if (formsLost) {
+    changes.forms = kept;
+    // Keep wearing the same form if it survived (otherwise the first one left)
+    const activeId = character.forms[character.activeFormIndex]?.formId;
+    changes.activeFormIndex = Math.max(0, kept.findIndex(f => f.formId === activeId));
+  }
+  return { kind: "evolved", tier: nextTier, mass, weakened, hatboxToLegend, formsLost, changes };
 }
 
 // ============================================================

@@ -1,4 +1,9 @@
-6. Break up resolveStrike (large, highest risk)
+# Optimizations
 
-- It's about 350 lines: rival strikes, partial bites and swallowing whole are all in one function.
-- Splitting it into those three parts, and moving the dice and outcome math into gameData.ts, would help most. It's also the riskiest, since it has the most edge cases (treasure, achievements, fleeing, elusive targets) and no tests today.
+Improvements to the code itself (refactors, splitting large files, test coverage, cleanup), as opposed to new features. Items are worked through one at a time and removed once done. Ideas for the game, or for code changes that may never be needed, go in IDEAS.md; deliberate choices that shouldn't be "fixed" go in DECISIONS.md.
+
+From the final review and the fixes after it (each checked against the code), most important first.
+
+## Last
+
+1. **Git:** `package-lock.json` is git-ignored while the generated `tsconfig.tsbuildinfo` is tracked. Commit the lockfile (reproducible installs) and ignore the build info.

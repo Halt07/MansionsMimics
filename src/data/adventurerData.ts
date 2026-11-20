@@ -21,7 +21,14 @@ export const ADVENTURER_GROUPS = [
   { id: "supernatural", label: "Supernatural & Monstrous", description: "Undead, fey and monstrous things. Most haunt only certain locations, and several have unusual instincts that change how you hunt them." },
   { id: "huntersElites", label: "Hunters & Elites", description: "Specialists who appear once you have grown powerful enough to draw attention. Mimic hunters also form Bounty Hunt parties." },
   { id: "giantKin", label: "Giant-Kin", description: "Only found in giant-realm locations (the Giant's Castle and Cloud Kingdom Outpost). Gated by Apex tier and minimum mass. Giant-kin yield significantly more AP than standard adventurers (up to 12 per kill)." },
+  // Hidden: the branch tiers' own adventurers. Left out of the Codex until met, and out of
+  // Connoisseur and Master of Disguise (only one branch can ever meet them)
+  { id: "beyondApex", label: "Beyond the Apex", description: "What else don't you know?", hidden: true },
 ] as const;
+/** Whether this adventurer belongs to a hidden group (the branch tiers' own; see ADVENTURER_GROUPS). */
+export function isHiddenAdventurer(template: Pick<AdventurerTemplate, "group">): boolean {
+  return ADVENTURER_GROUPS.some(g => g.id === template.group && "hidden" in g && g.hidden);
+}
 export type AdventurerGroupId = (typeof ADVENTURER_GROUPS)[number]["id"];
 
 /** Qualities an adventurer reacts to: materials and traits on the mimic's look, tags on its form. */
@@ -116,10 +123,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Inspects valuables closely", "Tests hinges and seams"],
     appliedQuirk: "{name} looks at the {form} closely.",
-    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Polished", "Gilded", "Locked", "Heavy-Lidded"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Polished", "Gilded", "Locked", "Heavy-Lidded", "Thieves' Mark"], tags: ["Valuable"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 1, text: 0, magical: 0, social: 1, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
     lootMaterials: ["Tanned Hide", "Steel", "Goatskin"],
-    lootTraits: [],
+    lootTraits: ["Thieves' Mark"],
     partialLoot: ["scrap of leather armor", "torn belt", "a boot heel"],
   },
   {
@@ -127,10 +134,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Rarely touches anything directly", "Scans exits first"],
     appliedQuirk: "{name} gives the {form} a wide berth, eyes on the exits.",
-    alluringQualities: { materials: ["Gold", "Silver", "Silk"], traits: ["Locked"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Silk"], traits: ["Locked", "Thieves' Mark"], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Goatskin", "Iron", "Linen"],
-    lootTraits: [],
+    lootTraits: ["Thieves' Mark"],
     partialLoot: ["strip of cloak", "torn glove", "a coin pouch fragment"],
   },
   // ── Clerics ──
@@ -212,10 +219,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Knocks on surfaces", "Tests stability with force"],
     appliedQuirk: "{name} gives the {form} a solid knock with a gauntleted fist.",
-    alluringQualities: { materials: ["Steel", "Gold"], traits: [], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Steel", "Gold"], traits: ["Tally Marks"], tags: ["Valuable"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Blacksteel", "Iron", "Cowhide"],
-    lootTraits: ["Bloodstained"],
+    lootTraits: ["Bloodstained", "Tally Marks"],
     partialLoot: ["torn chainmail link strip", "a boot tongue", "piece of pauldron strap"],
   },
   {
@@ -223,10 +230,11 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Checks corners before entering", "Distrusts ornate things"],
     appliedQuirk: "{name} checks every corner, then gives the {form} a long, suspicious look.",
-    alluringQualities: { materials: ["Iron", "Steel"], traits: [], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Iron", "Steel"], traits: ["Tally Marks"], tags: ["Valuable"] },
+    repelledBy: { traits: ["Thieves' Mark"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Iron", "Steel", "Cowhide"],
-    lootTraits: [],
+    lootTraits: ["Tally Marks"],
     partialLoot: ["torn tabard strip", "a gauntlet finger", "piece of boot leather"],
   },
   // ── Rangers ──
@@ -273,7 +281,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Grizzled Paladin", type: "Paladin", discipline: 4, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "common",
-    repelledBy: { materials: ["Gravecloth"], traits: ["Bloodstained", "Shadowed Presence"] },
+    repelledBy: { materials: ["Gravecloth"], traits: ["Bloodstained", "Shadowed Presence", "Thieves' Mark"] },
     quirks: ["Detects evil presence", "Slow to trust but fierce when provoked"],
     appliedQuirk: "{name} rests a hand on their holy symbol as they pass the {form}.",
     alluringQualities: { materials: ["Gold", "Silver"], traits: ["Sacred Symbol", "Arched", "Radiant"], tags: ["Religious", "Valuable"] },
@@ -288,7 +296,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Takes notes on unusual objects", "Taps and measures everything"],
     appliedQuirk: "{name} measures the {form} with a folding rule and jots down a note.",
-    alluringQualities: { materials: ["Iron", "Brass", "Crystal"], traits: ["Arcane Sigil", "Carved"], tags: ["Knowledge"] },
+    alluringQualities: { materials: ["Iron", "Brass", "Crystal"], traits: ["Arcane Sigil", "Carved", "Guild Mark"], tags: ["Knowledge"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 1, magical: 1, social: 0, spatial: 2, environmental: 0, acoustic: 1, presence: 0 },
     lootMaterials: ["Brass", "Iron", "Crystal"],
     lootTraits: ["Arcane Sigil"],
@@ -314,7 +322,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { traits: ["Gilded", "Faint Glow", "Radiant", "Ornate", "Fragrant"] },
     quirks: ["Never announces presence", "Studies shadows carefully"],
     appliedQuirk: "{name} slips in without a sound, studying the shadows around the {form}.",
-    alluringQualities: { materials: ["Shadowwood", "Silk"], traits: ["Minimalist"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Shadowwood", "Silk"], traits: ["Minimalist", "Thieves' Mark"], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 1, text: 0, magical: 1, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
     lootMaterials: ["Shadowwood", "Goatskin", "Steel", "Smoked Glass"],
     lootTraits: ["Shadowed Presence"],
@@ -348,7 +356,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "common",
     quirks: ["Pockets small items instinctively", "Underestimates danger"],
     appliedQuirk: "{name} pockets something small from beside the {form} without even thinking about it.",
-    alluringQualities: { materials: ["Gold", "Silver", "Crystal"], traits: ["Upholstered", "Locked", "Heavy-Lidded"], tags: ["Valuable", "Comfort"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Crystal"], traits: ["Upholstered", "Locked", "Heavy-Lidded", "Thieves' Mark"], tags: ["Valuable", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 1, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Silk", "Silver", "Linen"],
     lootTraits: ["Briny"],
@@ -363,7 +371,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Taps every surface methodically", "Carries a vial of acid for testing", "Never touches anything without gloves"],
     appliedQuirk: "{name} raps twice on the {form}, listening.",
-    alluringQualities: { materials: ["Gold"], traits: [], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold"], traits: ["Tally Marks"], tags: ["Valuable"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 2, social: 0, spatial: 3, environmental: 2, acoustic: 2, presence: 3 },
     lootMaterials: ["Blacksteel", "Mithril", "Dragonhide"],
     lootTraits: ["Runescript"],
@@ -390,7 +398,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Speaks to rooms aloud before entering", "Detects heat signatures instinctively", "Refuses to sit or lean on anything"],
     appliedQuirk: "{name} announces themselves to the room before entering, nostrils flaring for heat.",
-    alluringQualities: { materials: ["Gold", "Obsidian"], traits: ["Arcane Sigil"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Gold", "Obsidian"], traits: ["Arcane Sigil", "Tally Marks"], tags: ["Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 1, magical: 3, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 3 },
     lootMaterials: ["Dragonhide", "Starforged Iron", "Aether Crystal"],
     lootTraits: ["Arcane Sigil", "Smoky"],
@@ -415,10 +423,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Greater", isMimicHunter: true,
     quirks: ["Follows scent trails", "Breaks off pieces of suspicious objects to taste them", "Ignores anything that doesn't smell like prey"],
     appliedQuirk: "{name} sniffs along the floor toward the {form}.",
-    alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced"], tags: ["Structural", "Valuable"] },
+    alluringQualities: { materials: ["Iron", "Bonesteel", "Horn", "Boarhide"], traits: ["Bloodstained", "Worn", "Reinforced", "Tally Marks"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 1, presence: 2 },
     lootMaterials: ["Boarhide", "Iron", "Horn"],
-    lootTraits: ["Bloodstained"],
+    lootTraits: ["Bloodstained", "Tally Marks"],
     partialLoot: ["strip of studded hide armor", "a bone talisman shard", "torn tusk-leather belt"],
     companion: {
       chance: 0.40,
@@ -443,7 +451,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Veteran Inquisitor", type: "Paladin", discipline: 5, baseSuspicion: 5, constitution: 4, interactionStyle: "touch",
     group: "huntersElites",
-    repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained", "Whispering"] },
+    repelledBy: { materials: ["Shadowwood", "Void Marble"], traits: ["Arcane Sigil", "Shadowed Presence", "Bloodstained", "Whispering", "Thieves' Mark"] },
     minTier: "Grand",
     quirks: ["Casts detect magic on entry", "Marks rooms with chalk sigils", "Interrogates every object aloud"],
     appliedQuirk: "{name} chalks a sigil on the floor and questions the {form} aloud.",
@@ -483,13 +491,13 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Frightened Peasant", type: "Commoner", discipline: 1, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
     group: "commoners",
-    repelledBy: { traits: ["Bloodstained", "Shadowed Presence", "Cold to Touch", "Whispering", "Foul"] },
+    repelledBy: { traits: ["Bloodstained", "Shadowed Presence", "Cold to Touch", "Whispering", "Foul", "Tally Marks"] },
     quirks: ["Jumps at shadows", "Clutches holy symbol", "Easily startled by unusual things"],
     appliedQuirk: "{name} jumps at a shadow near the {form}, clutching their holy symbol.",
-    alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty", "Upholstered", "Rustic", "Warm to Touch"], tags: ["Comfort", "Storage"] },
+    alluringQualities: { materials: ["Cotton", "Wool", "Linen"], traits: ["Worn", "Dusty", "Upholstered", "Rustic", "Warm to Touch", "Ward Sign"], tags: ["Comfort", "Storage"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 1 },
     lootMaterials: ["Wool", "Linen", "Burlap", "Pine"],
-    lootTraits: [],
+    lootTraits: ["Ward Sign"],
     partialLoot: ["torn wool smock", "a rope belt", "scrap of burlap sack"],
   },
   {
@@ -497,10 +505,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     group: "commoners",
     quirks: ["Rifles through anything unlocked", "Sleeps anywhere flat", "Interested in anything left behind"],
     appliedQuirk: "{name} eyes the {form} as a likely place for a nap.",
-    alluringQualities: { materials: ["Iron", "Brass", "Cotton"], traits: ["Worn", "Weathered", "Tarnished", "Rustic", "Warm to Touch", "Smoky"], tags: ["Storage", "Comfort"] },
+    alluringQualities: { materials: ["Iron", "Brass", "Cotton"], traits: ["Worn", "Weathered", "Tarnished", "Rustic", "Warm to Touch", "Smoky", "Ward Sign"], tags: ["Storage", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Linen", "Cowhide", "Iron"],
-    lootTraits: ["Wrinkled", "Musty"],
+    lootTraits: ["Wrinkled", "Musty", "Ward Sign"],
     partialLoot: ["patched travelling cloak strip", "a worn boot sole", "scrap of road-stained linen"],
   },
 
@@ -511,7 +519,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { materials: ["Burlap", "Cotton"], traits: ["Cracked", "Worn", "Dusty", "Tarnished", "Rustic", "Minimalist", "Foul", "Earthy"] },
     quirks: ["Demands everything be inspected by guards first", "Attracted to displays of wealth", "Expects furnishings worthy of royalty"],
     appliedQuirk: "{name} gestures at the {form}: \"Have that inspected.\"",
-    alluringQualities: { materials: ["Gold", "Marble", "Silk", "Velvet"], traits: ["Gilded", "Inlaid", "Polished", "Upholstered", "Ornate", "Fresh"], tags: ["Valuable", "Authority", "Comfort"] },
+    alluringQualities: { materials: ["Gold", "Marble", "Silk", "Velvet"], traits: ["Gilded", "Inlaid", "Polished", "Upholstered", "Ornate", "Fresh", "Maker's Mark"], tags: ["Valuable", "Authority", "Comfort"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 0, text: 1, magical: 0, social: 2, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
     lootMaterials: ["Gold", "Silk", "Velvet"],
     lootTraits: ["Gilded", "Heraldic Crest"],
@@ -530,7 +538,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { materials: ["Burlap"], traits: ["Cracked", "Dusty", "Bloodstained", "Rough-Hewn", "Rustic", "Cold to Touch", "Minimalist", "Musty", "Foul"] },
     quirks: ["Reaches out to touch pretty things", "Easily enchanted by ornate objects", "Wanders from her escort"],
     appliedQuirk: "{name} reaches out to touch the {form}. It's so pretty.",
-    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched", "Upholstered", "Ornate", "Fresh", "Fragrant"], tags: ["Valuable", "Comfort", "Decor"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Silk", "Crystal"], traits: ["Gilded", "Inlaid", "Polished", "Etched", "Upholstered", "Ornate", "Fresh", "Fragrant", "Maker's Mark"], tags: ["Valuable", "Comfort", "Decor"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 1, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Silk", "Silver", "Crystal", "Satin"],
     lootTraits: ["Gilded", "Fragrant"],
@@ -549,10 +557,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { traits: ["Cracked", "Worn", "Tarnished", "Rustic", "Minimalist", "Musty", "Foul", "Earthy"] },
     quirks: ["Mentally appraises everything", "Tests material quality with fingers", "Offers to buy things on the spot"],
     appliedQuirk: "{name} runs appraising fingers over the {form} and murmurs a price.",
-    alluringQualities: { materials: ["Gold", "Silver", "Mahogany", "Silk"], traits: ["Polished", "Lacquered", "Gilded", "Ornate"], tags: ["Valuable", "Storage", "Dining"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Mahogany", "Silk"], traits: ["Polished", "Lacquered", "Gilded", "Ornate", "Guild Mark"], tags: ["Valuable", "Storage", "Dining"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 2, text: 0, magical: 0, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 0 },
     lootMaterials: ["Gold", "Silver", "Mahogany", "Marble"],
-    lootTraits: ["Gilded", "Lacquered"],
+    lootTraits: ["Gilded", "Lacquered", "Guild Mark"],
     partialLoot: ["torn merchant coat lining", "a wax seal stamp", "scrap of velvet money pouch"],
   },
 
@@ -586,6 +594,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Kisses every relic it passes", "Hums hymns about a chest that eats sinners", "Lingers at the empty altar long after the others move on"],
     appliedQuirk: "{name} kisses the {form} reverently, humming a hymn about a chest that eats sinners.",
     alluringQualities: { materials: ["Gold", "Oak"], traits: ["Sacred Symbol", "Heavy-Lidded", "Carved", "Faint Glow"], tags: ["Religious", "Storage"] },
+    repelledBy: { traits: ["Tally Marks"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 0, text: 1, magical: 1, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 2 },
     lootMaterials: ["Linen", "Wool"],
     lootTraits: ["Sacred Symbol"],
@@ -608,7 +617,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Shrine Guard", type: "Warrior", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "common",
-    repelledBy: { traits: ["Cracked"] },
+    repelledBy: { traits: ["Cracked", "Thieves' Mark"] },
     locations: ["hollow_reliquary"],
     quirks: ["Paid to keep thieves out, not to believe", "Raps the pommel of their sword on anything suspicious", "Counts the relics at every shift change"],
     appliedQuirk: "{name} raps the pommel of their sword against the {form}.",
@@ -624,7 +633,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["hollow_reliquary"],
     quirks: ["Posing as a pilgrim, fooling no one", "Pries at every lock and seam", "Knows exactly what the old reliquary chest was worth"],
     appliedQuirk: "{name} pries at the {form}'s seams with a thin blade.",
-    alluringQualities: { materials: ["Gold", "Silver", "Mahogany"], traits: ["Locked", "Inlaid", "Gilded"], tags: ["Valuable", "Storage"] },
+    alluringQualities: { materials: ["Gold", "Silver", "Mahogany"], traits: ["Locked", "Inlaid", "Gilded", "Maker's Mark"], tags: ["Valuable", "Storage"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 1, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 1, presence: 0 },
     lootMaterials: ["Silver", "Tanned Hide"],
     lootTraits: ["Inlaid"],
@@ -651,6 +660,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Walks the same round every hour, lantern held high", "Swears the crates were stacked differently yesterday", "Won't sit on anything in here anymore"],
     appliedQuirk: "{name} raises their lantern at the {form}: \"Was that there yesterday?\"",
     alluringQualities: { materials: ["Oak", "Iron"], traits: ["Locked", "Iron-Banded"], tags: ["Storage", "Seating"] },
+    repelledBy: { traits: ["Thieves' Mark"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 1 },
     lootMaterials: ["Iron", "Wool", "Clear Glass"],
     lootTraits: ["Pitted"],
@@ -663,10 +673,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["mimic_nest"],
     quirks: ["Counts every crate against the manifest — there is always one too many", "Taps lids to judge what's inside", "Sent by the insurers, and furious about it"],
     appliedQuirk: "{name} taps the {form}, checks the manifest and frowns. One too many. Again.",
-    alluringQualities: { materials: ["Mahogany", "Brass"], traits: ["Locked", "Lacquered", "Polished"], tags: ["Storage", "Valuable"] },
+    alluringQualities: { materials: ["Mahogany", "Brass"], traits: ["Locked", "Lacquered", "Polished", "Guild Mark"], tags: ["Storage", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 2, weight: 3, text: 2, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 1, presence: 0 },
     lootMaterials: ["Brass", "Linen"],
-    lootTraits: ["Lacquered"],
+    lootTraits: ["Lacquered", "Guild Mark"],
     partialLoot: ["a page of the cargo manifest", "a brass measuring rule", "an ink-stained cuff"],
   },
   {
@@ -694,7 +704,8 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["mimic_nest"],
     quirks: ["Calls her brother's name into every room", "Opens every chest big enough to hide a person", "Refuses to leave until she finds him"],
     appliedQuirk: "{name} calls her brother's name, then looks hard at the {form}, as if he might be inside.",
-    alluringQualities: { materials: ["Pine", "Cotton"], traits: ["Worn", "Heavy-Lidded"], tags: ["Storage", "Comfort"] },
+    alluringQualities: { materials: ["Pine", "Cotton"], traits: ["Worn", "Heavy-Lidded", "Ward Sign"], tags: ["Storage", "Comfort"] },
+    repelledBy: { traits: ["Tally Marks"] },
     perceptionAffinity: { material: 0, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Cotton", "Linen"],
     lootTraits: ["Soft"],
@@ -713,7 +724,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     },
     quirks: ["Refuses to abandon ship without the strongbox", "Barks orders at anything that moves", "Knows every inch of this hull — and that one chest wasn't in the manifest"],
     appliedQuirk: "{name} squints at the {form}: \"That wasn't in my manifest.\"",
-    alluringQualities: { materials: ["Brass", "Mahogany", "Gold"], traits: ["Locked", "Iron-Banded", "Polished", "Briny"], tags: ["Storage", "Valuable", "Authority"] },
+    alluringQualities: { materials: ["Brass", "Mahogany", "Gold"], traits: ["Locked", "Iron-Banded", "Polished", "Briny", "Guild Mark"], tags: ["Storage", "Valuable", "Authority"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 1, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
     lootMaterials: ["Brass", "Mahogany", "Gold"],
     lootTraits: ["Pitted"],
@@ -737,7 +748,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["sinking_ship"],
     quirks: ["Salvaging the good knives before anything else", "Swears at the water as if it can hear", "Grabs any sturdy container to bail with"],
     appliedQuirk: "{name} eyes the {form} as something to bail with.",
-    alluringQualities: { materials: ["Pine", "Iron", "Brass"], traits: ["Worn", "Soft", "Smoky"], tags: ["Dining", "Storage"] },
+    alluringQualities: { materials: ["Pine", "Iron", "Brass"], traits: ["Worn", "Soft", "Smoky", "Ward Sign"], tags: ["Dining", "Storage"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 1, text: 0, magical: 0, social: 0, spatial: 0, environmental: 1, acoustic: 0, presence: 0 },
     lootMaterials: ["Iron", "Linen"],
     lootTraits: ["Pitted", "Smoky"],
@@ -762,7 +773,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["sinking_ship"],
     quirks: ["Pocketing whatever the passengers leave behind", "Climbs rather than walks", "Eyes the captain's strongbox"],
     appliedQuirk: "{name} climbs over the {form} rather than walking around it.",
-    alluringQualities: { materials: ["Brass", "Silver"], traits: ["Locked", "Inlaid", "Briny"], tags: ["Valuable", "Storage"] },
+    alluringQualities: { materials: ["Brass", "Silver"], traits: ["Locked", "Inlaid", "Briny", "Thieves' Mark"], tags: ["Valuable", "Storage"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 1, presence: 0 },
     lootMaterials: ["Linen", "Brass"],
     lootTraits: ["Inlaid", "Briny"],
@@ -773,7 +784,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Vampire Noble", type: "Undead", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "sight",
     group: "supernatural",
-    repelledBy: { traits: ["Sacred Symbol", "Faint Glow", "Radiant"] },
+    repelledBy: { traits: ["Sacred Symbol", "Faint Glow", "Radiant", "Ward Sign"] },
     locations: ["noble_estate", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     quirks: ["Drawn to bloodstained objects", "Cannot enter without invitation — waits at thresholds", "Hypersensitive to magical auras"],
     appliedQuirk: "{name} pauses at the threshold, waiting to be invited in.",
@@ -789,7 +800,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { traits: ["Foul"] },
     quirks: ["Sniffs everything before trusting it", "Navigates by scent more than sight", "Attracted to sturdy, large furnishings"],
     appliedQuirk: "{name} snorts and sniffs the {form} before trusting it.",
-    alluringQualities: { materials: ["Iron", "Steel", "Oak", "Horn"], traits: ["Reinforced", "Iron-Banded", "Worn"], tags: ["Structural", "Valuable"] },
+    alluringQualities: { materials: ["Iron", "Steel", "Oak", "Horn"], traits: ["Reinforced", "Iron-Banded", "Worn", "Tally Marks"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 3, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 2, acoustic: 1, presence: 1 },
     lootMaterials: ["Horn", "Iron", "Boarhide"],
     lootTraits: ["Bloodstained"],
@@ -798,7 +809,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Cursed Revenant", type: "Undead", discipline: 3, baseSuspicion: 2, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
-    repelledBy: { traits: ["Sacred Symbol", "Pristine"] },
+    repelledBy: { traits: ["Sacred Symbol", "Pristine", "Ward Sign"] },
     locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
     quirks: ["Fixated on objects from their past life", "Ignores most things unless they trigger recognition", "Slow but relentless — its body is intact, unlike a zombie"],
     appliedQuirk: "{name} stops before the {form}, as if it reminded them of something long ago.",
@@ -812,7 +823,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Wailing Banshee", type: "Undead", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
     group: "supernatural",
-    repelledBy: { traits: ["Pristine", "Radiant"] },
+    repelledBy: { traits: ["Pristine", "Radiant", "Ward Sign"] },
     locations: ["haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle", "lonely_moor"],
     behavior: "keenHearing",
     quirks: ["A gaunt, grave-pale crone — flesh and bone, whatever the stories say", "Turns toward every creak and footstep", "Keens softly when something nearby moves"],
@@ -826,7 +837,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
   {
     name: "Ghoul", type: "Undead", discipline: 2, baseSuspicion: 1, constitution: 4, interactionStyle: "touch",
     group: "supernatural",
-    repelledBy: { traits: ["Sacred Symbol", "Faint Glow", "Radiant", "Warm to Touch", "Fresh"] },
+    repelledBy: { traits: ["Sacred Symbol", "Faint Glow", "Radiant", "Warm to Touch", "Fresh", "Ward Sign"] },
     locations: ["manor", "haunted_inn", "cursed_chapel", "ruined_city", "abandoned_castle"],
     behavior: "carrionScent",
     quirks: ["Sniffs at cupboards and larders", "Gnaws on anything that smells of meat", "Follows the scent of a fresh kill"],
@@ -841,7 +852,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     name: "Fey Changeling", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
     minTier: "Standard",
     group: "supernatural",
-    repelledBy: { materials: ["Iron", "Steel", "Blacksteel"], traits: ["Iron-Banded", "Smoky"] },
+    repelledBy: { materials: ["Iron", "Steel", "Blacksteel"], traits: ["Iron-Banded", "Smoky", "Ward Sign"] },
     locations: ["wizard_tower", "noble_estate", "hidden_grove", "crossroads"],
     behavior: "shapeSense",
     quirks: ["Its face never quite settles on one shape", "Feels the moment anything nearby changes its form", "Cannot resist pretty, delicate things"],
@@ -911,7 +922,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Apex", minMass: 28, wholeMealMass: 36,
     quirks: ["Shoves furniture to test sturdiness", "Sits on things without asking", "Drawn to large, sturdy objects"],
     appliedQuirk: "{name} shoves the {form} to see if it's sturdy.",
-    alluringQualities: { materials: ["Titan Oak", "Giant Iron", "Beanstalk Leather"], traits: ["Reinforced", "Iron-Banded", "Heavy-Lidded"], tags: ["Structural", "Valuable"] },
+    alluringQualities: { materials: ["Titan Oak", "Giant Iron", "Beanstalk Leather"], traits: ["Reinforced", "Iron-Banded", "Heavy-Lidded", "Tally Marks"], tags: ["Structural", "Valuable"] },
     perceptionAffinity: { material: 2, structure: 4, weight: 4, text: 0, magical: 0, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 0 },
     lootMaterials: ["Titan Oak", "Giant Iron", "Beanstalk Leather"],
     lootTraits: ["Bloodstained"],
@@ -979,10 +990,10 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["cloud_kingdom"],
     quirks: ["Raps on metal to hear how it rings", "Can't pass an iron fitting without checking the rivets", "Hums over the roar of the forge"],
     appliedQuirk: "{name} raps the {form}'s fittings to hear how they ring.",
-    alluringQualities: { materials: ["Stormforged Iron", "Giant Iron", "Cumulogranite"], traits: ["Iron-Banded", "Reinforced", "Etched"], tags: ["Structural", "Storage", "Defensive"] },
+    alluringQualities: { materials: ["Stormforged Iron", "Giant Iron", "Cumulogranite"], traits: ["Iron-Banded", "Reinforced", "Etched", "Guild Mark", "Maker's Mark"], tags: ["Structural", "Storage", "Defensive"] },
     perceptionAffinity: { material: 5, structure: 4, weight: 3, text: 1, magical: 2, social: 0, spatial: 1, environmental: 2, acoustic: 4, presence: 1 },
     lootMaterials: ["Stormforged Iron", "Giant Iron"],
-    lootTraits: ["Etched"],
+    lootTraits: ["Etched", "Maker's Mark"],
     partialLoot: ["a scorched leather apron strap", "a hammer-head the size of an anvil", "a coil of lightning-tempered wire"],
   },
   {
@@ -1054,7 +1065,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Apex", minMass: 35, wholeMealMass: 43,
     quirks: ["Appraises everything by picking it up and sniffing it", "Obsessed with gold and gemstone items", "Drops things carelessly — they are very large"],
     appliedQuirk: "{name} picks up the {form} and gives it a long, thoughtful sniff.",
-    alluringQualities: { materials: ["Sky Gold", "Lightning Marble", "Soulglass"], traits: ["Gilded", "Inlaid", "Polished", "Warm to Touch", "Locked"], tags: ["Valuable", "Storage", "Authority"] },
+    alluringQualities: { materials: ["Sky Gold", "Lightning Marble", "Soulglass"], traits: ["Gilded", "Inlaid", "Polished", "Warm to Touch", "Locked", "Maker's Mark"], tags: ["Valuable", "Storage", "Authority"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 4, text: 0, magical: 1, social: 1, spatial: 1, environmental: 0, acoustic: 1, presence: 1 },
     lootMaterials: ["Sky Gold", "Lightning Marble", "Soulglass"],
     lootTraits: ["Gilded", "Inlaid"],
@@ -1066,7 +1077,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     minTier: "Apex", minMass: 30, wholeMealMass: 38,
     quirks: ["Has climbed the stalk before — checks everything for traps", "Moves silently for their size", "Paranoid about giant detection — checks ceilings constantly"],
     appliedQuirk: "{name} checks the {form} for traps, then glances nervously at the ceiling.",
-    alluringQualities: { materials: ["Sky Gold", "Golden Goose Down", "Lightning Marble"], traits: ["Gilded", "Polished", "Locked"], tags: ["Valuable"] },
+    alluringQualities: { materials: ["Sky Gold", "Golden Goose Down", "Lightning Marble"], traits: ["Gilded", "Polished", "Locked", "Thieves' Mark"], tags: ["Valuable"] },
     perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 1, social: 1, spatial: 3, environmental: 2, acoustic: 3, presence: 1 },
     lootMaterials: ["Beanstalk Leather", "Titan Oak", "Sky Gold"],
     lootTraits: [],
@@ -1106,7 +1117,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     name: "Swamp Hag", type: "Fey", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "spell",
     minTier: "Standard",
     group: "supernatural",
-    repelledBy: { traits: ["Polished", "Fragrant"] },
+    repelledBy: { traits: ["Polished", "Fragrant", "Ward Sign"] },
     locations: ["spell_or_sweet_street", "lonely_moor"],
     quirks: ["Her warts move when you aren't looking", "Asks everyone she meets for something other than coin", "The pond weed in her hair is still alive"],
     appliedQuirk: "{name} sniffs the {form} and cackles. \"Oh, I know what YOU are, dearie.\"",
@@ -1136,7 +1147,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["founders_fair"],
     quirks: ["Missing two fingers and an eyebrow, and proud of both", "Always looking for the next crate of rockets", "Can't hear a thing after the first volley"],
     appliedQuirk: "{name} pries at the {form}'s lid, looking for rockets.",
-    alluringQualities: { materials: ["Pine", "Burlap", "Iron"], traits: ["Smoky", "Reinforced", "Rustic"], tags: ["Storage", "Entertainment"] },
+    alluringQualities: { materials: ["Pine", "Burlap", "Iron"], traits: ["Smoky", "Reinforced", "Rustic", "Guild Mark"], tags: ["Storage", "Entertainment"] },
     perceptionAffinity: { material: 1, structure: 2, weight: 2, text: 0, magical: 0, social: 0, spatial: 1, environmental: 2, acoustic: 0, presence: 0 },
     lootMaterials: ["Pine", "Burlap"],
     lootTraits: ["Smoky"],
@@ -1198,7 +1209,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["stargazers_hill"],
     quirks: ["Polishes anything shiny on reflex", "Was told to mind the workshop and absolutely did not", "Squints through a lens at everything"],
     appliedQuirk: "{name} squints at the {form} through a lens, then gives it a quick polish.",
-    alluringQualities: { materials: ["Clear Glass", "Crystal", "Brass"], traits: ["Smooth", "Lacquered"], tags: ["Lighting", "Knowledge"] },
+    alluringQualities: { materials: ["Clear Glass", "Crystal", "Brass"], traits: ["Smooth", "Lacquered", "Guild Mark"], tags: ["Lighting", "Knowledge"] },
     perceptionAffinity: { material: 2, structure: 1, weight: 0, text: 0, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
     lootMaterials: ["Clear Glass", "Crystal"],
     lootTraits: ["Lacquered"],
@@ -1210,7 +1221,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["stargazers_hill"],
     quirks: ["Makes a wish on every single streak", "Ties ribbons to anything near the stones", "Is absolutely sure this is the year"],
     appliedQuirk: "{name} ties a ribbon to the {form} and makes a wish on it.",
-    alluringQualities: { materials: ["Silver", "Silk"], traits: ["Faint Glow", "Gilded", "Fragrant"], tags: ["Decor", "Social"] },
+    alluringQualities: { materials: ["Silver", "Silk"], traits: ["Faint Glow", "Gilded", "Fragrant", "Ward Sign"], tags: ["Decor", "Social"] },
     perceptionAffinity: { material: 0, structure: 0, weight: 0, text: 0, magical: 1, social: 1, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
     lootMaterials: ["Silk", "Linen"],
     lootTraits: ["Fragrant"],
@@ -1224,7 +1235,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["snowbound_lodge"],
     quirks: ["Rations the firewood and counts every log", "Knows exactly what furniture the lodge owns", "Keeps saying the pass will open tomorrow"],
     appliedQuirk: "{name} stops in front of the {form}, frowning. \"I don't remember buying that.\"",
-    alluringQualities: { materials: ["Pine", "Wool", "Iron"], traits: ["Rustic", "Smoky", "Worn"], tags: ["Comfort", "Hospitality"] },
+    alluringQualities: { materials: ["Pine", "Wool", "Iron"], traits: ["Rustic", "Smoky", "Worn", "Ward Sign"], tags: ["Comfort", "Hospitality"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 1 },
     lootMaterials: ["Pine", "Wool"],
     lootTraits: ["Smoky"],
@@ -1237,6 +1248,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     quirks: ["Snowed in with a sack of Midwinter parcels and a schedule to keep", "Checks every package against a very long list", "Insists the sledge dogs will be back for them"],
     appliedQuirk: "{name} checks the {form} against the list. Twice.",
     alluringQualities: { materials: ["Burlap", "Linen", "Pine"], traits: ["Pristine", "Fragrant"], tags: ["Storage", "Transport", "Decor"] },
+    repelledBy: { traits: ["Tally Marks"] },
     perceptionAffinity: { material: 1, structure: 0, weight: 2, text: 2, magical: 0, social: 0, spatial: 1, environmental: 0, acoustic: 0, presence: 0 },
     lootMaterials: ["Burlap", "Linen"],
     lootTraits: ["Fragrant"],
@@ -1249,7 +1261,7 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     repelledBy: { traits: ["Shadowed Presence"] },
     quirks: ["Keeps every lamp in the lodge trimmed and burning", "Notices the moment a shadow falls the wrong way", "Hums to keep warm"],
     appliedQuirk: "{name} lifts a lamp to the {form} and studies the shadow it casts.",
-    alluringQualities: { materials: ["Brass", "Clear Glass"], traits: ["Polished", "Faint Glow"], tags: ["Lighting", "Decor"] },
+    alluringQualities: { materials: ["Brass", "Clear Glass"], traits: ["Polished", "Faint Glow", "Guild Mark"], tags: ["Lighting", "Decor"] },
     perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 0, magical: 1, social: 0, spatial: 2, environmental: 2, acoustic: 0, presence: 1 },
     lootMaterials: ["Brass", "Clear Glass"],
     lootTraits: ["Faint Glow"],
@@ -1261,11 +1273,100 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     locations: ["snowbound_lodge"],
     quirks: ["Whittles little gifts by the fire", "Runs a thumb along the grain of everything wooden", "Can't resist critiquing other people's joinery"],
     appliedQuirk: "{name} runs a thumb along the {form}'s grain and tuts at the joinery.",
-    alluringQualities: { materials: ["Birch", "Walnut", "Pine"], traits: ["Carved", "Etched", "Smooth"], tags: ["Decor", "Entertainment"] },
+    alluringQualities: { materials: ["Birch", "Walnut", "Pine"], traits: ["Carved", "Etched", "Smooth", "Guild Mark", "Maker's Mark"], tags: ["Decor", "Entertainment"] },
     perceptionAffinity: { material: 3, structure: 2, weight: 0, text: 0, magical: 0, social: 0, spatial: 0, environmental: 0, acoustic: 1, presence: 0 },
     lootMaterials: ["Birch", "Walnut"],
-    lootTraits: ["Etched", "Inlaid"],
+    lootTraits: ["Etched", "Inlaid", "Maker's Mark"],
     partialLoot: ["a half-whittled reindeer", "a pocket knife", "a curl of birch shaving"],
+  },
+
+  // ── The Tear in Time (Primordial's hunting ground) ──
+  // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
+  {
+    name: "Cave Hunter", type: "Hunter", discipline: 4, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Prods anything unfamiliar with a spear", "Sniffs the air before stepping into a clearing"],
+    appliedQuirk: "{name} jabs the {form} with the butt of a spear, and waits to see if it jabs back.",
+    alluringQualities: { materials: ["Horn", "Obsidian", "Boarhide"], traits: ["Bloodstained", "Tally Marks"], tags: ["Defensive"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 2, text: 0, magical: 0, social: 1, spatial: 3, environmental: 3, acoustic: 3, presence: 3 },
+    lootMaterials: ["Obsidian", "Horn", "Boarhide"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a flint spearhead", "a strip of hide wrapping", "a necklace of teeth"],
+    companion: {
+      chance: 0.5,
+      options: [
+        { nameSuffix: "'s Wolf", type: "AnimalCompanion", ap: 3, discipline: 3, constitution: 3, description: "One of the first wolves ever to sit by a fire for scraps. Not a dog yet. Nearly." },
+      ],
+    },
+  },
+  {
+    name: "Firekeeper", type: "Commoner", discipline: 2, baseSuspicion: 1, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    repelledBy: { traits: ["Cold to Touch"] },
+    quirks: ["Never lets the fire go out", "Warms anything that looks cold"],
+    appliedQuirk: "{name} sets a smouldering ember beside the {form}, to keep it warm.",
+    alluringQualities: { materials: ["Oak", "Basalt"], traits: ["Warm to Touch", "Smoky", "Ward Sign"], tags: ["Comfort"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 2, spatial: 1, environmental: 3, acoustic: 1, presence: 1 },
+    lootMaterials: ["Oak", "Basalt"],
+    lootTraits: ["Smoky"],
+    partialLoot: ["a fire-blackened stick", "a pouch of tinder", "a scorched fur mitten"],
+  },
+  {
+    name: "Cave Painter", type: "Bard", discipline: 3, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Traces every new shape on the cave wall", "Stares a long time at outlines"],
+    appliedQuirk: "{name} squints at the {form}, then starts sketching it in ochre.",
+    alluringQualities: { materials: ["Limestone", "Basalt"], traits: ["Etched", "Carved", "Runescript"], tags: ["Decor"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 0, text: 3, magical: 0, social: 1, spatial: 2, environmental: 1, acoustic: 0, presence: 1 },
+    lootMaterials: ["Limestone"],
+    lootTraits: ["Etched"],
+    partialLoot: ["a lump of red ochre", "a charcoal-stained finger bone", "a brush of moss and fat"],
+  },
+  {
+    name: "Tribal Elder", type: "Druid", discipline: 4, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Speaks to the spirit in every stone", "Leaves offerings on anything strange"],
+    appliedQuirk: "{name} lays a bundle of herbs on the {form} and murmurs to it.",
+    alluringQualities: { materials: ["Bloodoak", "Horn"], traits: ["Carved", "Earthy", "Sacred Symbol"], tags: ["Religious"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 1, magical: 3, social: 2, spatial: 1, environmental: 2, acoustic: 1, presence: 4 },
+    lootMaterials: ["Bloodoak"],
+    lootTraits: ["Earthy"],
+    partialLoot: ["a string of carved bone beads", "a bundle of dried herbs", "a feathered headdress"],
+  },
+  {
+    name: "Woolly Mammoth", type: "Beast", discipline: 3, baseSuspicion: 1, constitution: 8, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    repelledBy: { traits: ["Smoky"] },
+    quirks: ["Rubs its flank against anything solid", "Trumpets at whatever won't get out of its way"],
+    appliedQuirk: "{name} leans its whole shaggy weight against the {form}.",
+    alluringQualities: { materials: ["Wool", "Oak", "Birch"], traits: ["Rough-Hewn", "Mossy"], tags: ["Rural"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 4, text: 0, magical: 0, social: 1, spatial: 2, environmental: 3, acoustic: 2, presence: 2 },
+    lootMaterials: ["Wool", "Horn"],
+    lootTraits: ["Mossy"],
+    partialLoot: ["a tuft of russet wool", "a chip of tusk ivory", "a clump of matted fur"],
+  },
+  {
+    name: "Raptor", type: "Beast", discipline: 4, baseSuspicion: 4, constitution: 3, interactionStyle: "touch",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Hunts in short, silent dashes", "Tilts its head at anything that might be breathing"],
+    appliedQuirk: "{name} circles the {form} twice, nostrils flaring.",
+    alluringQualities: { materials: ["Cowhide", "Boarhide"], traits: ["Bloodstained"], tags: ["Dining"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 1, text: 0, magical: 0, social: 0, spatial: 3, environmental: 3, acoustic: 3, presence: 5 },
+    lootMaterials: ["Boarhide"],
+    lootTraits: ["Bloodstained"],
+    partialLoot: ["a curved sickle claw", "a scrap of feathered hide", "a serrated tooth"],
+  },
+  {
+    // Rare: joins only now and then (the Tear in Time's realMonsters); eating it is A Stitch in Time
+    name: "Time Caster", type: "Wizard", discipline: 6, baseSuspicion: 5, constitution: 3, interactionStyle: "spell",
+    group: "beyondApex", locations: ["tear_in_time"],
+    quirks: ["Checks a pocket watch that runs backwards", "Keeps muttering about the way home"],
+    appliedQuirk: "{name} frowns at the {form}: \"You weren't here yesterday. Or tomorrow.\"",
+    alluringQualities: { materials: ["Brass", "Aether Crystal"], traits: ["Runescript", "Arcane Sigil", "Faint Glow"], tags: ["Knowledge"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 3, magical: 5, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 4 },
+    lootMaterials: ["Aether Crystal", "Brass"],
+    lootTraits: ["Arcane Sigil"],
+    partialLoot: ["a cracked hourglass", "a page of impossible arithmetic", "a sleeve of star-spangled robe"],
   },
 ];
 
@@ -1334,6 +1435,8 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   isConsumed: boolean;
   isAttracted: boolean;
   hitsTaken?: number;
+  /** AP taken from them in bites so far: the whole meal, if they collapse. */
+  biteAp?: number;
   fled?: boolean;
   isDisappeared?: boolean;
   isCompanion?: boolean;
@@ -1356,6 +1459,14 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   trueName?: string;
 };
 
+/**
+ * Still in the hunt: not eaten, fled, vanished, converted or frozen. (Each of those also sets
+ * isAlive false; every one is checked here anyway, so nothing depends on that.) The one check
+ * for this, used everywhere.
+ */
+export const stillInHunt = (a: PartyMember): boolean =>
+  a.isAlive && !a.isConsumed && !a.fled && !a.isDisappeared && !a.isConverted && !a.isFrozen;
+
 // ============================================================
 // AP REWARDS & LOOT FALLBACKS
 // ============================================================
@@ -1368,6 +1479,14 @@ export const AP_REWARDS: Record<ApRewardKey, number> = {
   Fey: 5, Construct: 6, Beast: 6,
   Giant: 12, // Giant-kin yield significantly more AP (applied by group, see getApReward)
 };
+
+// AP for fully consuming an adventurer. Giant-kin use the Giant reward regardless of
+// their class type (a Half-Giant Mercenary is type "Warrior" but is worth far more).
+export function getApReward(adventurer: Pick<PartyMember, "group" | "type" | "apReward">): number {
+  if (adventurer.apReward !== undefined) return adventurer.apReward;
+  if (adventurer.group === "giantKin") return AP_REWARDS.Giant;
+  return AP_REWARDS[adventurer.type] || 3;
+}
 
 // Materials / traits learned from FULL consumption — pulled directly from adventurer template now
 // These are fallback values if template lootMaterials is missing

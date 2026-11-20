@@ -52,4 +52,12 @@ export default async function ({ gameData: m, ok, log }) {
       .filter((f) => f?.holiday && f.holiday !== l.holiday)
       .map((f) => `${l.name} / ${room}: ${f.name} (${f.holiday})`)));
   ok(offSeason.length === 0, `seasonal locations only give bonuses to seasonal forms of their own holiday${offSeason.length ? `: ${offSeason.join('; ')}` : ''}`);
+
+  // The Firework Crate is a seasonal variant of the Crate, so it shares the Crate's room bonuses,
+  // except where it has its own entry
+  const fw = (loc, room) => m.getRoomContextMod('lesser_firework_crate', loc, room);
+  ok(fw('manor', 'Wine Cellar').plausibility === mod('lesser_crate', 'manor', 'Wine Cellar').plausibility, 'the Firework Crate shares the Crate\'s bonus in a cellar');
+  ok(mod('lesser_crate', 'noble_estate', 'Armory').plausibility === 1 && fw('noble_estate', 'Armory').plausibility === 0 && fw('noble_estate', 'Armory').allure === 0,
+    'but not in the Noble Estate\'s Armory: fireworks among the weapons get nothing');
+  ok(fw('founders_fair', 'Riverbank').allure === 1, 'and at the Fair\'s Riverbank it has its own, better bonus');
 }

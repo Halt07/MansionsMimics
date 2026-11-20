@@ -11,13 +11,25 @@ export default async function ({ gameData: m, ok }) {
   const { ACHIEVEMENTS, CULT_CONVERSIONS, CANNIBAL_MIMICS } = m;
   const fresh = { hatboxToLegendReached: false, apexPeakReached: false, titanicFeastReached: false, downWithTheShipReached: false, conversions: 0, mimicsConsumed: 0, adventurersEaten: [], learnedMaterials: [], learnedTraits: [], formsUsed: [] };
   const earned = (c) => ACHIEVEMENTS.filter((a) => a.isEarned(c)).map((a) => a.id);
-  ok(ACHIEVEMENTS.length === 12 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 12, 'twelve distinct achievements');
+  ok(ACHIEVEMENTS.length === 16 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 16, 'sixteen distinct achievements…');
+  const hidden = ACHIEVEMENTS.filter((a) => a.hidden).map((a) => a.id);
+  ok(hidden.join() === 'eternal,primordial,stitchInTime,rulerOfAllMimics', '…four of them hidden: one for each branch tier past Apex, and A Stitch in Time');
   ok(earned(fresh).length === 0, 'a new mimic has none');
   ok(CULT_CONVERSIONS === 3 && CANNIBAL_MIMICS === 10, 'Cult of Personality needs 3 conversions; Cannibal needs 10 mimics');
   ok(!earned({ ...fresh, conversions: 2 }).includes('cultOfPersonality') && earned({ ...fresh, conversions: 3 }).includes('cultOfPersonality'), 'Cult of Personality is earned at the 3rd conversion');
   ok(!earned({ ...fresh, mimicsConsumed: 9 }).includes('cannibal') && earned({ ...fresh, mimicsConsumed: 10 }).includes('cannibal'), 'Cannibal is earned at the 10th mimic');
   ok(earned({ ...fresh, apexPeakReached: true, titanicFeastReached: true, hatboxToLegendReached: true, downWithTheShipReached: true }).length === 4, 'the flag-based achievements read their saved flags');
   ok(ACHIEVEMENTS.every((a) => a.flavor('Chesty').length > 0 && a.description.length > 0), 'every achievement has a description and banner text');
+
+  // ---------- the hidden ones (the branch tiers) ----------
+  ok(earned({ ...fresh, branchTier: 'Eternal' }).join() === 'eternal' && earned({ ...fresh, branchTier: 'Primordial' }).join() === 'primordial',
+    'Eternal and Primordial: earned by taking the branch');
+  ok(earned({ ...fresh, branchTier: 'Sovereign', sovereignReached: true }).join() === 'rulerOfAllMimics', 'Ruler of All Mimics: earned by becoming Sovereign…');
+  ok(earned({ ...fresh, branchTier: 'Eternal', sovereignReached: true }).join() === 'eternal,rulerOfAllMimics', '…and kept after losing it (here, a fallen Sovereign gone Eternal)');
+  const shownIds = (...cs) => m.achievementsShown(cs).map((a) => a.id);
+  ok(shownIds(fresh).length === 12 && !shownIds(fresh).some((id) => hidden.includes(id)), 'a mimic with no branch: only the twelve ordinary ones are listed');
+  ok(shownIds({ ...fresh, branchTier: 'Primordial' }).length === 13 && shownIds({ ...fresh, branchTier: 'Primordial' }).includes('primordial'), 'once one is earned, it is listed too, and only that one');
+  ok(shownIds(fresh, { ...fresh, sovereignReached: true }).includes('rulerOfAllMimics'), '…as it is for the Codex, if any of the mimics read for has earned it');
 
   // Connoisseur: one of every adventurer
   const allNames = m.ADVENTURER_TEMPLATES.map((t) => t.name);

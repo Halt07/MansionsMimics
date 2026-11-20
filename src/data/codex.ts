@@ -5,10 +5,10 @@
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { TIER_ORDER } from "./vocabulary";
-import { ADVENTURER_TEMPLATES, type PartyMember } from "./adventurerData";
+import { ADVENTURER_TEMPLATES, isHiddenAdventurer, type AdventurerTemplate, type PartyMember } from "./adventurerData";
 import { LOCATIONS, type HuntLocation } from "./locationData";
 import { isInSeason, today } from "./holidays";
-import { meetsLocationRequirements } from "./gameData";
+import { meetsLocationRequirements } from "./core";
 
 // ============================================================
 // CODEX DISCOVERY
@@ -53,7 +53,7 @@ export function withDiscovered(list: readonly string[], members: readonly Pick<P
 // CODEX: LOCATIONS
 // The Codex groups hunting grounds and only tells you about the ones you've found.
 // ============================================================
-export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare" | "seasonal";
+export type LocationGroupId = "common" | "advanced" | "giant" | "adept" | "rare" | "seasonal" | "beyond";
 
 export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; description: string }[] = [
   { id: "common", label: "Common", description: "Hunting grounds every mimic knows from its first meal." },
@@ -62,6 +62,8 @@ export const LOCATION_GROUPS: readonly { id: LocationGroupId; label: string; des
   { id: "adept", label: "Adept", description: "Grounds for mimics that have outgrown even the giants' doorways." },
   { id: "rare", label: "Rare", description: "Places that open only now and then, for a hunt or two." },
   { id: "seasonal", label: "Seasonal", description: "Places that open to mimics of every size, but only while their holiday lasts." },
+  // Only listed once one of them has been hunted (see codexLocations)
+  { id: "beyond", label: "Beyond the Apex", description: "What else don't you know?" },
 ];
 
 /** Where a location's requirements fall in unlock order: tier first, then mass. */
@@ -71,6 +73,7 @@ const firstGiantRank = Math.min(...LOCATIONS.filter(l => l.isGiantRealm).map(unl
 
 /** Which Codex group a location belongs to. */
 export function locationGroup(location: HuntLocation): LocationGroupId {
+  if (location.branch) return "beyond";
   if (location.holiday) return "seasonal";
   if (location.rare) return "rare";
   if (location.isGiantRealm) return "giant";
@@ -98,9 +101,29 @@ export function locationKnowledge(
   date: Date = today(),
 ): LocationKnowledge {
   if (locationHunts(location, characters) > 0) return "visited";
+  if (location.branch) return "unknown";
   if (location.holiday) return isInSeason(location.holiday, date) ? "known" : "unknown";
   const group = locationGroup(location);
   if (group === "common") return "known";
   if (group === "rare") return "unknown";
   return characters.some(c => meetsLocationRequirements(location, c.tier, c.mass)) ? "known" : "unknown";
+}
+
+// ============================================================
+// SECRETS
+// The branch tiers' own hunting grounds and adventurers (see "Beyond Apex" in IDEAS.md) aren't
+// even listed as "???" until a mimic has been there or met them, so the Codex doesn't give
+// away that there's anything past Apex.
+// ============================================================
+
+/** The locations the Codex lists: all but a branch tier's own ground no one here has hunted. */
+export function codexLocations(
+  characters: readonly Pick<MimicCharacter, "locationHuntCounts">[],
+): HuntLocation[] {
+  return LOCATIONS.filter(l => !l.branch || locationHunts(l, characters) > 0);
+}
+
+/** The adventurers the Codex lists: all but the hidden ones no one here has met. */
+export function codexAdventurers(discoveries: Discoveries): AdventurerTemplate[] {
+  return ADVENTURER_TEMPLATES.filter(t => !isHiddenAdventurer(t) || discoveryLevel(discoveries, t.name) !== "unknown");
 }

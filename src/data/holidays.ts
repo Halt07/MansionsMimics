@@ -22,7 +22,8 @@ export interface Holiday {
 // Year's Turning), so there are stretches with no seasonal forms at all.
 export const HOLIDAYS: Readonly<Record<HolidayId, Holiday>> = {
   new_year:         { id: "new_year",         name: "Year's Turning",          icon: "⏳", start: [12, 31], end: [1, 6] },
-  lunar_new_year:   { id: "lunar_new_year",   name: "Lantern Festival",        icon: "🏮", start: [1, 20],  end: [2, 15] },
+  // Lunar New Year always falls between Jan 21 and Feb 20 (the season is about the New Year itself)
+  lunar_new_year:   { id: "lunar_new_year",   name: "Lantern Festival",        icon: "🏮", start: [1, 21],  end: [2, 20] },
   // Easter always falls between Mar 22 and Apr 25
   easter:           { id: "easter",           name: "Springtide",              icon: "🥚", start: [3, 22],  end: [4, 25] },
   midsummer:        { id: "midsummer",        name: "Midsummer Revel",         icon: "☀️", start: [6, 14],  end: [6, 24] },

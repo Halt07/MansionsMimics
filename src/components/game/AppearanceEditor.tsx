@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Check } from "lucide-react";
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, type Material, type Trait } from "@/data/gameData";
+import { TRAITS, APPEARANCE_LIMITS, MAGIC_EFFECTS, isMagicMaterial, countMagicMaterials, hasMagic, knowsTrait, plural, toggleChoice, type Material, type Trait } from "@/data/gameData";
+import ChoiceSection, { type Choice } from "./ChoiceSection";
 
 type MaterialField = "primaryMaterials" | "secondaryMaterials";
 type TraitField = "surfaceTraits" | "symbolicTraits" | "conditionTraits" | "scentTraits";
@@ -56,43 +57,23 @@ export default function AppearanceEditor({ character, onSave, onClose, onDevTogg
     return magicInUse - freed >= limits.magicalMaterials;
   };
 
-  const materialButton = (field: MaterialField, mat: Material) => {
-    const selected = appearance[field].includes(mat);
-    const magic = isMagicMaterial(mat);
+  const materialChoice = (field: MaterialField, mat: Material): Choice => {
     const inOtherSlot = usedElsewhere(field, mat);
     const magicCapped = !inOtherSlot && exceedsMagicCap(field, mat);
-    const blocked = inOtherSlot || magicCapped;
-
-    let style: string;
-    let title: string | undefined = isMagicMaterial(mat) ? MAGIC_EFFECTS[mat] : undefined;
-    if (selected) {
-      style = magic ? "border-purple-400 bg-purple-400/10 text-purple-400" : "border-primary bg-primary/10 text-primary";
-    } else if (magicCapped) {
-      // Muted purple (not grey) so it still reads as a magic material
-      style = "border-purple-400/15 bg-purple-400/5 text-purple-300/35 cursor-not-allowed";
-      title = limits.magicalMaterials === 0
-        ? "Your tier is too inexperienced to imitate magic materials."
-        : "You are unable to imitate any more magic materials at one time.";
-    } else if (inOtherSlot) {
-      style = "border-border text-muted-foreground opacity-30 cursor-not-allowed";
-      title = "Already used in your other material slot.";
-    } else {
-      style = magic ? "border-purple-400/30 text-purple-400/70 hover:border-purple-400/60" : "border-border text-muted-foreground hover:border-primary/30";
-    }
-
-    // aria-disabled instead of disabled, so the hover message still shows in every browser
-    return (
-      <button
-        key={mat}
-        type="button"
-        title={title}
-        aria-disabled={blocked}
-        onClick={() => { if (!blocked) toggleMat(field, mat, limits[field]); }}
-        className={`px-2.5 py-1 rounded border text-xs transition-all ${style}`}
-      >
-        {mat}
-      </button>
-    );
+    return {
+      key: mat,
+      label: mat,
+      on: appearance[field].includes(mat),
+      // In the other slot already, it's simply faded; capped, it stays (muted) magic purple
+      tone: isMagicMaterial(mat) && !inOtherSlot ? "magic" : "plain",
+      title: isMagicMaterial(mat) ? MAGIC_EFFECTS[mat] : undefined,
+      blocked: inOtherSlot ? "Already used in your other material slot."
+        : magicCapped ? (limits.magicalMaterials === 0
+          ? "Your tier is too inexperienced to imitate magic materials."
+          : "You are unable to imitate any more magic materials at one time.")
+        : undefined,
+      onToggle: () => toggleMat(field, mat, limits[field]),
+    };
   };
   // Thimblewood resizes the mimic: warn as soon as it's picked or removed (Apply then opens the form menu)
   const wearingThimblewood = hasMagic(appearance, "Thimblewood");
@@ -114,32 +95,26 @@ export default function AppearanceEditor({ character, onSave, onClose, onDevTogg
   ];
   const known = (t: Trait) => knowsTrait(character, t) || worn.includes(t);
 
-  // With a limit of 1, picking a new material replaces the current one.
-  // With higher limits, extra picks are ignored once the limit is reached.
-  const toggleMat = (field: MaterialField, mat: Material, maxCount: number) => {
-    setAppearance(a => {
-      const cur = a[field];
-      if (cur.includes(mat)) return withField(a, field, cur.filter(m => m !== mat));
-      if (maxCount === 1) return withField(a, field, [mat]);
-      if (cur.length >= maxCount) return a;
-      return withField(a, field, [...cur, mat]);
-    });
-  };
+  // A material slot of one swaps on a new pick; otherwise picks past the limit are ignored (see toggleChoice)
+  const toggleMat = (field: MaterialField, mat: Material, max: number) =>
+    setAppearance(a => withField(a, field, toggleChoice(a[field], mat, max, { swap: true })));
+  const toggleTrait = <F extends TraitField>(field: F, trait: Appearance[F][number], max: number) =>
+    setAppearance(a => withField(a, field, toggleChoice(a[field] as Appearance[F][number][], trait, max) as Appearance[F]));
 
-  const toggleTrait = <F extends TraitField>(field: F, trait: Appearance[F][number], maxCount: number) => {
-    setAppearance(a => {
-      const cur: Appearance[F][number][] = a[field];
-      if (cur.includes(trait)) return withField(a, field, cur.filter(t => t !== trait) as Appearance[F]);
-      if (cur.length >= maxCount) return a;
-      return withField(a, field, [...cur, trait] as Appearance[F]);
-    });
-  };
+  /** The traits of one kind the mimic knows, as toggles. */
+  const traitChoices = <F extends TraitField>(field: F, traits: readonly Appearance[F][number][]): Choice[] =>
+    traits.filter(known).map(trait => ({
+      key: trait,
+      label: trait,
+      on: (appearance[field] as readonly Trait[]).includes(trait),
+      onToggle: () => toggleTrait(field, trait, limits[field]),
+    }));
 
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="font-cinzel text-sm text-foreground">Adjust Appearance</CardTitle>
-        <Button variant="ghost" size="icon" onClick={onClose} className="w-6 h-6 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" className="w-6 h-6 text-muted-foreground hover:text-foreground">
           <X className="w-3 h-3" />
         </Button>
       </CardHeader>
@@ -170,27 +145,18 @@ export default function AppearanceEditor({ character, onSave, onClose, onDevTogg
           );
         })()}
 
-        {/* Primary Material */}
-        <div>
-          <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-            Primary Material{limits.primaryMaterials > 1 ? `s (max ${limits.primaryMaterials})` : ""} — learned only
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {learned.length === 0 && <span className="text-muted-foreground italic">No materials learned yet.</span>}
-            {learned.map(mat => materialButton("primaryMaterials", mat))}
-          </div>
-        </div>
+        <ChoiceSection
+          heading={<>Primary {plural(limits.primaryMaterials, "Material")}{limits.primaryMaterials > 1 ? ` (max ${limits.primaryMaterials})` : ""} — learned only</>}
+          choices={learned.map(mat => materialChoice("primaryMaterials", mat))}
+          empty="No materials learned yet."
+        />
 
         {/* Secondary Material — only if tier allows */}
         {limits.secondaryMaterials > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Secondary Material{limits.secondaryMaterials > 1 ? `s (max ${limits.secondaryMaterials})` : ""}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {learned.map(mat => materialButton("secondaryMaterials", mat))}
-            </div>
-          </div>
+          <ChoiceSection
+            heading={<>Secondary {plural(limits.secondaryMaterials, "Material")}{limits.secondaryMaterials > 1 ? ` (max ${limits.secondaryMaterials})` : ""}</>}
+            choices={learned.map(mat => materialChoice("secondaryMaterials", mat))}
+          />
         )}
 
         {/* Magic materials: cap and effects */}
@@ -213,105 +179,23 @@ export default function AppearanceEditor({ character, onSave, onClose, onDevTogg
           </div>
         )}
 
-        {/* Surface Traits */}
         {limits.surfaceTraits > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Surface Traits (max {limits.surfaceTraits})
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TRAITS.surface.filter(known).map(trait => (
-                <button
-                  key={trait}
-                  onClick={() => toggleTrait("surfaceTraits", trait, limits.surfaceTraits)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all ${
-                    (appearance.surfaceTraits || []).includes(trait)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {trait}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChoiceSection heading={`Surface Traits (max ${limits.surfaceTraits})`} choices={traitChoices("surfaceTraits", TRAITS.surface)} />
         )}
-
-        {/* Symbolic Traits — only if learned */}
+        {/* Symbolic traits are all learned in play */}
         {limits.symbolicTraits > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Symbolic Traits — learned only (max {limits.symbolicTraits})
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TRAITS.symbolic.filter(known).length === 0
-                ? <span className="text-muted-foreground italic">No symbolic traits learned yet.</span>
-                : TRAITS.symbolic.filter(known).map(trait => (
-                  <button
-                    key={trait}
-                    onClick={() => toggleTrait("symbolicTraits", trait, limits.symbolicTraits)}
-                    className={`px-2.5 py-1 rounded border text-xs transition-all ${
-                      (appearance.symbolicTraits || []).includes(trait)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {trait}
-                  </button>
-                ))
-              }
-            </div>
-          </div>
+          <ChoiceSection
+            heading={`Symbolic Traits — learned only (max ${limits.symbolicTraits})`}
+            choices={traitChoices("symbolicTraits", TRAITS.symbolic)}
+            empty="No symbolic traits learned yet."
+          />
         )}
-
-        {/* Condition Traits */}
         {limits.conditionTraits > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Condition Traits (max {limits.conditionTraits})
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TRAITS.condition.filter(known).map(trait => (
-                <button
-                  key={trait}
-                  onClick={() => toggleTrait("conditionTraits", trait, limits.conditionTraits)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all ${
-                    (appearance.conditionTraits || []).includes(trait)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {trait}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChoiceSection heading={`Condition Traits (max ${limits.conditionTraits})`} choices={traitChoices("conditionTraits", TRAITS.condition)} />
         )}
-
-        {/* Scent — all learned */}
+        {/* So are scents */}
         {limits.scentTraits > 0 && (
-          <div>
-            <p className="font-cinzel text-muted-foreground uppercase tracking-widest text-[11px] mb-1.5">
-              Scent (max {limits.scentTraits})
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TRAITS.scent.filter(known).length === 0
-                ? <span className="text-muted-foreground italic">No scents learned yet.</span>
-                : TRAITS.scent.filter(known).map(trait => (
-                <button
-                  key={trait}
-                  onClick={() => toggleTrait("scentTraits", trait, limits.scentTraits)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all ${
-                    (appearance.scentTraits || []).includes(trait)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {trait}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChoiceSection heading={`Scent (max ${limits.scentTraits})`} choices={traitChoices("scentTraits", TRAITS.scent)} empty="No scents learned yet." />
         )}
 
         <Button

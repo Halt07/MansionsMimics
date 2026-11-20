@@ -6,7 +6,7 @@
 // ============================================================
 import {
   MATERIALS, TIER_ORDER,
-  type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
+  type BranchTier, type BuiltInTrait, type CombatStat, type FlawType, type MagicMaterial, type Material, type Trait,
   type MaterialRarity, type StartingType, type Tier, type UtilityTag,
 } from "./vocabulary";
 import type { HolidayId } from "./holidays";
@@ -434,6 +434,17 @@ const FORM_DATA = {
         { type: "temperature", description: "Mattress retains warmth unnaturally long" },
       ],
     },
+    {
+      id: "greater_grandfather_clock", name: "Grandfather Clock", tier: "Greater", baseMassRange: [13, 16],
+      builtInTraits: ["Carved", "Arched"],
+      baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Decor", "Valuable"],
+      materialSlots: 4, digestCapacityRequired: 5, description: "Tall, patient, and counting every second until you come closer.",
+      flawProfiles: [
+        { type: "acoustic", description: "The tick falls a fraction behind the swing of the pendulum" },
+        { type: "presence", description: "It keeps perfect time, though no one has wound it in years" },
+        { type: "structure", description: "The weights never descend" },
+      ],
+    },
   ],
 
   Grand: [
@@ -596,6 +607,19 @@ const FORM_DATA = {
         { type: "environmental", description: "Wind intensity does not increase at higher levels" },
         { type: "acoustic", description: "Echo delay inconsistent with tower height" },
         { type: "structure", description: "Arrow slits fail to admit correct light angles" },
+      ],
+    },
+    {
+      id: "apex_clocktower", name: "Clocktower", tier: "Apex", baseMassRange: [25, 38],
+      variantOf: "apex_watchtower", unlockedBy: ["Maker's Mark", "Brass"],
+      builtInTraits: ["Reinforced", "Arched", "Ornate"],
+      baseAllureModifier: 3, plausibilityModifier: 2, utilityTags: ["Structural", "Authority"],
+      materialSlots: 7, digestCapacityRequired: 8, description: "The whole town sets its day by it. It has been keeping time for longer than the town has stood.",
+      flawProfiles: [
+        { type: "acoustic", description: "Some nights the bells strike thirteen, and nobody remembers it in the morning" },
+        { type: "visual", description: "The great clock face casts no shadow at noon" },
+        { type: "structure", description: "The hands move, but nothing behind the face turns" },
+        { type: "spatial", description: "The stair has more steps going up than coming down" },
       ],
     },
     {
@@ -901,7 +925,7 @@ const SEASONAL_FORM_DATA = [
   },
   {
     id: "lesser_firework_crate", name: "Firework Crate", baseMassRange: [5, 16],
-    holiday: "independence_day", holidayTiers: ["Lesser", "Standard", "Greater"],
+    variantOf: "lesser_crate", holiday: "independence_day", holidayTiers: ["Lesser", "Standard", "Greater"],
     builtInTraits: ["Reinforced", "Rustic"],
     baseAllureModifier: 2, plausibilityModifier: 1, utilityTags: ["Storage", "Entertainment"],
     materialSlots: 2, digestCapacityRequired: 2, description: "A crate of rockets and fizzers stamped DO NOT DROP. Everyone wants a look inside; nobody wants to be the one who opens it carelessly.",
@@ -1124,13 +1148,14 @@ export const SEASONAL_FORMS: readonly SeasonalForm[] = SEASONAL_FORM_DATA.map((f
 export const ALL_FORMS: readonly Form[] = [...TIER_ORDER.flatMap((tier) => MASTER_FORMS[tier]), ...SEASONAL_FORMS];
 export const FORM_IDS = ALL_FORMS.map((form) => form.id) as [FormId, ...FormId[]];
 
+/** The base form of a variant (or the form itself): what burns and room modifiers are keyed by. */
+export function formFamily(formId: FormId): FormId {
+  return (ALL_FORMS.find(f => f.id === formId)?.variantOf as FormId | undefined) ?? formId;
+}
+
 // ============================================================
 // MATERIALS (the lists themselves are in ./vocabulary)
 // ============================================================
-export const ALL_MATERIALS_FLAT: readonly Material[] = [
-  ...MATERIALS.mundane, ...MATERIALS.valuable, ...MATERIALS.rare, ...MATERIALS.magic, ...MATERIALS.giant,
-];
-
 export const MATERIAL_RARITY = Object.fromEntries(
   (Object.entries(MATERIALS) as [MaterialRarity, readonly Material[]][])
     .flatMap(([rarity, mats]) => mats.map((mat) => [mat, rarity] as const)),
@@ -1213,6 +1238,18 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
   Greater:  { massRange: [13, 16], apToEvolve: 55, apToUpgrade: 15, description: "Formidable illusionist",             lore: "Its patience is geological. It has consumed dozens and learned their secrets." },
   Grand:    { massRange: [17, 25], apToEvolve: 80, apToUpgrade: 20, description: "Architectural predator",             lore: "A room is not a hiding place. A room IS the mimic." },
   Apex:     { massRange: [26, 99], apToEvolve: 120, apToUpgrade: 28, description: "Legendary shapeshifter",       lore: "Travelers speak of entire buildings that vanish overnight. They are not wrong." },
+};
+
+/** The branch tiers past Apex. A branch mimic is still Apex in size and rules; the branch adds to it. */
+export interface BranchTierConfig {
+  readonly description: string;
+  readonly lore: string;
+}
+
+export const BRANCH_TIER_CONFIG: Record<BranchTier, BranchTierConfig> = {
+  Eternal:    { description: "The mimic that never ends",  lore: "Empires rise around it and crumble to dust. It is still there, waiting for the next one." },
+  Primordial: { description: "The first mimic",           lore: "Before the first chest was ever built, something on this world was already pretending to be something else." },
+  Sovereign:  { description: "Ruler of All Mimics",       lore: "Every crate that holds its breath, every chest that waits too patiently, answers to it." },
 };
 
 // ============================================================

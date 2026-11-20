@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { LOCATIONS, LOCATION_GROUPS, locationGroup, locationHunts, locationKnowledge, type LocationKnowledge } from "@/data/gameData";
+import { codexLocations, LOCATIONS, LOCATION_GROUPS, locationGroup, locationHunts, locationKnowledge, type LocationKnowledge } from "@/data/gameData";
 import LocationCard from "./LocationCard";
 import type { CodexReader } from "./CodexReader";
 
 /** Every hunting ground, grouped, revealed as it's found and mapped once hunted. */
 export default function LocationsSection({ viewedMimic, knowers }: CodexReader) {
-  // DEV ONLY (achievement-preview branch): reveal every location (names and details), and/or every
-  // map (as if hunted). Display only — nothing is saved.
+  // DEV ONLY (achievement-preview branch): reveal every location (names and details, the hidden
+  // Beyond the Apex ones included), and/or every map (as if hunted). Display only — nothing is saved.
   const [revealAll, setRevealAll] = useState(false);
   const [revealMaps, setRevealMaps] = useState(false);
   const devKnowledge = (saved: LocationKnowledge): LocationKnowledge =>
     revealMaps ? "visited" : revealAll && saved === "unknown" ? "known" : saved;
-  const entries = LOCATIONS.map(loc => ({ loc, knowledge: devKnowledge(locationKnowledge(loc, knowers)), hunts: locationHunts(loc, knowers) }));
+  const listed = revealAll || revealMaps ? [...LOCATIONS] : codexLocations(knowers);
+  const entries = listed.map(loc => ({ loc, knowledge: devKnowledge(locationKnowledge(loc, knowers)), hunts: locationHunts(loc, knowers) }));
   const found = entries.filter(e => e.knowledge !== "unknown").length;
   const mapped = entries.filter(e => e.knowledge === "visited").length;
   return (
@@ -21,7 +22,7 @@ export default function LocationsSection({ viewedMimic, knowers }: CodexReader) 
         Every hunting ground {viewedMimic ? <span className="text-foreground">{viewedMimic.name}</span> : "your mimics"} {viewedMimic ? "has" : "have"} found. A place shows up here once {viewedMimic ? "it is" : "one of them is"} big enough to hunt there (rare places, only after hunting in one), and its floor plan once {viewedMimic ? "it has" : "one has"} hunted there.
       </p>
       <p className="text-xs font-cinzel text-primary mb-2">
-        Found {found}/{LOCATIONS.length} · Mapped {mapped}/{LOCATIONS.length}
+        Found {found}/{listed.length} · Mapped {mapped}/{listed.length}
       </p>
       {import.meta.env.DEV && (
         <div className="flex gap-2">

@@ -2,13 +2,11 @@ import { useState } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, TIER_ORDER, formTier, getValidForms, getSeasonalForms, getLockedVariants, canAddForm, formBurn, today,
-  MAX_FORMS_ABOVE_TIER, type Form, type Tier,
+  MAX_FORMS, MAX_FORMS_ABOVE_TIER, type Form, type Tier,
 } from "@/data/gameData";
 import BurnBadge from "./BurnBadge";
 import HolidayBadge, { holidayCardProps } from "./HolidayBadge";
 import { Button } from "@/components/ui/button";
-
-const MAX_FORMS = 3;
 
 interface FormSelectorProps {
   character: MimicCharacter;
@@ -77,6 +75,8 @@ export default function FormSelector({ character, onConfirm, onSkip }: FormSelec
       <button
         key={form.id}
         onClick={() => !isDisabled && toggle(form)}
+        aria-pressed={isSelected}
+        aria-disabled={isDisabled || undefined}
         data-holiday={holidayProps["data-holiday"]}
         className={`${holidayProps.className} text-left px-3 py-2.5 rounded-lg border transition-all text-xs ${
           isSelected

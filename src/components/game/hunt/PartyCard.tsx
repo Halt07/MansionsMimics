@@ -1,13 +1,19 @@
-import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, uneatenFrozen, type HuntLocation, type RoomName } from "@/data/gameData";
+import { FROST_WARNING, distractedRooms, getRoomDistance, isTheRealThing, stillInHunt, uneatenFrozen, type HuntLocation, type RoomName } from "@/data/gameData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RoomMap from "../RoomMap";
+import { FOCUS_RING } from "@/lib/asButton";
 import { useHunt, type HuntState } from "./HuntContext";
 
 /** The hunt, once there's a location and a room. */
 type ViewProps = HuntState & { location: HuntLocation; mimicRoom: RoomName };
 
-/** The party as a list (where everyone is, how far, their state) or as the room map. One card, click to switch. */
+/**
+ * The party as a list (where everyone is, how far, their state) or as the room map. Click anywhere
+ * on the card to switch. For the keyboard and screen readers the switch is the small button in the
+ * header (a click on it reaches the card's handler, so it switches once); the list and map stay
+ * ordinary content, read out as such.
+ */
 export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   const hunt = useHunt();
   const { location, mimicRoom, party, activeAdventurers, character } = hunt;
@@ -17,24 +23,17 @@ export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   const consumed = party.filter(a => a.isConsumed).length;
   const counts = `(${activeAdventurers.length} active / ${consumed} consumed)`;
   return (
-    <Card
-      role="button"
-      tabIndex={0}
-      aria-label={showMap ? "Show the party list" : "Show the room map"}
-      onClick={onToggle}
-      onKeyDown={e => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }
-      }}
-      className={"sidebar-view-card bg-card border-border fx-shake"}
-    >
+    <Card onClick={onToggle} className="sidebar-view-card bg-card border-border fx-shake">
       <CardHeader className={`${showMap ? "pb-2" : "pb-1"} pt-3 px-4`}>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-xs font-cinzel text-muted-foreground uppercase tracking-wide">
             {showMap ? <>{location.name} <span className="normal-case tracking-normal">{counts}</span></> : <>Party {counts}</>}
           </CardTitle>
-          {showMap
-            ? <span className="view-toggle-icon" aria-hidden>Aa</span>
-            : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
+          <button type="button" aria-label={showMap ? "Show the party list" : "Show the room map"} className={`view-toggle -m-1 p-1 rounded ${FOCUS_RING}`}>
+            {showMap
+              ? <span className="view-toggle-icon" aria-hidden>Aa</span>
+              : <span className="view-toggle-icon view-toggle-map" aria-hidden><i /><i /><i /><i /><i /><i /></span>}
+          </button>
         </div>
       </CardHeader>
       {showMap ? <MapView {...props} /> : <ListView {...props} />}
@@ -68,7 +67,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
   return (
     <CardContent className="px-4 pb-3 space-y-2">
       {party.map(adv => {
-        const dist = adv.isAlive && !adv.isConsumed ? getRoomDistance(location, mimicRoom, adv.location) : null;
+        const dist = stillInHunt(adv) ? getRoomDistance(location, mimicRoom, adv.location) : null;
         const inRange = dist !== null && dist <= lureRange;
         const fled = adv.fled && !adv.isConsumed;
         const disappeared = adv.isDisappeared && !adv.isConsumed;
@@ -90,7 +89,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
               {fled && <span className="text-[10px] text-muted-foreground">Fled</span>}
               {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
               {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
-              {adv.warmth !== undefined && adv.isAlive && !adv.isConsumed && (
+              {adv.warmth !== undefined && stillInHunt(adv) && (
                 <span
                   title={`Warmth ${adv.warmth}/${adv.maxWarmth ?? adv.warmth}: freezes at 0`}
                   className={`text-[10px] whitespace-nowrap ${adv.warmth <= FROST_WARNING ? "text-sky-300" : "text-muted-foreground"}`}

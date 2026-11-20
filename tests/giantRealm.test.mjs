@@ -1,5 +1,5 @@
 // Giant realm: each location's giant roster, small creatures, and the Titanic Feast achievement.
-export default async function ({ gameData: m, ok, log }) {
+export default async function ({ gameData: m, ok }) {
   const { ADVENTURER_TEMPLATES: T, LOCATIONS } = m;
   const loc = (id) => LOCATIONS.find((l) => l.id === id);
   const eligibleAt = (id, mass) => T.filter((t) => m.isTemplateEligible(t, loc(id), 'Apex', mass)).map((t) => t.name).sort();

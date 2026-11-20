@@ -1,7 +1,9 @@
 import { createContext, useContext } from "react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import type {
-  EffectiveStats, Form, HuntLocation, PartyMember, RivalMimic, RoomName, Sickness, SmallCreature,
+import {
+  activeAdventurers, effectiveStats, getActiveForm, lureRange, skyward,
+  type EffectiveStats, type Form, type Hunt, type HuntLocation, type PartyMember, type RivalMimic, type RoomName,
+  type Sickness, type SmallCreature,
 } from "@/data/gameData";
 
 /**
@@ -44,6 +46,27 @@ export interface HuntState {
   starFragment: RoomName | null;
   /** Everyone in your room is watching fireworks right now. */
   skyward: boolean;
+}
+
+/**
+ * What the screen reads, from the character and the hunt (null before one starts).
+ * `location` is the one being set up before the hunt begins (after that, the hunt's own).
+ */
+export function huntState(
+  character: MimicCharacter, hunt: Hunt | null,
+  { location = null, huntOver = false, acting = false }: { location?: HuntLocation | null; huntOver?: boolean; acting?: boolean } = {},
+): HuntState {
+  const activeForm = getActiveForm(character);
+  const sickness = hunt?.sickness ?? null;
+  return {
+    character, activeForm, stats: effectiveStats(character, sickness, activeForm), sickness,
+    suspicion: hunt?.suspicion ?? 0, lureRange: lureRange(character),
+    location: hunt?.location ?? location, mimicRoom: hunt?.mimicRoom ?? null, party: hunt?.party ?? [],
+    activeAdventurers: hunt ? activeAdventurers(hunt) : [], creatures: hunt?.creatures ?? [], rivals: hunt?.rivals ?? [],
+    isBountyHunt: hunt?.bounty ?? false, huntOver, actionCount: hunt?.actionCount ?? 0, acting,
+    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null,
+    skyward: !!hunt && skyward(hunt),
+  };
 }
 
 export const HuntContext = createContext<HuntState | null>(null);

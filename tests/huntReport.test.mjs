@@ -56,6 +56,35 @@ export default async function ({ gameData: m, ok, log }) {
   const ship = m.buildHuntReport({ ...base, ending: 'cleared', locationName: 'The Sinking Ship', sank: true, party: [member('Ship\'s Captain', { fled: true })] });
   ok(!/the The|the the/i.test(text(ship)), 'no "the The Sinking Ship"');
 
+  // Names that bring their own "The" (The Princess, The King) don't get a second one, in any telling
+  const royals = (over) => [member('The Princess', over), member('The King', { fled: true })];
+  const doubled = [];
+  for (let seed = 0; seed < 40; seed++) {
+    for (const locationId of [undefined, 'spell_or_sweet_street']) {
+      for (const [ending, party] of [['discovered', royals({ isConsumed: true })], ['abandoned', royals({ isConsumed: true })], ['cleared', royals({ isConsumed: true })], ['cleared', [member('The Princess', { isConverted: true })]], ['cleared', [member('The Princess', { isConsumed: true })]]]) {
+        const r = m.buildHuntReport({ ...base, seed, locationId, ending, party, biggestMeal: { name: 'The Princess', ap: 4 } });
+        if (/the The|The The|a The /.test(text(r))) doubled.push(text(r));
+      }
+    }
+  }
+  ok(doubled.length === 0, `no "the The Princess" in any report${doubled.length ? `: ${doubled[0].match(/[^]{0,60}(the The|The The|a The ).{0,30}/s)?.[0]}` : ''}`);
+
+  // Found out with someone frozen solid (the Lodge): they count as lost, not as nothing happening
+  const seeds = Array.from({ length: 60 }, (_, i) => i);
+  const iced = seeds.map((seed) => text(m.buildHuntReport({ ...base, seed, ending: 'discovered', peakSuspicion: 10,
+    party: [member('Frail Scholar', { isFrozen: true }), member('Naive Bard')] })));
+  ok(iced.every((t) => t.includes('One frozen solid')) && !iced.some((t) => t.includes('It never touched us')), 'someone frozen solid: counted among the losses, never "it never touched us"');
+  const frozenThenEaten = text(m.buildHuntReport({ ...base, ending: 'discovered', party: [member('Frail Scholar', { isFrozen: true, isConsumed: true }), member('Naive Bard')] }));
+  ok(frozenThenEaten.includes('One devoured') && !frozenThenEaten.includes('frozen solid'), '…frozen and then eaten: devoured');
+
+  // The biggest meal: swallowed whole, or eaten a bite at a time
+  const quotes = (biteAp) => seeds.map((seed) => m.buildHuntReport({ ...base, seed, ending: 'discovered', biggestMeal: { name: 'Greedy Rogue', ap: 4 },
+    party: [member('Greedy Rogue', { isConsumed: true, biteAp }), member('Naive Bard')] }).quote?.text ?? '');
+  const bitten = quotes(3);
+  const swallowed = quotes(undefined);
+  ok(bitten.some((q) => q.includes('a bite at a time')) && !bitten.some((q) => q.includes('whole')), 'eaten in bites: the witness never says it was taken whole');
+  ok(swallowed.some((q) => q.includes('It took the Greedy Rogue whole')) && !swallowed.some((q) => q.includes('a bite at a time')), '…swallowed whole: they say so');
+
   // Same seed, same report; the seed varies the wording
   const again = m.buildHuntReport({ ...base, ending: 'discovered', biggestMeal: { name: 'Greedy Rogue', ap: 4 },
     party: [member('Greedy Rogue', { isConsumed: true }), member('Paranoid Cleric', { fled: true }), member('Naive Bard')] });
