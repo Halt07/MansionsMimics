@@ -248,6 +248,8 @@ const LOCATION_DATA = [
       "Innkeeper's Quarters":["Kitchen", "Guest Rooms"],
     },
     partySize: [4, 6], suspicionGrowthRate: 1,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Comfort", "Social", "Storage", "Hospitality"],
     imageHint: "dark cozy haunted inn at night",
     locationCreatures: [
@@ -271,6 +273,8 @@ const LOCATION_DATA = [
       "Cemetery":   ["Narthex"],
     },
     partySize: [3, 5], suspicionGrowthRate: 2,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Religious", "Structural", "Valuable"],
     imageHint: "dark gothic chapel ruins",
     locationCreatures: [
@@ -597,6 +601,8 @@ const LOCATION_DATA = [
       "Boggy Hollow":         ["Peat Stack", "Moorland Path South"],
     },
     partySize: [2, 4], suspicionGrowthRate: 2,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Structural", "Rural", "Comfort"],
     imageHint: "isolated stone bothy on a dark foggy moorland at night",
     locationCreatures: [

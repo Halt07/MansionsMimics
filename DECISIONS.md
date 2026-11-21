@@ -14,6 +14,8 @@ entries as decisions are made, with the reason if one was given.
 - **Eating a star fragment doesn't keep the party interested.** Meals reset the count of actions until the party gets bored and leaves, but swallowing a star doesn't: the mimic hasn't gone after anything living, let alone an adventurer, and with the star gone the party has one less thing to look for. (Pinned by tests/hunt.test.mjs.)
 - **A rival mimic that has been found is still hungry.** Revealing it doesn't stop it hunting: anyone who walks into its room on a Wait is eaten, and so is anyone you Lure into your room while it's there with you. They never reach you. In your own room you see it happen ("The rival mimic snatched up the Bard before you could get to them."); in another room they just don't come out. (Pinned by tests/hunt.test.mjs.)
 
+- **The haunted places save a place in every party for their own** (`nativeShare: 1`): the Lonely Moor (the Swamp Hag, Wailing Banshee, Cursed Revenant, Werewolf), the Haunted Roadside Inn and the Cursed Chapel (their undead, and the chapel's Gargoyle). Without it, each haunt was about 1 party in 90, too rare for the places to feel haunted, or for Connoisseur to be reasonable. Other places with adventurers tied to them don't save a place: there, being tied to a location only means they appear nowhere else.
+
 ## Seasonal locations
 
 - **Open to every tier while their holiday is on.** Nobody should miss a holiday for being too small or too big.
