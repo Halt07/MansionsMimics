@@ -110,6 +110,17 @@ export default async function ({ gameData: m, ok }) {
   ok(!m.lure(at([coiled], { mimicRoom: 'Gatehouse' }), sovereign, { ...still, random: () => 0 }).hunt.party[0].isAttracted, '…can\'t be drawn out of it');
   ok(m.lure(at([coiled], { mimicRoom: 'Western Moat' }), sovereign, { ...still, random: () => 0 }).hunt.party[0].isAttracted, '…but can be lured where it is, if you go into the moat');
 
+  // Getting at a Serpent: a Relocate can slip into its moat (it doesn't notice), and back out
+  const moatParty = [member('Moat Serpent', 'Western Moat')];
+  ok(m.relocateRooms(start.location, moatParty, 'Gatehouse').includes('Western Moat'), 'a Relocate can slip into a moat with a Serpent in it (down in the murky water, it never notices)');
+  ok(m.relocateRooms(start.location, moatParty, 'Western Moat').includes('Gatehouse'), '…and back out again: the Serpent doesn\'t count as company');
+  ok(!m.relocateRooms(start.location, [...moatParty, member('Herald', 'Western Moat')], 'Gatehouse').includes('Western Moat'), '…but anyone else in the moat would notice');
+  ok(m.relocateRooms(start.location, [member('Herald', 'Gatehouse')], 'Courtyard').every((r) => r !== 'Gatehouse')
+    && m.relocateRooms(start.location, [member('Herald', 'Courtyard')], 'Courtyard').length === 0, 'everywhere else, as ever: only into empty rooms, and not with someone in yours');
+  const slipped = m.relocate(at(moatParty, { mimicRoom: 'Gatehouse' }), sovereign, 'Western Moat', still);
+  ok(slipped.hunt.mimicRoom === 'Western Moat' && slipped.hunt.suspicion === start.suspicion + 1 && !slipped.log.some((l) => l.message.includes('notices')),
+    '…at the usual cost (+1 suspicion), and the Serpent never gets a look at you');
+
   // ---------- the breach ----------
   ok(court.breach.turn === 10 && court.breach.walls['Western Moat'] === 'Barracks' && court.breach.walls['Eastern Moat'] === 'Shrine' && court.breach.extra.join() === '1,2',
     'on turn 10 a Serpent batters through the wall beside its moat: the Western Moat into the Barracks, the Eastern Moat into the Shrine');

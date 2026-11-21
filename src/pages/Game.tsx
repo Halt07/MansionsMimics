@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, STAT_CAP, VARIANT_FORMS, ACHIEVEMENTS,
-  getAdjacentRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
+  notices, relocateRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
   getActiveForm, applyUpgrade, displayTier, type UpgradeChoice,
   activeAdventurers, huntCleared, beginHunt, relocate, lure, strike, canStrike, wait,
   eatCreature, eatStar, eatRemains, changeForm, changeAppearance,
@@ -371,7 +371,9 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
 
   // What the four hunt actions can do right now (shared by the buttons and the keyboard)
   const acting = ceremonyRunning;
-  const someoneInMyRoom = active.some(a => a.location === mimicRoom);
+  // Relocating needs nobody watching here or there (a Moat Serpent doesn't count; see relocateRooms)
+  const relocateTo = location && mimicRoom ? relocateRooms(location, party, mimicRoom) : [];
+  const someoneInMyRoom = !!location && !!mimicRoom && party.some(a => notices(a) && a.location === mimicRoom);
   const canRelocate = !acting && !huntOver && !someoneInMyRoom;
   const canLure = !acting && !huntOver && active.length > 0;
   const canStrikeNow = !acting && !huntOver && !!hunt && canStrike(hunt);
@@ -379,9 +381,6 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
   // Changing form or look takes a turn too
   const canChange = !acting && !huntOver;
   // Empty rooms next door, in the order the Relocate panel lists (and numbers) them
-  const relocateRooms = location && mimicRoom
-    ? getAdjacentRooms(location, mimicRoom).filter(room => !active.some(a => a.location === room))
-    : [];
   const toggleMovePanel = () => {
     if (!canRelocate) return;
     setShowMovePanel(prev => !prev);
@@ -398,7 +397,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
       s: { can: canStrikeNow, run: doStrike },
       w: { can: canWait, run: doWait },
     },
-    numbered: showMovePanel ? { choices: relocateRooms, can: canRelocate, choose: doRelocate, close: () => setShowMovePanel(false) } : null,
+    numbered: showMovePanel ? { choices: relocateTo, can: canRelocate, choose: doRelocate, close: () => setShowMovePanel(false) } : null,
   });
 
   if (loading) {
@@ -557,7 +556,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
                   onClose={() => setShowAppearancePanel(false)}
                 />
               )}
-              {showMovePanel && canRelocate && location && mimicRoom && <RelocatePanel rooms={relocateRooms} onRelocate={doRelocate} />}
+              {showMovePanel && canRelocate && location && mimicRoom && <RelocatePanel rooms={relocateTo} onRelocate={doRelocate} />}
               {/* Once the hunt is won there's nothing left to do: the report takes their place */}
               {!huntOver && (
                 <>

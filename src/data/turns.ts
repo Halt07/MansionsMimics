@@ -20,7 +20,7 @@ import type { HuntLocation, RoomName } from "./locationData";
 import { resolveLure } from "./lure";
 import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
 import { ALL_FORMS, type Form } from "./mimicData";
-import { VANISHING_LINES, isStationary, moveCreatures, moveParty, rivalAteFirst } from "./movement";
+import { VANISHING_LINES, isStationary, moveCreatures, moveParty, notices, rivalAteFirst } from "./movement";
 import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, becomePrimordial, branchMealRecords, lureRange, withBiggestMeal, withFormUsed } from "./stats";
 import {
   COLLAPSE_BONUS_AP, LUCKY_WANDER_CHANCE, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
@@ -125,8 +125,8 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
 
   t.countAction();
   t.raise(1);
-  // Anyone already in the room gets a look at you
-  t.stealth(hunt.party.filter(a => stillInHunt(a) && a.location === targetRoom));
+  // Anyone already in the room gets a look at you (not a Moat Serpent, down in the water: see notices)
+  t.stealth(hunt.party.filter(a => notices(a) && a.location === targetRoom));
   t.react("relocate", { fromRoom });
   t.endTurn();
   return t.finish();
