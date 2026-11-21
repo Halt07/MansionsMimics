@@ -13,7 +13,7 @@ import {
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
   // DEV ONLY (achievement-preview branch): the dev buttons below
   ADVENTURER_TEMPLATES, ALL_MATERIALS, LEARNABLE_TRAITS, LOCATIONS, SEASONAL_FORMS, HOLIDAYS, CULT_CONVERSIONS, CANNIBAL_MIMICS,
-  TIME_TEAR_MAGIC_USERS, TIME_TEAR_MASS, tearInTimeOpen, ETERNAL_DECAY_FREE_DAYS, branchOnOpening, type Material, type HolidayId,
+  TIME_TEAR_MAGIC_USERS, TIME_TEAR_MASS, tearInTimeOpen, ETERNAL_DECAY_FREE_DAYS, branchOnOpening, SOVEREIGN_MASS, sovereignOnGrowth, type Material, type HolidayId,
 } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -460,6 +460,24 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
   // Give or take away Eternal (saved), to check the Long After and its card. Giving makes the mimic
   // Apex with ETERNAL_DECAY_FREE_DAYS without decay, on no branch, then lets the real rule make it
   // Eternal straight away (as opening the mimic would); taking away clears it and the stretch.
+  // Give or take away Sovereign (saved), to check the Hollow Court and its card. Giving makes the
+  // mimic Apex with at least SOVEREIGN_MASS, on no branch, then lets the real rule crown it (as
+  // growing there would); taking away clears it and drops it just below, so the next growth
+  // doesn't crown it again. Ruler of All Mimics stays earned, as it would in play.
+  const devToggleSovereign = () => {
+    if (!character) return;
+    if (character.branchTier === "Sovereign") {
+      const updates: Partial<MimicCharacter> = { branchTier: null, mass: Math.min(character.mass, SOVEREIGN_MASS - 1) };
+      setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+      persist(updates);
+      return;
+    }
+    const ready: Partial<MimicCharacter> = { tier: "Apex", branchTier: null, mass: Math.max(character.mass, SOVEREIGN_MASS) };
+    const updates = { ...ready, ...sovereignOnGrowth({ ...character, ...ready }, ready.mass ?? SOVEREIGN_MASS)?.changes };
+    setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+    persist(updates);
+  };
+
   const devToggleEternal = () => {
     if (!character) return;
     const now = new Date();
@@ -735,6 +753,20 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
               🛠 Dev: {character.branchTier === "Eternal"
                 ? "take away Eternal (saved)"
                 : `give Eternal: Apex, ${ETERNAL_DECAY_FREE_DAYS} days without decay (saved)`}
+            </Button>
+          )}
+          {/* DEV ONLY (achievement-preview branch): make this mimic Sovereign or not, to check the
+              Hollow Court and its card. Saved, like the buttons above. */}
+          {import.meta.env.DEV && phase === "setup" && !roomSelecting && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+              onClick={devToggleSovereign}
+            >
+              🛠 Dev: {character.branchTier === "Sovereign"
+                ? "take away Sovereign (saved)"
+                : `give Sovereign: Apex, ${SOVEREIGN_MASS} mass (saved)`}
             </Button>
           )}
           {phase === "setup" && !roomSelecting && (
