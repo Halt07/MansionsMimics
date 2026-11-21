@@ -7,7 +7,7 @@
 // Re-exported from ./gameData.
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
-import { stillInHunt, type PartyMember } from "./adventurerData";
+import { getApReward, stillInHunt, type PartyMember } from "./adventurerData";
 import { LOCATIONS, type HuntLocation, type RoomName } from "./locationData";
 import { getBehaviorReactions, type BehaviorContext, type BehaviorTrigger } from "./behaviors";
 import { BURN_HUNTS, burnAfterDiscovery } from "./core";
@@ -17,6 +17,7 @@ import {
   ERUPTION_PROOF_FORM, RIVAL_DISGUISES, breachedView, digDue, siegeWave, wallsToBreach, waveDue, eruptionToll, eruptionZone, nextOpened, sealedView, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
 } from "./events";
 import { DUPLICATE_ROOM_SUSPICION, resolveStealth } from "./lure";
+import { notices } from "./movement";
 import type { SmallCreature } from "./mealPrep";
 import { TIER_CONFIG, type Sickness } from "./mimicData";
 import { effectiveStats, getActiveForm, withBiggestMeal } from "./stats";
@@ -61,6 +62,10 @@ export interface Hunt {
   wavesArrived?: number;
   /** The Hollow Court: moats whose wall has been broken through (`location` has the new doors). */
   breached?: RoomName[];
+  /** The Hollow Court: the mimic's minions, placed (see placeMinion). */
+  minions?: Minion[];
+  /** The Hollow Court: minions arrived and waiting to be placed. */
+  minionsToPlace?: number;
   /** Set once the hunt ends early: found out, or the party got bored and left. A cleared hunt (see huntCleared) leaves it null. */
   ending: Exclude<HuntEnding, "cleared"> | null;
 
@@ -75,6 +80,27 @@ export interface Hunt {
   seed: number;
   /** Counted in the lifetime stats yet (each hunt once, as survived or failed). */
   recorded: boolean;
+}
+
+/** One of the mimic's minions at the Hollow Court: where it waits, and how much it has eaten. */
+export interface Minion {
+  id: string;
+  room: RoomName;
+  meals: number;
+  /** Found and destroyed by the crusade (after its last meal), or cut down by the Champion. */
+  destroyed: boolean;
+}
+
+/**
+ * Where a minion can go: an open room that isn't one of the choke points, isn't the mimic's, and
+ * has no minion yet and nobody in it who'd notice (a Moat Serpent doesn't: see notices).
+ */
+export function minionRooms(hunt: Pick<Hunt, "location" | "party" | "mimicRoom" | "minions">): RoomName[] {
+  const settings = hunt.location.siege?.minions;
+  if (!settings) return [];
+  const taken = new Set((hunt.minions ?? []).filter(x => !x.destroyed).map(x => x.room));
+  return hunt.location.rooms.filter(r =>
+    !settings.bannedRooms.includes(r) && r !== hunt.mimicRoom && !taken.has(r) && !hunt.party.some(a => notices(a) && a.location === r));
 }
 
 export interface LogLine {
@@ -360,6 +386,47 @@ export class Turn {
     if (location.dig && !this.over) this.dig();
     if (location.tarPits && !this.over) this.tar();
     if (location.eruption && !this.over) this.erupt();
+    // Last, once everyone has moved and arrived: the minions eat whoever wandered in
+    if (!this.over) this.minionsFeed();
+  }
+
+  /**
+   * The Hollow Court: each minion eats whoever is in its room (they can only have wandered in), up
+   * to its meals, and the mimic gets a share of the AP. After its last meal the crusade finds and
+   * destroys it. The Siege Champion is no meal for a minion: they cut it down instead.
+   */
+  minionsFeed() {
+    const siege = this.hunt.location.siege;
+    const settings = siege?.minions;
+    if (!settings || !this.hunt.minions?.length) return;
+    for (const minion of this.hunt.minions) {
+      if (minion.destroyed) continue;
+      let meals = minion.meals;
+      const here = this.hunt.party.filter(a => stillInHunt(a) && a.location === minion.room);
+      // It eats whoever it can first; the Champion, there too, sees it happen and strikes it down
+      for (const prey of here.filter(a => a.name !== siege.champion)) {
+        if (meals >= settings.meals) break;
+        const ap = Math.max(1, Math.floor(getApReward(prey) * settings.apShare));
+        this.patchMember(prey.id, () => ({ isAlive: false, isConsumed: true, isAttracted: false, byMinion: true }));
+        this.consume(`🫥 Your minion in the ${minion.room} swallows the ${prey.name}. +${ap} AP.`);
+        this.feed(ap);
+        meals += 1;
+      }
+      const champion = here.find(a => a.name === siege.champion);
+      let destroyed = false;
+      if (champion) {
+        this.alert(meals > minion.meals
+          ? `⚔️ ${champion.name} sees it happen, and cuts your minion down where it sits.`
+          : `⚔️ ${champion.name} strides into the ${minion.room}, sees through your minion at once, and cuts it down.`);
+        destroyed = true;
+      } else if (meals >= settings.meals) {
+        this.alert(`The crusade finds the mimic in the ${minion.room}, gorged and slow, and destroys it.`);
+        destroyed = true;
+      }
+      if (meals !== minion.meals || destroyed) {
+        this.set({ minions: (this.hunt.minions ?? []).map(x => x.id === minion.id ? { ...x, meals, destroyed } : x) });
+      }
+    }
   }
 
   // The Long After: every few turns the dig opens another sealed room (cut free of the vines, or
@@ -390,7 +457,11 @@ export class Turn {
     if (!siege || !waveDue(location, turn, wavesArrived)) return;
     const wave = wavesArrived + 1;
     const arrivals = siegeWave(location, wave, this.random, this.hunt.breached ?? []);
-    this.set({ wavesArrived: wave, party: [...this.hunt.party, ...arrivals] });
+    this.set({
+      wavesArrived: wave, party: [...this.hunt.party, ...arrivals],
+      // Each wave brings another of your subjects to place
+      ...(siege.minions ? { minionsToPlace: (this.hunt.minionsToPlace ?? 0) + 1 } : {}),
+    });
     const names = arrivals.map(a => a.name).join(", ");
     if (wave === siege.waves) {
       this.alert(`⚔️ Trumpets at the ${siege.entry}! The last of the crusade marches in, ${siege.champion} at its head: ${names}. (+${siege.suspicion} suspicion)`);

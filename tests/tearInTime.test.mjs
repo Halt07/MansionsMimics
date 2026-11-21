@@ -177,6 +177,7 @@ export default async function ({ gameData: m, ok }) {
   ok(m.canStrike(helpless), 'a mimic in the Tar Pits can Strike the stuck without luring them…');
   const meal = m.strike(helpless, apex(), { ...still, random: () => 0.99 });
   ok(meal.hunt.party[0].isConsumed, '…and the Strike always holds: they have nowhere to go');
+  ok(!meal.log.some((l) => l.message.includes('fireworks')), '…(and nobody is said to be watching fireworks)');
   ok(!m.canStrike(tarHunt([stuck], { mimicRoom: 'Fern Thicket' })), 'from another room, they\'re out of reach like anyone else');
   ok(m.buildHuntReport({ ending: 'cleared', seed: 1, locationName: 'The Tear in Time', locationId: 'tear_in_time', lastRoom: 'Tar Pits', formName: 'Cave', tier: 'Apex', mimicName: 'Rex', bounty: false, peakSuspicion: 2, biggestMeal: null, mimicsDevoured: 0, sank: false,
     party: [sunk, { name: 'Firekeeper', isConsumed: false }] }).body.join(' ').includes('Two go out'), 'the report counts the sunk among the lost');

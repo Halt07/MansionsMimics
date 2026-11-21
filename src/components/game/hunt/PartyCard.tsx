@@ -41,7 +41,7 @@ export default function PartyCard({ onToggle }: { onToggle: () => void }) {
   );
 }
 
-function MapView({ location, mimicRoom, lureRange, activeAdventurers, creatures, rivals, party, starFragment, fireworksRoom, activeForm }: ViewProps) {
+function MapView({ location, mimicRoom, lureRange, activeAdventurers, creatures, rivals, party, starFragment, fireworksRoom, activeForm, minions }: ViewProps) {
   return (
     <CardContent className="px-4 pb-4">
       <RoomMap
@@ -56,6 +56,7 @@ function MapView({ location, mimicRoom, lureRange, activeAdventurers, creatures,
         markers={[
           ...(location.starfall && starFragment ? [{ room: starFragment, icon: "🌠", title: "A fallen star fragment" }] : []),
           ...(location.fireworks && fireworksRoom ? [{ room: fireworksRoom, icon: "🎆", title: "Fireworks overhead: everyone here and next door is looking up" }] : []),
+          ...minions.filter(x => !x.destroyed).map(x => ({ room: x.room, icon: "🫥", title: `Your minion, waiting (${x.meals} eaten so far)` })),
         ]}
         formName={activeForm?.name}
       />
@@ -97,6 +98,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
               {disappeared && <span className="text-[10px] text-purple-400/60">Disappeared</span>}
               {frozen && <span title={adv.location} className="text-[10px] text-sky-300/80">🧊 Frozen · {adv.location}</span>}
               {roasted && <span title={adv.location} className="text-[10px] text-orange-300/80">🍖 Roasted · {adv.location}</span>}
+              {adv.byMinion && <span className="text-[10px] text-violet-300/80">🫥 Eaten by your minion</span>}
               {burned && <span className="text-[10px] text-muted-foreground">🔥 Lost to the eruption</span>}
               {sunk && <span className="text-[10px] text-muted-foreground">🕳️ Sank in the tar</span>}
               {stuck && <span className="text-[10px] text-amber-500/90">🕳️ Stuck in the tar</span>}
@@ -108,7 +110,7 @@ function ListView({ location, mimicRoom, party, lureRange }: ViewProps) {
                   ❄️ {adv.warmth}
                 </span>
               )}
-              {adv.isConsumed && <span className="text-[10px] text-muted-foreground">Consumed</span>}
+              {adv.isConsumed && !adv.byMinion && <span className="text-[10px] text-muted-foreground">Consumed</span>}
               {adv.isAttracted && !adv.isConsumed && (
                 <Badge className="text-[10px] bg-yellow-400/10 text-yellow-400 border-yellow-400/20 border px-1 py-0">Attracted</Badge>
               )}

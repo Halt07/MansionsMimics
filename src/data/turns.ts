@@ -15,7 +15,7 @@ import {
   initiallySealed, sealedView, unmask, type RivalMimic,
 } from "./events";
 import { formsStillAllowed, formTier } from "./forms";
-import { skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+import { minionRooms, skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
 import type { HuntLocation, RoomName } from "./locationData";
 import { resolveLure } from "./lure";
 import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
@@ -47,6 +47,8 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     suspicion: start.suspicion, bounty: start.bounty, sickness: start.sickness,
     actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, eruptionTurn: start.eruptionTurn, ending: null,
     ...(sealedRooms.length ? { sealedRooms } : {}),
+    // The Hollow Court: one of your subjects is there from the start, waiting to be placed
+    ...(location.siege?.minions ? { minionsToPlace: 1, minions: [] } : {}),
     stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null,
     seed: Math.floor(random() * 2 ** 31), recorded: false,
   };
@@ -129,6 +131,22 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
   t.stealth(hunt.party.filter(a => notices(a) && a.location === targetRoom));
   t.react("relocate", { fromRoom });
   t.endTurn();
+  return t.finish();
+}
+
+// ---------- Minions (the Hollow Court) ----------
+
+/**
+ * Place a waiting minion in `room` (see minionRooms for where it can go). It takes no turn. If a
+ * Moat Serpent is down in that moat, the minion goes straight for it.
+ */
+export function placeMinion(hunt: Hunt, character: MimicCharacter, room: RoomName, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  if (!hunt.minionsToPlace || !minionRooms(hunt).includes(room)) return t.finish();
+  const minion = { id: `minion_${(hunt.minions ?? []).length}`, room, meals: 0, destroyed: false };
+  t.set({ minions: [...(hunt.minions ?? []), minion], minionsToPlace: hunt.minionsToPlace - 1 });
+  t.info(`🫥 One of your subjects settles into the ${room}, and goes still. It will take whoever wanders in.`);
+  t.minionsFeed();
   return t.finish();
 }
 
@@ -232,7 +250,12 @@ export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions 
   // A Strike that lands on someone stirs the mimic (the spiderweb starts over); one with nothing to strike takes no turn
   t.stir();
   t.set({ actionCount: 0 });
-  if (!target.isAttracted) t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+  // Not lured, yet in reach: say why (stuck in the tar says so itself, in the Strike's own line)
+  if (!target.isAttracted && target.behavior === "unshakeable") {
+    t.info(`${target.name} stands their ground right beside you. There's no luring this one: you go for them.`);
+  } else if (!target.isAttracted && target.tarStuck === undefined && skyward(hunt)) {
+    t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+  }
   const seen = strikeWitnesses(hunt.party, target, mimicRoom, looking);
   t.react("strike", { excludeIds: [target.id] });
   // Heard lunging and found out: you flee before the attack lands

@@ -96,6 +96,8 @@ export default async function ({ gameData: m, ok }) {
   const lured = m.lure(at([champ, member('Herald', 'Great Hall')], { mimicRoom: 'Great Hall' }), regal, { ...still, random: () => 0.99 });
   ok(lured.hunt.party[1].isAttracted && !lured.hunt.party[0].isAttracted, 'the Champion can\'t be lured, however tempting you look');
   ok(m.canStrike(at([champ], { mimicRoom: 'Great Hall' })) && !m.canStrike(at([champ], { mimicRoom: 'Courtyard' })), '…but in your room, you can go for them without luring; from anywhere else, you can\'t');
+  const goFor = m.strike(at([champ], { mimicRoom: 'Great Hall' }), sovereign, { ...still, random: () => 0.99 }).log.map((l) => l.message);
+  ok(goFor.some((l) => l.includes('stands their ground right beside you')) && !goFor.some((l) => l.includes('fireworks')), '…the log says you went for them (not that they\'re watching fireworks)');
   const crowd = [champ, member('Herald', 'Courtyard'), member('Crusader Knight', 'Treasury'), member('Dragon-Slayer', 'Gatehouse')];
   const missed = m.strike(at(crowd, { mimicRoom: 'Great Hall' }), { ...sovereign, adhesion: 1 }, { ...still, random: () => 0.99 });
   const where = (n) => missed.hunt.party.find((p) => p.name === n).location;
@@ -120,6 +122,38 @@ export default async function ({ gameData: m, ok }) {
   const slipped = m.relocate(at(moatParty, { mimicRoom: 'Gatehouse' }), sovereign, 'Western Moat', still);
   ok(slipped.hunt.mimicRoom === 'Western Moat' && slipped.hunt.suspicion === start.suspicion + 1 && !slipped.log.some((l) => l.message.includes('notices')),
     '…at the usual cost (+1 suspicion), and the Serpent never gets a look at you');
+
+  // ---------- your minions ----------
+  ok(start.minionsToPlace === 1 && start.minions.length === 0, 'one of your subjects is there from the start, waiting to be placed');
+  const settings = court.siege.minions;
+  ok(settings.meals === 2 && settings.apShare === 0.5 && ['Gatehouse', 'Courtyard', 'Great Hall'].every((r) => settings.bannedRooms.includes(r)), 'each eats two, for half their worth, and never in the choke points');
+  const free = m.minionRooms(at([member('Herald', 'Barracks'), member('Moat Serpent', 'Eastern Moat')], { mimicRoom: 'Throne Hall' }));
+  ok(!free.some((r) => ['Gatehouse', 'Courtyard', 'Great Hall', 'Throne Hall', 'Barracks'].includes(r)) && free.includes('Shrine') && free.includes('Eastern Moat'),
+    'it can go in any room but the choke points, yours, or one someone\'s watching (a Serpent\'s moat is fine)');
+  const placed = m.placeMinion(at([member('Herald', 'Barracks')], { mimicRoom: 'Throne Hall', minionsToPlace: 1, minions: [] }), sovereign, 'Shrine', still);
+  ok(placed.hunt.minions.length === 1 && placed.hunt.minions[0].room === 'Shrine' && placed.hunt.minionsToPlace === 0 && placed.hunt.turn === start.turn, 'placing one takes no turn');
+  ok(m.placeMinion(placed.hunt, sovereign, 'Treasury', still).hunt.minions.length === 1, '…and once they\'re all placed, there\'s nothing more to place');
+  ok(m.minionRooms({ ...placed.hunt, minionsToPlace: 1 }).every((r) => r !== 'Shrine'), '…one to a room');
+  const seized = m.placeMinion(at([member('Moat Serpent', 'Western Moat')], { mimicRoom: 'Throne Hall', minionsToPlace: 1, minions: [] }), sovereign, 'Western Moat', still);
+  ok(seized.hunt.party[0].isConsumed && seized.hunt.party[0].byMinion && seized.hunt.minions[0].meals === 1 && seized.character.assimilationPoints === 3,
+    'placed in a Serpent\'s moat, it goes straight for the Serpent (half its 6 AP is yours)');
+  const minionAt = (room, meals = 0) => [{ id: 'mn', room, meals, destroyed: false }];
+  const fed = m.wait(at([member('Herald', 'Shrine')], { turn: 1, minions: minionAt('Shrine') }), sovereign, still);
+  ok(fed.hunt.party[0].isConsumed && fed.hunt.party[0].byMinion && fed.hunt.minions[0].meals === 1 && fed.character.assimilationPoints === 1 && fed.log.some((l) => l.message.includes('Your minion in the Shrine swallows the Herald')),
+    'whoever wanders into its room, it eats (and half of what they\'re worth is yours)');
+  const full = m.wait(at([member('Herald', 'Shrine'), member('Crusader Knight', 'Shrine')], { turn: 1, minions: minionAt('Shrine', 1) }), sovereign, still);
+  ok(full.hunt.minions[0].destroyed && full.hunt.party.filter((p) => p.byMinion).length === 1 && full.log.some((l) => l.message.includes('finds the mimic in the Shrine, gorged and slow, and destroys it')),
+    'after its second meal the crusade finds it and destroys it (and the next one walks away)');
+  const cut = m.wait(at([member('The Siege Champion', 'Shrine')], { turn: 1, minions: minionAt('Shrine') }), sovereign, still);
+  ok(cut.hunt.minions[0].destroyed && m.stillInHunt(cut.hunt.party[0]) && cut.log.some((l) => l.message.includes('cuts it down')), 'the Siege Champion is no meal for a minion: they cut it down');
+  const seen = m.wait(at([member('The Siege Champion', 'Shrine'), member('Herald', 'Shrine')], { turn: 1, minions: minionAt('Shrine') }), sovereign, still);
+  const heraldThen = seen.hunt.party.find((p) => p.name === 'Herald');
+  ok(heraldThen.byMinion && seen.hunt.minions[0].destroyed && m.stillInHunt(seen.hunt.party.find((p) => p.name === 'The Siege Champion')),
+    '…but if someone comes in with them, the minion eats them first, and the Champion, seeing it, cuts it down');
+  const order = seen.log.map((l) => l.message);
+  ok(order.findIndex((l) => l.includes('swallows the Herald')) < order.findIndex((l) => l.includes('sees it happen, and cuts your minion down')), '…in that order');
+  ok(m.wait(at([], { turn: 4, minionsToPlace: 0, minions: [] }), sovereign, still).hunt.minionsToPlace === 1, 'every wave brings another subject to place');
+  ok(!m.canStrike(at([], { mimicRoom: 'Shrine', minions: minionAt('Shrine') })), 'and you can\'t eat your own');
 
   // ---------- the breach ----------
   ok(court.breach.turn === 10 && court.breach.walls['Western Moat'] === 'Barracks' && court.breach.walls['Eastern Moat'] === 'Shrine' && court.breach.extra.join() === '1,2',

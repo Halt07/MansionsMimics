@@ -52,7 +52,10 @@ export default function HuntReport({ report }: { report: Report }) {
           {report.signoff && (
             <div className="report-signoff">
               <span>{report.signoff}</span>
-              {isNotice && paper && <span className="report-seal" aria-hidden>G</span>}
+              {isNotice && paper && (
+                // The Guild's "G", or another device pressed into the wax (an emoji, tinted to match: see .report-seal--emblem)
+                <span className={`report-seal${report.seal ? " report-seal--emblem" : ""}`} aria-hidden>{report.seal ?? "G"}</span>
+              )}
             </div>
           )}
 

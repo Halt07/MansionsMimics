@@ -5,7 +5,7 @@ import { db } from "@/api/db";
 import type { Appearance, FormRef, MimicCharacter, MimicCharacterInput } from "@/api/schemas/mimicCharacter";
 import {
   ALL_FORMS, STAT_CAP, VARIANT_FORMS, ACHIEVEMENTS,
-  notices, relocateRooms, today, dropExpiredSeasonalForms, isVariantUnlocked,
+  notices, relocateRooms, minionRooms, placeMinion, today, dropExpiredSeasonalForms, isVariantUnlocked,
   getActiveForm, applyUpgrade, displayTier, type UpgradeChoice,
   activeAdventurers, huntCleared, beginHunt, relocate, lure, strike, canStrike, wait,
   eatCreature, eatStar, eatRemains, changeForm, changeAppearance,
@@ -30,7 +30,7 @@ import PartyCard from "../components/game/hunt/PartyCard";
 import { LocationSelect, RoomSelect } from "../components/game/hunt/LocationSelect";
 import HuntHeader from "../components/game/hunt/HuntHeader";
 import ActionBar from "../components/game/hunt/ActionBar";
-import { FormSwitcher, MealsHere, RelocatePanel } from "../components/game/hunt/HuntPanels";
+import { FormSwitcher, MealsHere, MinionPanel, RelocatePanel } from "../components/game/hunt/HuntPanels";
 import { EvolveScreen, GameOverScreen, HuntOverPanel } from "../components/game/hunt/EndScreens";
 import { CEREMONY_STEP_MS, useDevotionCeremony } from "../components/game/hunt/useDevotionCeremony";
 import { useHuntKeys } from "../components/game/hunt/useHuntKeys";
@@ -557,6 +557,14 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
                 />
               )}
               {showMovePanel && canRelocate && location && mimicRoom && <RelocatePanel rooms={relocateTo} onRelocate={doRelocate} />}
+              {hunt && !huntOver && (
+                <MinionPanel
+                  waiting={hunt.minionsToPlace ?? 0}
+                  rooms={minionRooms(hunt)}
+                  disabled={acting}
+                  onPlace={room => act((h, c) => placeMinion(h, c, room))}
+                />
+              )}
               {/* Once the hunt is won there's nothing left to do: the report takes their place */}
               {!huntOver && (
                 <>

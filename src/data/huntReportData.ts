@@ -78,6 +78,8 @@ export interface HuntReport {
   readonly signoff?: string;
   /** A big rubber stamp across the notice. */
   readonly stamp?: string;
+  /** What's pressed into the wax seal on a notice: the Guild's "G" unless it says otherwise (the Crown's 👑). */
+  readonly seal?: string;
   /**
    * What it's on: paper (the default), a stone tablet (the Tear in Time, long before paper), or a
    * museum placard (the Long After, long after: by then the whole hunt is an exhibit).
@@ -112,6 +114,24 @@ const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 function listOf(items: readonly string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+/** Past this many people, a report stops naming them and counts regiments. */
+export const REGIMENT_SIZE = 8;
+
+/**
+ * People named in a report: their names ("the Herald and the Archmage"), or past REGIMENT_SIZE
+ * (a siege can bring dozens), "a regiment", "two regiments"… about one for every REGIMENT_SIZE.
+ */
+export function namesOrRegiments(names: readonly string[]): string {
+  return regiments(names.length) ?? listOf(names);
+}
+
+/** "A regiment", "Two regiments"… for more than REGIMENT_SIZE people; null for fewer (name or count them). */
+export function regiments(people: number): string | null {
+  if (people <= REGIMENT_SIZE) return null;
+  const count = Math.max(1, Math.round(people / REGIMENT_SIZE));
+  return count === 1 ? "A regiment" : `${numberWord(count)} regiments`;
 }
 
 const SIZE_BY_TIER: Record<Tier, string> = {
@@ -247,7 +267,7 @@ function incidentNotice(c: Ctx): HuntReport {
       { label: "Disguised as", value: input.formName ? pick([`An ordinary-looking ${form}`, `A ${form}`]) : "Unknown. It changed" },
       { label: "Size", value: SIZE_BY_TIER[input.tier] },
       { label: "Casualties", value: casualtyLine(c) },
-      { label: "Survivors", value: survivors.length ? listOf(survivors.map(s => the(s.name))) : "None reported" },
+      { label: "Survivors", value: survivors.length ? namesOrRegiments(survivors.map(s => the(s.name))) : "None reported" },
       { label: "Threat", value: threat },
       { label: "Reward", value: `${reward.toLocaleString("en-US")} crowns, on proof of destruction` },
     ],
@@ -279,7 +299,7 @@ function missingNotice(c: Ctx): HuntReport {
     title: plural(people.length, "Missing", "Missing Party"),
     subtitle: `Last seen entering ${place}`,
     fields: [
-      { label: "Names", value: listOf(people.map(p => the(p.name))) },
+      { label: "Names", value: namesOrRegiments(people.map(p => the(p.name))) },
       ...(c.room ? [{ label: "Last heard from", value: `The ${c.room}` }] : []),
     ],
     body,
@@ -399,7 +419,7 @@ function streetNotice(c: Ctx): HuntReport {
       { label: "Looked like", value: input.formName ? `A ${form}. It was not a decoration` : "Something on a doorstep" },
       { label: "Size", value: SIZE_BY_TIER[input.tier] },
       { label: "Taken", value: lost ? `${numberWord(lost)}, sweet bags and all` : "Nobody, this time" },
-      { label: "Got home", value: survivors.length ? listOf(survivors.map(s => the(s.name))) : "Nobody" },
+      { label: "Got home", value: survivors.length ? namesOrRegiments(survivors.map(s => the(s.name))) : "Nobody" },
       { label: "Reward", value: `${reward.toLocaleString("en-US")} crowns and the Mayor's own pumpkin` },
     ],
     body: [
@@ -683,7 +703,7 @@ function placardJournal(c: Ctx): HuntReport {
     title: "The Last Field Journal",
     subtitle: "Of the Long After Expedition, recovered from its abandoned camp",
     fields: [
-      { label: "Expedition", value: people.length ? listOf(people.map(p => the(p.name))) : "Unrecorded" },
+      { label: "Expedition", value: people.length ? namesOrRegiments(people.map(p => the(p.name))) : "Unrecorded" },
       { label: "Returned", value: "None" },
     ],
     body: [
@@ -734,8 +754,96 @@ function placardUnremarkable(c: Ctx): HuntReport {
   });
 }
 
+// ---------- the Hollow Court: told by the crusade ----------
+// Found out on your own throne, the crusade has won; any other ending, the court still stands.
+
+/** "Three", or "Two regiments", for the crusade's numbers. */
+const crusadeCount = (n: number) => regiments(n) ?? numberWord(n);
+
+/** Discovered: the crusade has found the Mimic King out, and won. */
+function crusadeVictorious(c: Ctx): HuntReport {
+  const { input, pick, form, survivors, lost, room, witness } = c;
+  return {
+    kind: "incident",
+    postedAt: "Read out in every square, and nailed to every church door",
+    heading: "Proclamation of the Crusade",
+    title: pick(["The Hollow Court Has Fallen", "The Siege Is Won", "The Crusade Is Victorious"]),
+    subtitle: "The Mimic King is found out, on its own throne",
+    fields: [
+      { label: "Where", value: room ? `The ${room}, at the heart of the Hollow Court` : "The heart of the Hollow Court" },
+      { label: "Disguised as", value: input.formName ? `A ${form}, as if a king would hide in plain sight` : "Its own furniture" },
+      { label: "Fallen", value: lost ? `${crusadeCount(lost)}, remembered with honor` : "None" },
+      { label: "Victorious", value: survivors.length ? namesOrRegiments(survivors.map(s => the(s.name))) : "The crusade" },
+    ],
+    body: [
+      `Let it be known that the crusade has done what was sworn: the court of the Mimic King is broken, and its king driven out before every eye.`,
+      `Its subjects, the chests and coffers and quiet chairs of that court, are to be burned where they stand.`,
+    ],
+    quote: witness ? { text: pick([`It sat on the throne like it had always been there. Maybe it had.`, `Every chair in that hall was watching us. Every single one.`]), by: the(witness) } : undefined,
+    signoff: "By order of the Crusade",
+    stamp: "Victory",
+  };
+}
+
+/** Cleared, nobody left: the crusade marched in, and never marched out. */
+function crusadeLost(c: Ctx): HuntReport {
+  const { people, form } = c;
+  return {
+    kind: "missing",
+    postedAt: "Nailed to the gate of the last town before the court",
+    heading: "Notice of the Crusade",
+    title: "The Crusade Never Returned",
+    subtitle: "Marched on the Hollow Court, and was not seen again",
+    fields: [
+      { label: "Marched", value: people.length ? namesOrRegiments(people.map(p => the(p.name))) : "The whole crusade" },
+      { label: "Returned", value: "None" },
+    ],
+    body: [
+      `The crusade marched on the Hollow Court to end the Mimic King. The gate closed behind them.`,
+      `Travelers are warned: the court still stands. Do not rest against any ${form} you find there.`,
+    ],
+    signoff: "By order of the Crown",
+    seal: "👑",
+  };
+}
+
+/** Cleared, some got away: they sing about it, and they don't go back. */
+function crusadeLament(c: Ctx): HuntReport {
+  const { survivors, lost, devoured } = c;
+  return {
+    kind: "verse",
+    postedAt: "Sung in the taverns by the crusade's survivors",
+    heading: "A Lament for the Crusade",
+    title: "The King Who Was a Chair",
+    fields: [],
+    body: [
+      `We marched to end the Mimic King\nwith banners and with steel;\n${crusadeCount(survivors.length + lost).toLowerCase()} went in to break its court,\nand found its court was real.`,
+      `The chests, the chairs, the coffers all\nwere hungry, every one;\n${lost ? `and ${crusadeCount(lost).toLowerCase()} of us are with them still,` : "but all of us came home,"}\n${devoured.length ? "who never saw the sun." : "who barely saw the sun."}`,
+      `So if you pass the Hollow Court,\ndon't stop, and don't sit down:\nits king still waits upon its throne\nand wears its hungry crown.`,
+    ],
+    signoff: "As sung at the Broken Banner",
+  };
+}
+
+/** Abandoned: the crusade gave up looking, and lifted the siege. */
+function crusadeWithdrawn(c: Ctx): HuntReport {
+  const { pick } = c;
+  return {
+    kind: "gossip",
+    postedAt: "Overheard at the Broken Banner",
+    heading: "Tavern Talk",
+    title: "The Siege Is Lifted",
+    fields: [],
+    body: [
+      `They say the crusade searched the Hollow Court top to bottom and never found the King. Just furniture. A great deal of furniture.`,
+      pick([`They've gone home. Nobody's saying who won.`, `The Champion swears it was there. Nobody believes the Champion.`, `Some of them say the throne was warm.`]),
+    ],
+  };
+}
+
 const LOCATION_REPORTS: Partial<Record<string, ReportTeller>> = {
   spell_or_sweet_street: { incident: streetNotice, missing: streetMissing, verse: streetRhyme, gossip: streetGossip },
   tear_in_time: { incident: tearWarning, missing: tearMissing, verse: tearChant, gossip: tearTalk },
   the_long_after: { incident: placardFound, missing: placardJournal, verse: placardRemembered, gossip: placardUnremarkable },
+  hollow_court: { incident: crusadeVictorious, missing: crusadeLost, verse: crusadeLament, gossip: crusadeWithdrawn },
 };
