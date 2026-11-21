@@ -644,7 +644,7 @@ const exhibitNo = (c: Ctx) => 10 + Math.floor(c.rand() * 90);
 const exhibit = (report: Omit<HuntReport, "material">): HuntReport => ({ ...report, material: "placard" });
 /** The museum's own Curator went to oversee the dig, and was eaten there. */
 const curatorLost = (c: Ctx) => c.devoured.some(a => a.name === "The Curator");
-const CURATOR_NOTE = "The museum regrets that its Curator, who oversaw the dig in person, did not return from it.";
+const CURATOR_NOTE = "The museum regrets that its Curator, who oversaw the dig in person, did not return.";
 
 /** Discovered: the find turned out to be a mimic, and it's on display (behind glass). */
 function placardFound(c: Ctx): HuntReport {
