@@ -153,6 +153,17 @@ interface LocationDef {
    * of `name`, each in a different one of `rooms` (the Hollow Court's Moat Serpents).
    */
   readonly lurkers?: { readonly name: string; readonly rooms: readonly string[]; readonly count: readonly [number, number] };
+  /**
+   * The Hollow Court's walls: on turn `turn`, each of `walls` (moat → the room on the other side)
+   * with a living `by` in its moat is broken through, joining the two. From then on each wave also
+   * brings `extra` crusaders per broken wall, into its moat. See Turn.breach.
+   */
+  readonly breach?: {
+    readonly turn: number;
+    readonly by: string;
+    readonly walls: Readonly<Record<string, string>>;
+    readonly extra: readonly [number, number];
+  };
   readonly dig?: {
     readonly every: number;
     readonly stages: readonly (readonly string[])[];
@@ -834,6 +845,8 @@ const LOCATION_DATA = [
     // The crusade comes in waves, the Siege Champion leading the last
     siege: { every: 5, waves: 5, size: [2, 3], entry: "Gatehouse", champion: "The Siege Champion", finalEscort: 4, suspicion: 1 },
     lurkers: { name: "Moat Serpent", rooms: ["Western Moat", "Eastern Moat"], count: [1, 2] },
+    // A Serpent left alive batters through the wall beside its moat
+    breach: { turn: 10, by: "Moat Serpent", walls: { "Western Moat": "Barracks", "Eastern Moat": "Shrine" }, extra: [1, 2] },
     locationCreatures: [
       { id: "moat_eel", name: "Moat Eel", ap: 2, discipline: 2, description: "Lives in the moat, and comes up into the Gatehouse when nobody's looking.", rooms: ["Western Moat", "Eastern Moat", "Gatehouse"] },
       { id: "castle_bat", name: "Castle Bat", ap: 1, discipline: 2, description: "Roosts in the high places of the Great Hall." },

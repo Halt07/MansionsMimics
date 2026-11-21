@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, stillInHunt, turnsUntil,
+  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, stillInHunt, turnsUntil, wallsToBreach,
   type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,7 @@ export default function LocationBanners() {
       {live && location.snowbound && <SnowboundBanner {...props} />}
       {live && location.eruption && props.eruptionTurn === props.huntTurn + 1 && <EruptionBanner {...props} />}
       {live && location.siege && props.wavesArrived < location.siege.waves && <SiegeBanner {...props} />}
+      {live && location.breach && <BreachBanner {...props} />}
       {live && location.dig && props.sealedRooms.length > 0 && <DigBanner {...props} />}
       {live && location.tarPits && props.party.some(a => a.tarStuck !== undefined && stillInHunt(a)) && <TarBanner {...props} />}
       {/* The party gets bored and leaves (not when snowed in: the cold is the clock there) */}
@@ -154,6 +155,27 @@ function SiegeBanner({ location, huntTurn, wavesArrived }: BannerProps) {
         It storms the {siege.entry} in {turns(turnsUntil(siege.every, huntTurn))}.
         {last ? ` ${siege.champion} leads it.` : ""}
       </Note>
+    </Banner>
+  );
+}
+
+// The Hollow Court's walls: the Serpents battering them (and how long they'll hold), or the
+// walls already down
+function BreachBanner({ location, huntTurn, party, breached }: BannerProps) {
+  const breach = location.breach;
+  if (!breach) return null;
+  if (breached.length > 0) {
+    return (
+      <Banner tone="border-emerald-500/30 bg-emerald-500/5 text-emerald-300/90" title={`🐍 The wall into the ${breached.map(m => breach.walls[m]).join(" and the ")} is down`}>
+        <Note>Every wave now comes through the moat too.</Note>
+      </Banner>
+    );
+  }
+  const battering = wallsToBreach(location, party);
+  if (battering.length === 0 || huntTurn >= breach.turn) return null;
+  return (
+    <Banner tone="border-emerald-500/30 bg-emerald-500/5 text-emerald-300/90" title={`🐍 The ${breach.by} is battering the wall into the ${battering.map(m => breach.walls[m]).join(" and the ")}`}>
+      <Note>It breaks through in {turns(breach.turn - huntTurn)}, and crusaders enter there as well. Eat it first, and the wall holds.</Note>
     </Banner>
   );
 }

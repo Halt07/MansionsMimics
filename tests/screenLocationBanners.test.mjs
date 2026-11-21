@@ -75,6 +75,14 @@ export default async function ({ gameData: m, load, ok }) {
   ok(banners({ ...ruinHunt, party: [{ ...ruinHunt.party[0], name: 'The Curator' }] }).includes('The Curator is overseeing it, and will leave once the last room is open'), '…and that the Curator is there, until it\'s done');
   ok(!banners({ ...ruinHunt, sealedRooms: [] }).includes('The dig'), '…and nothing once the whole court is open');
 
+  // ---------- the Hollow Court: the siege and the walls ----------
+  const court = start('hollow_court', 'Throne Hall', mimic({ tier: 'Apex', mass: 100, branchTier: 'Sovereign' }));
+  const serpent = court.party.find((p) => p.name === 'Moat Serpent');
+  ok(banners(court).includes('The siege: wave 1 of 5') && banners(court).includes('It storms the Gatehouse in 5 turns'), 'the Hollow Court: the next wave, and when it storms the gate');
+  ok(banners({ ...court, wavesArrived: 4, turn: 22 }).includes('wave 5 of 5 (the last)') && banners({ ...court, wavesArrived: 4, turn: 22 }).includes('The Siege Champion leads it'), '…and who leads the last');
+  ok(banners(court).includes(`battering the wall into the ${loc('hollow_court').breach.walls[serpent.location]}`) && banners(court).includes('breaks through in 10 turns'), 'a Serpent battering its wall: which, and how long it will hold');
+  ok(banners({ ...court, breached: [serpent.location] }).includes('is down') && !banners({ ...court, breached: [serpent.location] }).includes('battering'), '…and once it\'s down, that it is');
+
   // ---------- Stargazers' Hill ----------
   const hill = start('stargazers_hill');
   ok(banners(hill).includes(`The next one should fall in ${loc('stargazers_hill').starfall.every} turns.`), 'stars: when the next one falls');

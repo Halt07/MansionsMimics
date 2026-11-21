@@ -14,7 +14,7 @@ import { BURN_HUNTS, burnAfterDiscovery } from "./core";
 import { CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS, isCat } from "./easterEggs";
 import {
   RIVAL_STATS, chillParty, distractedRooms, fireworksDue, fireworksRummage, isNestCleared, sinkingWarning,
-  ERUPTION_PROOF_FORM, RIVAL_DISGUISES, digDue, siegeWave, waveDue, eruptionToll, eruptionZone, nextOpened, sealedView, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
+  ERUPTION_PROOF_FORM, RIVAL_DISGUISES, breachedView, digDue, siegeWave, wallsToBreach, waveDue, eruptionToll, eruptionZone, nextOpened, sealedView, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
 } from "./events";
 import { DUPLICATE_ROOM_SUSPICION, resolveStealth } from "./lure";
 import type { SmallCreature } from "./mealPrep";
@@ -59,6 +59,8 @@ export interface Hunt {
   sealedRooms?: RoomName[];
   /** The Hollow Court: how many of the siege's waves have arrived. */
   wavesArrived?: number;
+  /** The Hollow Court: moats whose wall has been broken through (`location` has the new doors). */
+  breached?: RoomName[];
   /** Set once the hunt ends early: found out, or the party got bored and left. A cleared hunt (see huntCleared) leaves it null. */
   ending: Exclude<HuntEnding, "cleared"> | null;
 
@@ -352,6 +354,8 @@ export class Turn {
     if (location.starfall && !this.over) this.starfall();
     if (location.sinkingTurns && !this.over) this.sinking(location.sinkingTurns);
     if (location.snowbound && !this.over) this.frost();
+    // The walls give way first, so a wave arriving the same turn already comes through them
+    if (location.breach && !this.over) this.breach();
     if (location.siege && !this.over) this.siege();
     if (location.dig && !this.over) this.dig();
     if (location.tarPits && !this.over) this.tar();
@@ -385,7 +389,7 @@ export class Turn {
     const siege = location.siege;
     if (!siege || !waveDue(location, turn, wavesArrived)) return;
     const wave = wavesArrived + 1;
-    const arrivals = siegeWave(location, wave, this.random);
+    const arrivals = siegeWave(location, wave, this.random, this.hunt.breached ?? []);
     this.set({ wavesArrived: wave, party: [...this.hunt.party, ...arrivals] });
     const names = arrivals.map(a => a.name).join(", ");
     if (wave === siege.waves) {
@@ -394,6 +398,20 @@ export class Turn {
       this.alert(`⚔️ The crusade's wave ${wave} of ${siege.waves} storms the ${siege.entry}: ${names}. (+${siege.suspicion} suspicion)`);
     }
     this.raise(siege.suspicion);
+  }
+
+  // The Hollow Court's walls: on the breach turn, every moat that still has its Serpent breaks
+  // through into the room beyond (a new door), and the siege can come in that way from then on
+  private breach() {
+    const { location, turn, party } = this.hunt;
+    const breach = location.breach;
+    if (!breach || turn !== breach.turn || this.hunt.breached?.length) return;
+    const moats = wallsToBreach(location, party);
+    if (moats.length === 0) return;
+    this.set({ breached: moats, location: breachedView(location, moats) });
+    for (const moat of moats) {
+      this.alert(`🐍 With a roar, the ${breach.by} batters through the wall of the ${moat} into the ${breach.walls[moat]}! The moat is open: the crusaders can use it as another entrance.`);
+    }
   }
 
   // Whatever was shut in a room the dig has just opened: a small mimic in the Treasury (now and

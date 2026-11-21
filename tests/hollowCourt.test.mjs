@@ -110,6 +110,31 @@ export default async function ({ gameData: m, ok }) {
   ok(!m.lure(at([coiled], { mimicRoom: 'Gatehouse' }), sovereign, { ...still, random: () => 0 }).hunt.party[0].isAttracted, '…can\'t be drawn out of it');
   ok(m.lure(at([coiled], { mimicRoom: 'Western Moat' }), sovereign, { ...still, random: () => 0 }).hunt.party[0].isAttracted, '…but can be lured where it is, if you go into the moat');
 
+  // ---------- the breach ----------
+  ok(court.breach.turn === 10 && court.breach.walls['Western Moat'] === 'Barracks' && court.breach.walls['Eastern Moat'] === 'Shrine' && court.breach.extra.join() === '1,2',
+    'on turn 10 a Serpent batters through the wall beside its moat: the Western Moat into the Barracks, the Eastern Moat into the Shrine');
+  const westOnly = [member('Moat Serpent', 'Western Moat')];
+  const before = m.wait(at(westOnly, { turn: 8 }), sovereign, still);
+  ok(!before.hunt.breached && !m.getAdjacentRooms(before.hunt.location, 'Barracks').includes('Western Moat'), 'turn 9: the walls still hold');
+  const broke = m.wait(at(westOnly, { turn: 9, wavesArrived: 1 }), sovereign, still);
+  ok(broke.hunt.breached?.join() === 'Western Moat' && m.getAdjacentRooms(broke.hunt.location, 'Barracks').includes('Western Moat') && m.getAdjacentRooms(broke.hunt.location, 'Western Moat').includes('Barracks'),
+    'turn 10: the wall comes down: the moat and the Barracks are joined');
+  ok(!m.getAdjacentRooms(broke.hunt.location, 'Shrine').includes('Eastern Moat') && broke.log.some((l) => l.message.includes('batters through the wall of the Western Moat into the Barracks')),
+    '…only where there\'s a Serpent (no Serpent in the Eastern Moat, so the Shrine\'s wall holds)');
+  ok(m.floorPlan(broke.hunt.location).cells.find((c) => c.room === 'Barracks').doorDown, '…and the map shows the new door');
+  const both = m.wait(at([member('Moat Serpent', 'Western Moat'), member('Moat Serpent', 'Eastern Moat')], { turn: 9 }), sovereign, still);
+  ok([...both.hunt.breached].sort().join() === 'Eastern Moat,Western Moat', 'with a Serpent in each moat, both walls fall');
+  const eaten = m.wait(at([{ ...member('Moat Serpent', 'Western Moat'), isConsumed: true, isAlive: false }], { turn: 9 }), sovereign, still);
+  ok(!eaten.hunt.breached, 'eat the Serpent first, and its wall holds');
+  ok(m.wait({ ...broke.hunt, turn: 19 }, sovereign, still).hunt.breached.join() === 'Western Moat', 'it only happens once');
+  const wave2 = broke.hunt.party.filter((p) => p.id.startsWith('wave2_'));
+  ok(wave2.filter((p) => p.location === 'Western Moat').length >= 1 && wave2.filter((p) => p.location === 'Gatehouse').length >= 2,
+    'the wave arriving the same turn already comes through it: 2–3 at the Gatehouse, and 1–2 more through the moat');
+  const twoWalls = m.siegeWave(court, 3, () => 0.99, ['Western Moat', 'Eastern Moat']);
+  ok(twoWalls.filter((p) => p.location === 'Western Moat').length === 2 && twoWalls.filter((p) => p.location === 'Eastern Moat').length === 2 && twoWalls.filter((p) => p.location === 'Gatehouse').length === 3,
+    'with both walls down, a wave can be 3 at the gate and 2 through each moat');
+  ok(m.siegeWave(court, 3, () => 0, ['Western Moat']).filter((p) => p.location === 'Western Moat').length === 1, '…at least 1 through each broken wall');
+
   // ---------- dressing for it ----------
   const fits = (form, room) => m.getRoomContextMod(form, 'hollow_court', room).plausibility;
   ok(fits('giant_throne', 'Throne Hall') > 0 && fits('apex_castle_gate', 'Gatehouse') > 0 && fits('grand_vault', 'Treasury') > 0, 'your throne in the Throne Hall, a gate at the Gatehouse, a vault in the Treasury');

@@ -119,7 +119,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `spellOrSweet.test.mjs` | Spell or Sweet Street: the procession, answering the door, costumes |
 | `foundersFair.test.mjs` | The Founders' Fair: fireworks, the crate rummage |
 | `stargazersHill.test.mjs` | Stargazers' Hill: falling stars and the party running for them |
-| `hollowCourt.test.mjs` | The Hollow Court: Sovereign's ground (the Long After's plan, plus a moat), the crusade, the siege's waves, the Siege Champion, the Moat Serpents |
+| `hollowCourt.test.mjs` | The Hollow Court: Sovereign's ground (the Long After's plan, plus a moat), the crusade, the siege's waves, the Siege Champion, the Moat Serpents and the breach |
 | `theLongAfter.test.mjs` | The Long After: Eternal's ground, the dig opening sealed rooms, the lucky Curator |
 | `tearInTime.test.mjs` | The Tear in Time: who it opens to, its roster, strays and the Time Caster, becoming Primordial, kept out of the Codex, the eruption |
 | `branchTiers.test.mjs` | The branch tiers past Apex: taking Eternal, Primordial or Sovereign, losing Sovereign, one branch at a time |
