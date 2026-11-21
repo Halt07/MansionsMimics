@@ -13,7 +13,7 @@ import {
   type Form, type GameEvent, type GameEventType, type HuntLocation, type RoomName,
   // DEV ONLY (achievement-preview branch): the dev buttons below
   ADVENTURER_TEMPLATES, ALL_MATERIALS, LEARNABLE_TRAITS, LOCATIONS, SEASONAL_FORMS, HOLIDAYS, CULT_CONVERSIONS, CANNIBAL_MIMICS,
-  TIME_TEAR_MAGIC_USERS, TIME_TEAR_MASS, tearInTimeOpen, type Material, type HolidayId,
+  TIME_TEAR_MAGIC_USERS, TIME_TEAR_MASS, tearInTimeOpen, ETERNAL_DECAY_FREE_DAYS, branchOnOpening, type Material, type HolidayId,
 } from "@/data/gameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -457,6 +457,25 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     persist(updates);
   };
 
+  // Give or take away Eternal (saved), to check the Long After and its card. Giving makes the mimic
+  // Apex with ETERNAL_DECAY_FREE_DAYS without decay, on no branch, then lets the real rule make it
+  // Eternal straight away (as opening the mimic would); taking away clears it and the stretch.
+  const devToggleEternal = () => {
+    if (!character) return;
+    const now = new Date();
+    if (character.branchTier === "Eternal") {
+      const updates: Partial<MimicCharacter> = { branchTier: null, decayFreeDate: now.toISOString() };
+      setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+      persist(updates);
+      return;
+    }
+    const days = (ETERNAL_DECAY_FREE_DAYS + 1) * 24 * 60 * 60 * 1000;
+    const ready: Partial<MimicCharacter> = { tier: "Apex", branchTier: null, decayFreeDate: new Date(now.getTime() - days).toISOString() };
+    const updates = { ...ready, ...branchOnOpening({ ...character, ...ready }, now)?.changes };
+    setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+    persist(updates);
+  };
+
   const displayCharacter = character && previewAchievements
     ? {
         ...character,
@@ -704,6 +723,20 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
               </Button>
             );
           })()}
+          {/* DEV ONLY (achievement-preview branch): make this mimic Eternal or not, to check the Long
+              After and its card. Saved, like the Tear button above. */}
+          {import.meta.env.DEV && phase === "setup" && !roomSelecting && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] border-dashed border-amber-400/40 text-amber-400/80"
+              onClick={devToggleEternal}
+            >
+              🛠 Dev: {character.branchTier === "Eternal"
+                ? "take away Eternal (saved)"
+                : `give Eternal: Apex, ${ETERNAL_DECAY_FREE_DAYS} days without decay (saved)`}
+            </Button>
+          )}
           {phase === "setup" && !roomSelecting && (
             <LocationSelect onChoose={chooseLocation} onChooseForms={() => startFormSelection("setup")} />
           )}
