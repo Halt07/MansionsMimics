@@ -125,7 +125,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `achievements.test.mjs` | Achievements and thresholds (and the hidden ones, listed only once earned), every material and trait being learnable, lifetime stats |
 | `discovery.test.mjs` | Codex discovery: met and eaten, pooled across mimics |
 | `codexLocations.test.mjs` | The Codex's hunting grounds: groups, and what it reveals about each |
-| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data (and the Tear in Time's stone tablets) |
+| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data (and the Tear in Time's stone tablets, the Long After's museum placards) |
 | `easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
 | `creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |
 | `text.test.mjs` | `the()` and `plural()` |

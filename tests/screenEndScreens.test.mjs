@@ -40,6 +40,12 @@ export default async function ({ gameData: m, load, ok }) {
   ok(slab.classList.contains('report-paper--stone') && stone.querySelector('.report-wall--cave') && slab.dataset.scorched === 'true', 'at the Tear: a stone tablet on a cave wall, sooty after an eruption');
   ok(!stone.querySelector('.report-nail') && !stone.querySelector('.report-seal') && stone.querySelector('.report-crack'), '…cracked, leaning (no nails), and no Guild seal');
   ok(!tablet.quote || stone.textContent.includes(`— ${tablet.quote.by} say`), '…the witness "say"s, rather than giving a statement');
+  const placard = m.buildHuntReport({ ending: 'discovered', party: [{ name: 'Jungle Guide' }], seed: 3, locationName: 'The Long After', locationId: 'the_long_after',
+    lastRoom: 'Treasury', formName: 'Colossus', tier: 'Apex', mimicName: 'Ever', bounty: false, peakSuspicion: 10, biggestMeal: null, mimicsDevoured: 0, sank: false });
+  const { container: museum } = s.show(HuntOverPanel, { report: placard, ...over });
+  ok(museum.querySelector('.report-paper--placard') && museum.querySelector('.report-wall--museum') && !museum.querySelector('.report-nail') && !museum.querySelector('.report-seal'),
+    'at the Long After: a museum placard on a gallery wall (no nails, no Guild seal)');
+  ok(!placard.quote || museum.textContent.includes(`— recorded from ${placard.quote.by}`), '…its witness "recorded from", like a museum label');
 
   // ---------- found out ----------
   const caught = report('discovered', [{ name: 'Greedy Rogue' }]);

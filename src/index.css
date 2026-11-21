@@ -896,6 +896,47 @@
     linear-gradient(160deg, #cdb98a, #ab9566 55%, #8f7a50) 0 0 / 100% 100%;
 }
 
+/* ── The Long After: a museum placard. A cream card in a thin brass frame, hung straight under a
+   spotlight on a deep green gallery wall. ── */
+.report-wall--museum {
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgb(255 244 214 / 0.22), transparent 75%),
+    linear-gradient(180deg, #1f3a30, #11241d);
+}
+.report-wall--museum .report-caption { color: hsl(45 30% 78% / 0.8); }
+.report-wall--museum .report-shadow { filter: drop-shadow(0 8px 14px rgb(0 0 0 / 0.55)); }
+.report-paper.report-paper--placard {
+  --ink: #2a2620;
+  --ink-faded: #5c5446;
+  --blood: #6b4a1a;
+  max-width: none;
+  margin: 0;
+  transform: none;
+  clip-path: none;
+  padding: 1.6rem 1.6rem 1.3rem;
+  font-family: 'Crimson Text', serif;
+  background: linear-gradient(180deg, #f5f0e3, #ebe3cf);
+  /* A thin brass frame: an outer bevel and an inner rule */
+  border: 6px solid #b08d3c;
+  border-image: linear-gradient(135deg, #d9b766, #8a6a24 40%, #e8cf8a 60%, #7a5b1e) 1;
+  box-shadow: inset 0 0 0 1px rgb(120 90 30 / 0.45), inset 0 0 0 5px #f5f0e3, inset 0 0 0 6px rgb(120 90 30 / 0.35);
+}
+.report-paper--placard .report-heading,
+.report-paper--placard .report-title,
+.report-paper--placard.report-paper--gossip .report-title,
+.report-paper--placard.report-paper--verse .report-title {
+  font-family: 'Cinzel', serif;
+  font-style: normal;
+  letter-spacing: 0.06em;
+}
+.report-paper--placard .report-title,
+.report-paper--placard.report-paper--incident .report-title { font-size: 1.45rem; color: var(--ink); text-shadow: none; }
+.report-paper--placard.report-paper--gossip .report-body { font-style: normal; }
+/* The placards' accounts are prose, not verse */
+.report-paper--placard .report-verse { font-style: normal; text-align: left; white-space: normal; }
+.report-paper--placard .report-rule { border-color: rgb(120 90 30 / 0.6); }
+.report-paper--placard .report-signoff { font-variant: small-caps; letter-spacing: 0.06em; }
+
 .report-paper:has(.report-stamp) .report-signoff { padding-left: 9.5rem; }
 @container (max-width: 26rem) {
   .report-paper:has(.report-stamp) .report-signoff { padding-left: 0; }

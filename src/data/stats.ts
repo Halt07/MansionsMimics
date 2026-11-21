@@ -454,7 +454,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   },
   // ── Hidden: the branch tiers past Apex ──
   {
-    id: "eternal", name: "Eternal", icon: "⏳", hidden: true,
+    id: "eternal", name: "Hunger Unending", icon: "⏳", hidden: true,
     description: `At the Apex, go ${ETERNAL_DECAY_FREE_DAYS} days without losing any mass to hunger, and become Eternal.`,
     flavor: (n) => `${n} has outlasted hunger itself. Kingdoms will fall around it, and it will still be waiting.`,
     isEarned: (c) => c.branchTier === "Eternal",

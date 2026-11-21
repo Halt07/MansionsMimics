@@ -138,4 +138,18 @@ export default async function ({ gameData: m, ok, log }) {
   const sooty = m.buildHuntReport({ ...tear, ending: 'cleared', party: caveParty, erupted: true });
   ok(sooty.scorched && sooty.body.some((p) => p.includes('Mountain')), 'after an eruption: scorched, and the mountain gets a mention');
   ok(!m.buildHuntReport({ ...base, ending: 'cleared', party: caveParty, erupted: true }).material, 'anywhere else: paper, as always');
+
+  // ---------- the Long After: a museum placard, long after ----------
+  const ruin = { ...base, locationId: 'the_long_after', locationName: 'The Long After', formName: 'Colossus', tier: 'Apex', lastRoom: 'Treasury' };
+  const dig = [member('Archaeologist', { isConsumed: true }), member('Jungle Guide')];
+  const placards = [['discovered', dig], ['cleared', dig], ['cleared', dig.map((p) => ({ ...p, isConsumed: true }))], ['abandoned', [member('Relic-Digger')]]]
+    .map(([ending, party]) => m.buildHuntReport({ ...ruin, ending, party, peakSuspicion: 10 }));
+  ok(placards.every((r) => r.material === 'placard' && r.heading.startsWith('Exhibit ') && r.postedAt.includes('Long After Gallery')) && new Set(placards.map((r) => r.kind)).size === 4,
+    'every ending at the Long After is a museum placard (its own four)');
+  ok(placards[0].title === 'A Colossus, Believed to Be a Mimic' && placards[2].title === 'The Last Field Journal' && placards[3].title.includes('Of No Particular Interest'),
+    '…found out: an exhibit "believed to be a mimic"; nobody left: the expedition\'s last field journal; bored: of no particular interest');
+  ok(placards.every((r) => !/Guild|crowns|ten-foot/.test(text(r))), '…nothing of the Guild: it\'s all a museum by then');
+  ok(!placards.some((r) => text(r).includes('did not return')), '…and with the Curator never at the dig, no word of them');
+  const curated = m.buildHuntReport({ ...ruin, ending: 'cleared', party: [...dig, member('The Curator', { isConsumed: true })] });
+  ok(curated.body.some((p) => p.includes('its Curator, who oversaw the dig in person, did not return')), 'eating the Curator: the museum regrets they did not return');
 }

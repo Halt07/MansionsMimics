@@ -78,8 +78,11 @@ export interface HuntReport {
   readonly signoff?: string;
   /** A big rubber stamp across the notice. */
   readonly stamp?: string;
-  /** What it's on: paper (the default), or a stone tablet (the Tear in Time, long before paper). */
-  readonly material?: "paper" | "stone";
+  /**
+   * What it's on: paper (the default), a stone tablet (the Tear in Time, long before paper), or a
+   * museum placard (the Long After, long after: by then the whole hunt is an exhibit).
+   */
+  readonly material?: "paper" | "stone" | "placard";
   /** Smeared with soot (the volcano erupted). */
   readonly scorched?: boolean;
 }
@@ -633,7 +636,106 @@ function tearTalk(c: Ctx): HuntReport {
   });
 }
 
+// ---------- the Long After: by then, it's all a museum exhibit ----------
+// Each ending is a placard in the museum the dig was for, written in a curator's careful voice.
+
+/** The exhibit number, seeded so the same hunt always hangs in the same place. */
+const exhibitNo = (c: Ctx) => 10 + Math.floor(c.rand() * 90);
+const exhibit = (report: Omit<HuntReport, "material">): HuntReport => ({ ...report, material: "placard" });
+/** The museum's own Curator went to oversee the dig, and was eaten there. */
+const curatorLost = (c: Ctx) => c.devoured.some(a => a.name === "The Curator");
+const CURATOR_NOTE = "The museum regrets that its Curator, who oversaw the dig in person, did not return from it.";
+
+/** Discovered: the find turned out to be a mimic, and it's on display (behind glass). */
+function placardFound(c: Ctx): HuntReport {
+  const { input, pick, form, witness, lost, room } = c;
+  const n = exhibitNo(c);
+  return exhibit({
+    kind: "incident",
+    postedAt: "On a placard in the Long After Gallery, beside an empty plinth",
+    heading: `Exhibit ${n} · The Long After Collection`,
+    title: `A ${input.formName ?? "Thing"}, Believed to Be a Mimic`,
+    subtitle: `Recovered from ${room ? `the ${room}` : "the ruins"}, the Long After dig`,
+    fields: [
+      { label: "Found", value: room ? `In the ${room}, among the ruins of an older court` : "Among the ruins of an older court" },
+      { label: "Described as", value: `A ${form}. Thought decorative, until it was not` },
+      { label: "Expedition losses", value: lost ? `${numberWord(lost)}, recorded with regret` : "None, remarkably" },
+      { label: "Present location", value: "Unknown. The plinth is empty" },
+    ],
+    body: [
+      `This ${form} was catalogued as an ordinary furnishing of the ruined court until members of the expedition noticed it was not where they had left it.`,
+      pick([`Visitors are asked not to touch the exhibit, and to report it if it moves.`, `Please do not lean on any of the furniture in this gallery.`]),
+      ...(curatorLost(c) ? [CURATOR_NOTE] : []),
+    ],
+    quote: witness ? { text: pick([`It was older than the walls around it. And it was hungry.`, `We dug it out. We should have left it buried.`, `I catalogued it myself. It watched me do it.`]), by: the(witness) } : undefined,
+    signoff: "The Museum of the Long After",
+  });
+}
+
+/** Cleared, nobody left: all the museum has is the expedition's last field journal. */
+function placardJournal(c: Ctx): HuntReport {
+  const { pick, form, people, room } = c;
+  const day = 40 + Math.floor(c.rand() * 20);
+  return exhibit({
+    kind: "missing",
+    postedAt: "On a placard in the Long After Gallery, beside a glass case",
+    heading: `Exhibit ${exhibitNo(c)} · The Long After Collection`,
+    title: "The Last Field Journal",
+    subtitle: "Of the Long After Expedition, recovered from its abandoned camp",
+    fields: [
+      { label: "Expedition", value: people.length ? listOf(people.map(p => the(p.name))) : "Unrecorded" },
+      { label: "Returned", value: "None" },
+    ],
+    body: [
+      `Day ${day}: ${room ? `The ${room} is open at last.` : "Another room open."} There is a ${form} in it that was not on yesterday's survey. Noted for cataloguing.`,
+      `Day ${day + 1}: ${pick(["Fewer of us at breakfast.", "Someone has moved the " + form + ". Nobody admits to it.", "The jungle has gone very quiet."])}`,
+      `Day ${day + 2}:`,
+      ...(curatorLost(c) ? [CURATOR_NOTE] : []),
+    ],
+    signoff: "The Museum of the Long After",
+  });
+}
+
+/** Cleared, some got away: the find, as one of them remembers it. */
+function placardRemembered(c: Ctx): HuntReport {
+  const { input, pick, form, survivors, devoured, meal } = c;
+  const teller = survivors.length ? the(survivors[0].name) : "a survivor";
+  return exhibit({
+    kind: "verse",
+    postedAt: "On a placard in the Long After Gallery, at the end of a long corridor",
+    heading: `Exhibit ${exhibitNo(c)} · The Long After Collection`,
+    title: `A ${input.formName ?? "Thing"}, as Remembered`,
+    fields: [],
+    body: [
+      `Nothing of this find survives but an account, given by ${teller} on returning from the dig.`,
+      `“We took it for a ${form}. It had stood in that court since before the jungle, and it would stand there long after us. ${devoured.length ? `It took ${numberWord(devoured.length).toLowerCase()} of us before we understood.` : "We understood just in time."}”`,
+      ...(meal ? [`The expedition's records note the loss of ${the(meal)} in particular.`] : []),
+      pick([`The museum has not attempted a second expedition.`, `The site has been reburied, at the museum's expense.`]),
+      ...(curatorLost(c) ? [CURATOR_NOTE] : []),
+    ],
+    signoff: "The Museum of the Long After",
+  });
+}
+
+/** Abandoned: the dig moved on, and the find was judged unremarkable. */
+function placardUnremarkable(c: Ctx): HuntReport {
+  const { input, pick, form } = c;
+  return exhibit({
+    kind: "gossip",
+    postedAt: "On a placard in a quiet corner of the Long After Gallery",
+    heading: `Exhibit ${exhibitNo(c)} · The Long After Collection`,
+    title: `A ${input.formName ?? "Thing"}. Of No Particular Interest`,
+    fields: [],
+    body: [
+      `A ${form} of the ruined court, recovered intact. The expedition found nothing remarkable about it, and moved on to more promising rooms.`,
+      pick([`It has been placed in storage.`, `Visitors rarely stop at this case.`, `It is occasionally reported to be in a slightly different place than it was the day before.`]),
+      ...(curatorLost(c) ? [CURATOR_NOTE] : []),
+    ],
+  });
+}
+
 const LOCATION_REPORTS: Partial<Record<string, ReportTeller>> = {
   spell_or_sweet_street: { incident: streetNotice, missing: streetMissing, verse: streetRhyme, gossip: streetGossip },
   tear_in_time: { incident: tearWarning, missing: tearMissing, verse: tearChant, gossip: tearTalk },
+  the_long_after: { incident: placardFound, missing: placardJournal, verse: placardRemembered, gossip: placardUnremarkable },
 };
