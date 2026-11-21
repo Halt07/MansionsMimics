@@ -289,6 +289,82 @@ export function uneatenRemains(party: readonly PartyMember[]): PartyMember[] {
 }
 
 // ============================================================
+// THE HOLLOW COURT: THE SIEGE
+// The crusade comes in waves through the Gatehouse; the last is led by the Siege Champion. The
+// Moat Serpents are in the moats from the start. Neither the Champion nor the Serpents come in
+// the ordinary party draw (see heldBack).
+// ============================================================
+/** Adventurers who only come their own way (the siege's Champion, the lurkers), never in the ordinary draw. */
+export function heldBack(location: Pick<HuntLocation, "siege" | "lurkers">): string[] {
+  return [location.siege?.champion, location.lurkers?.name].filter((n): n is string => !!n);
+}
+
+const asMember = (t: (typeof ADVENTURER_TEMPLATES)[number], id: string, room: RoomName): PartyMember => ({
+  ...t, id, suspicion: t.baseSuspicion, isAlive: true, isConsumed: false, isAttracted: false, location: room,
+});
+
+/** The lurkers already there when the hunt begins: `count` of them, each in a room of its own. */
+export function addLurkers(party: readonly PartyMember[], location: HuntLocation, random: () => number = Math.random): PartyMember[] {
+  const lurk = location.lurkers;
+  const t = lurk && ADVENTURER_TEMPLATES.find(a => a.name === lurk.name);
+  if (!lurk || !t) return [...party];
+  const [min, max] = lurk.count;
+  const rooms = shuffle(lurk.rooms.filter(r => location.rooms.includes(r as RoomName)), random) as RoomName[];
+  const count = Math.min(rooms.length, min + Math.floor(random() * (max - min + 1)));
+  return [...party, ...rooms.slice(0, count).map((room, i) => asMember(t, `lurker_${i}`, room))];
+}
+
+/** The location as the hunt sees it with these walls broken: each moat joined to the room beyond its wall. */
+export function breachedView(location: HuntLocation, breached: readonly RoomName[]): HuntLocation {
+  const walls = location.breach?.walls;
+  if (!walls || breached.length === 0) return location;
+  const graph: Record<string, RoomName[]> = Object.fromEntries(Object.entries(location.roomGraph).map(([r, next]) => [r, [...(next ?? [])]]));
+  for (const moat of breached) {
+    const beyond = walls[moat] as RoomName | undefined;
+    if (!beyond) continue;
+    if (!graph[moat]?.includes(beyond)) graph[moat] = [...(graph[moat] ?? []), beyond];
+    if (!graph[beyond]?.includes(moat)) graph[beyond] = [...(graph[beyond] ?? []), moat];
+  }
+  return { ...location, roomGraph: graph as HuntLocation["roomGraph"] };
+}
+
+/** The walls that give way: each one whose moat still holds a living Serpent (or whatever `by` is). */
+export function wallsToBreach(location: Pick<HuntLocation, "breach">, party: readonly PartyMember[]): RoomName[] {
+  const breach = location.breach;
+  if (!breach) return [];
+  return (Object.keys(breach.walls) as RoomName[]).filter(moat => party.some(a => a.name === breach.by && a.location === moat && stillInHunt(a)));
+}
+
+/** The siege brings a wave this turn: every `every` turns, until all have come. */
+export function waveDue(location: Pick<HuntLocation, "siege">, turn: number, arrived: number): boolean {
+  return !!location.siege && turn > 0 && turn % location.siege.every === 0 && arrived < location.siege.waves;
+}
+
+/**
+ * The crusaders in wave number `wave` (1 first), at the entry: `size` of the location's own (never
+ * the held-back ones); the last wave is the Champion and their escort. Each broken wall (`breached`,
+ * by moat) adds `breach.extra` more, coming in through its moat.
+ */
+export function siegeWave(location: HuntLocation, wave: number, random: () => number = Math.random, breached: readonly RoomName[] = []): PartyMember[] {
+  const siege = location.siege;
+  if (!siege) return [];
+  const held = heldBack(location);
+  const pool = ADVENTURER_TEMPLATES.filter(t => t.locations?.includes(location.id) && !held.includes(t.name));
+  const last = wave === siege.waves;
+  const [min, max] = siege.size;
+  const count = last ? siege.finalEscort : min + Math.floor(random() * (max - min + 1));
+  const entry = siege.entry as RoomName;
+  const crusaders = Array.from({ length: count }, (_, i) => asMember(pool[Math.floor(random() * pool.length)], `wave${wave}_${i}`, entry));
+  const champion = last ? ADVENTURER_TEMPLATES.find(t => t.name === siege.champion) : undefined;
+  const [fewest, most] = location.breach?.extra ?? [0, 0];
+  const throughWalls = breached.flatMap(moat => {
+    const n = fewest + Math.floor(random() * (most - fewest + 1));
+    return Array.from({ length: n }, (_, i) => asMember(pool[Math.floor(random() * pool.length)], `wave${wave}_${moat.replace(/\W+/g, "_")}_${i}`, moat));
+  });
+  return [...(champion ? [asMember(champion, `wave${wave}_champion`, entry)] : []), ...crusaders, ...throughWalls];
+}
+
+// ============================================================
 // THE LONG AFTER: THE DIG
 // Some rooms start sealed (buried, or grown over) and open one every few turns. While sealed they
 // aren't part of the hunt at all: the hunt's location is a view of the place without them (see

@@ -20,8 +20,8 @@ import { the } from "./text";
 // rival is still hungry: see DECISIONS.md).
 
 /** Adventurers with this behavior never wander on their own. */
-export function isStationary(adventurer: Pick<PartyMember, "behavior" | "tarStuck">): boolean {
-  return adventurer.behavior === "stoneWatch" || adventurer.tarStuck !== undefined;
+export function isStationary(adventurer: Pick<PartyMember, "behavior" | "tarStuck" | "stationary">): boolean {
+  return adventurer.behavior === "stoneWatch" || adventurer.tarStuck !== undefined || !!adventurer.stationary;
 }
 
 /** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */

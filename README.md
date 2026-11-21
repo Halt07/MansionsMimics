@@ -119,13 +119,14 @@ wide, but if one fails once, rerun before assuming a bug.
 | `spellOrSweet.test.mjs` | Spell or Sweet Street: the procession, answering the door, costumes |
 | `foundersFair.test.mjs` | The Founders' Fair: fireworks, the crate rummage |
 | `stargazersHill.test.mjs` | Stargazers' Hill: falling stars and the party running for them |
+| `hollowCourt.test.mjs` | The Hollow Court: Sovereign's ground (the Long After's plan, plus a moat), the crusade, the siege's waves, the Siege Champion, the Moat Serpents and the breach |
 | `theLongAfter.test.mjs` | The Long After: Eternal's ground, the dig opening sealed rooms, the lucky Curator |
 | `tearInTime.test.mjs` | The Tear in Time: who it opens to, its roster, strays and the Time Caster, becoming Primordial, kept out of the Codex, the eruption |
 | `branchTiers.test.mjs` | The branch tiers past Apex: taking Eternal, Primordial or Sovereign, losing Sovereign, one branch at a time |
 | `achievements.test.mjs` | Achievements and thresholds (and the hidden ones, listed only once earned), every material and trait being learnable, lifetime stats |
 | `discovery.test.mjs` | Codex discovery: met and eaten, pooled across mimics |
 | `codexLocations.test.mjs` | The Codex's hunting grounds: groups, and what it reveals about each |
-| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data (and the Tear in Time's stone tablets) |
+| `huntReport.test.mjs` | The end-of-hunt report for each ending, from the hunt's own data (and the Tear in Time's stone tablets, the Long After's museum placards) |
 | `easterEggs.test.mjs` | Name remarks, the rival wearing your shape, quirks acted out in hunts |
 | `creatureEmoji.test.mjs` | Every small creature gets its own emoji in hunts |
 | `text.test.mjs` | `the()` and `plural()` |

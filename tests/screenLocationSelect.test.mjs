@@ -76,6 +76,9 @@ export default async function ({ gameData: m, load, storage, ok }) {
     ok(offered()[0] === 'the_long_after' && cardOf('the_long_after').classList.contains('ruin-card') && cardOf('the_long_after').textContent.includes('where everything ends up'),
       '…it has the Long After instead: its own overgrown card, and its own words');
     ok(!document.getElementById('tear-rip'), '…(no torn edge: that\'s the Tear\'s)');
+    choose(mimic({ tier: 'Apex', mass: 100, branchTier: 'Sovereign' }));
+    ok(offered()[0] === 'hollow_court' && cardOf('hollow_court').classList.contains('court-card') && cardOf('hollow_court').textContent.includes('your court'),
+      'a Sovereign mimic has the Hollow Court: gold and purple, "your court"');
 
     // ---------- a rare ground ----------
     choose(mimic({ tier: 'Standard', mass: 12, rareLocation: { id: 'hollow_reliquary', huntsLeft: 2 } }));

@@ -96,7 +96,7 @@ export function getBehaviorReactions(
       case "bloodScent": {
         if (trigger !== "feed") return;
         if (adv.behavior === "bloodScent" && hasMagic(appearance, "Direwolf Pelt")) return;
-        if (adv.tarStuck !== undefined) return; // stuck in the tar: going nowhere
+        if (adv.tarStuck !== undefined || adv.stationary) return; // stuck in the tar, or never leaves its room
         const newRoom = stepToward(location, adv.location, mimicRoom);
         const arrived = newRoom === mimicRoom;
         const moved = newRoom !== adv.location;
@@ -122,6 +122,9 @@ export function getBehaviorReactions(
       }
       case "elusive":
         // Handled when a Strike is resolved (extra resist die; bolts to another room instead of fleeing)
+        return;
+      case "unshakeable":
+        // Handled when luring (never drawn in) and striking (reachable in your room; rallies on a miss)
         return;
       case "lucky":
         // Handled when a Strike is resolved (extra resist die; a miss goes unnoticed)

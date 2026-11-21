@@ -20,6 +20,7 @@ export const ACHIEVEMENT_STYLES: Record<AchievementId, { text: string; box: stri
   rulerOfAllMimics:  { text: "text-yellow-400", box: "bg-yellow-500/10 border-yellow-500/40" },
   stitchInTime:      { text: "text-sky-300",    box: "bg-sky-400/10 border-sky-400/40" },
   closingTime:       { text: "text-emerald-300", box: "bg-emerald-400/10 border-emerald-400/40" },
+  longLiveTheKing:   { text: "text-amber-300",  box: "bg-amber-400/10 border-amber-400/40" },
 };
 
 /**

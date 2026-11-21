@@ -48,6 +48,10 @@ export interface HuntState {
   eruptionTurn: number | null;
   /** The Long After: rooms the dig hasn't opened yet. */
   sealedRooms: readonly RoomName[];
+  /** The Hollow Court: how many of the siege's waves have come. */
+  wavesArrived: number;
+  /** The Hollow Court: moats whose wall has been broken through. */
+  breached: readonly RoomName[];
   /** Everyone in your room is watching fireworks right now. */
   skyward: boolean;
 }
@@ -68,7 +72,7 @@ export function huntState(
     location: hunt?.location ?? location, mimicRoom: hunt?.mimicRoom ?? null, party: hunt?.party ?? [],
     activeAdventurers: hunt ? activeAdventurers(hunt) : [], creatures: hunt?.creatures ?? [], rivals: hunt?.rivals ?? [],
     isBountyHunt: hunt?.bounty ?? false, huntOver, actionCount: hunt?.actionCount ?? 0, acting,
-    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null, eruptionTurn: hunt?.eruptionTurn ?? null, sealedRooms: hunt?.sealedRooms ?? [],
+    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null, eruptionTurn: hunt?.eruptionTurn ?? null, sealedRooms: hunt?.sealedRooms ?? [], wavesArrived: hunt?.wavesArrived ?? 0, breached: hunt?.breached ?? [],
     skyward: !!hunt && skyward(hunt),
   };
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, stillInHunt, turnsUntil,
+  ACTION_LIMIT, ACTION_WARNING, RIVAL_STATS, answersDoor, distractedRooms, fireworksRummage, housesAway, plural, stillInHunt, turnsUntil, wallsToBreach,
   type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +42,8 @@ export default function LocationBanners() {
       {live && location.starfall && <StarfallBanner {...props} />}
       {live && location.snowbound && <SnowboundBanner {...props} />}
       {live && location.eruption && props.eruptionTurn === props.huntTurn + 1 && <EruptionBanner {...props} />}
+      {live && location.siege && props.wavesArrived < location.siege.waves && <SiegeBanner {...props} />}
+      {live && location.breach && <BreachBanner {...props} />}
       {live && location.dig && props.sealedRooms.length > 0 && <DigBanner {...props} />}
       {live && location.tarPits && props.party.some(a => a.tarStuck !== undefined && stillInHunt(a)) && <TarBanner {...props} />}
       {/* The party gets bored and leaves (not when snowed in: the cold is the clock there) */}
@@ -137,6 +139,43 @@ function FireworksBanner({ location, huntTurn, fireworksRoom, activeForm, skywar
           : `The next volley goes up in ${turns(turnsUntil(every, huntTurn))}.`}
         {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
       </Note>
+    </Banner>
+  );
+}
+
+// The Hollow Court: how many waves are still to come, when the next arrives, and who leads the last
+function SiegeBanner({ location, huntTurn, wavesArrived }: BannerProps) {
+  const siege = location.siege;
+  if (!siege) return null;
+  const next = wavesArrived + 1;
+  const last = next === siege.waves;
+  return (
+    <Banner tone="border-amber-500/40 bg-amber-500/5 text-amber-300/90" title={`⚔️ The siege: wave ${next} of ${siege.waves} ${last ? "(the last)" : ""}`.trim()}>
+      <Note>
+        It storms the {siege.entry} in {turns(turnsUntil(siege.every, huntTurn))}.
+        {last ? ` ${siege.champion} leads it.` : ""}
+      </Note>
+    </Banner>
+  );
+}
+
+// The Hollow Court's walls: the Serpents battering them (and how long they'll hold), or the
+// walls already down
+function BreachBanner({ location, huntTurn, party, breached }: BannerProps) {
+  const breach = location.breach;
+  if (!breach) return null;
+  if (breached.length > 0) {
+    return (
+      <Banner tone="border-emerald-500/30 bg-emerald-500/5 text-emerald-300/90" title={`🐍 The wall into the ${breached.map(m => breach.walls[m]).join(" and the ")} is down`}>
+        <Note>Every wave now comes through the moat too.</Note>
+      </Banner>
+    );
+  }
+  const battering = wallsToBreach(location, party);
+  if (battering.length === 0 || huntTurn >= breach.turn) return null;
+  return (
+    <Banner tone="border-emerald-500/30 bg-emerald-500/5 text-emerald-300/90" title={`🐍 The ${breach.by} is battering the wall into the ${battering.map(m => breach.walls[m]).join(" and the ")}`}>
+      <Note>It breaks through in {turns(breach.turn - huntTurn)}, and crusaders enter there as well. Eat it first, and the wall holds.</Note>
     </Banner>
   );
 }

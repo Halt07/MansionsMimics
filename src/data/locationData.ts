@@ -133,6 +133,37 @@ interface LocationDef {
    * leaves the hunt, if still in it. Sealed rooms aren't part of the hunt until they open: see
    * sealedView.
    */
+  /**
+   * The Hollow Court's siege: every `every` turns a wave of `size` crusaders (from the location's own
+   * roster) arrives at `entry`, `waves` times in all; the last brings `champion` with `finalEscort`.
+   * Each wave raises suspicion by `suspicion` (the court is on alert). The hunt isn't cleared
+   * while waves are still to come. See Turn.siege.
+   */
+  readonly siege?: {
+    readonly every: number;
+    readonly waves: number;
+    readonly size: readonly [number, number];
+    readonly entry: string;
+    readonly champion: string;
+    readonly finalEscort: number;
+    readonly suspicion: number;
+  };
+  /**
+   * Adventurers already lurking when the hunt begins, never in the ordinary party draw: `count`
+   * of `name`, each in a different one of `rooms` (the Hollow Court's Moat Serpents).
+   */
+  readonly lurkers?: { readonly name: string; readonly rooms: readonly string[]; readonly count: readonly [number, number] };
+  /**
+   * The Hollow Court's walls: on turn `turn`, each of `walls` (moat → the room on the other side)
+   * with a living `by` in its moat is broken through, joining the two. From then on each wave also
+   * brings `extra` crusaders per broken wall, into its moat. See Turn.breach.
+   */
+  readonly breach?: {
+    readonly turn: number;
+    readonly by: string;
+    readonly walls: Readonly<Record<string, string>>;
+    readonly extra: readonly [number, number];
+  };
   readonly dig?: {
     readonly every: number;
     readonly stages: readonly (readonly string[])[];
@@ -788,6 +819,42 @@ const LOCATION_DATA = [
   },
   // ── Beyond the Apex ──
   {
+    // Sovereign's own ground: the mimics' kingdom, and the Long After's court before it fell, under
+    // siege by a crusade come to end the Mimic King
+    id: "hollow_court", name: "The Hollow Court", minTier: "Apex",
+    description: "The court of the Mimic King: a palace where every chest, chair and coffer might be one of your subjects, and the Throne Hall is yours.",
+    flavorText: "Every crate in this palace holds its breath when you pass. They are waiting to see what you do.",
+    rooms: ["Throne Hall", "Treasury", "Great Hall", "Royal Chambers", "Barracks", "Courtyard", "Shrine", "Western Moat", "Gatehouse", "Eastern Moat"],
+    roomGraph: {
+      "Throne Hall":    ["Great Hall"],
+      "Treasury":       ["Great Hall"],
+      "Great Hall":     ["Throne Hall", "Treasury", "Royal Chambers", "Courtyard"],
+      "Royal Chambers": ["Great Hall"],
+      "Barracks":       ["Courtyard"],
+      "Courtyard":      ["Great Hall", "Barracks", "Shrine", "Gatehouse"],
+      "Shrine":         ["Courtyard"],
+      "Western Moat":   ["Gatehouse"],
+      "Gatehouse":      ["Western Moat", "Courtyard", "Eastern Moat"],
+      "Eastern Moat":   ["Gatehouse"]
+    },
+    partySize: [3, 4], suspicionGrowthRate: 2,
+    advantageTags: ["Authority", "Valuable"],
+    imageHint: "a dark, gilded palace whose furniture seems to be watching, a moat around it, a throne at its heart",
+    exclusiveRoster: true,
+    branch: "Sovereign",
+    // The crusade comes in waves, the Siege Champion leading the last
+    siege: { every: 5, waves: 5, size: [2, 3], entry: "Gatehouse", champion: "The Siege Champion", finalEscort: 4, suspicion: 1 },
+    lurkers: { name: "Moat Serpent", rooms: ["Western Moat", "Eastern Moat"], count: [1, 2] },
+    // A Serpent left alive batters through the wall beside its moat
+    breach: { turn: 10, by: "Moat Serpent", walls: { "Western Moat": "Barracks", "Eastern Moat": "Shrine" }, extra: [1, 2] },
+    locationCreatures: [
+      { id: "moat_eel", name: "Moat Eel", ap: 2, discipline: 2, description: "Lives in the moat, and comes up into the Gatehouse when nobody's looking.", rooms: ["Western Moat", "Eastern Moat", "Gatehouse"] },
+      { id: "castle_bat", name: "Castle Bat", ap: 1, discipline: 2, description: "Roosts in the high places of the Great Hall." },
+      { id: "court_mouse", name: "Court Mouse", ap: 1, discipline: 1, description: "Has learned to be very careful which furniture it runs under." },
+      { id: "gilded_beetle", name: "Gilded Beetle", ap: 1, discipline: 1, description: "Gold-backed, and found mostly in the Treasury.", rooms: ["Treasury", "Throne Hall", "Royal Chambers"] },
+    ],
+  },
+  {
     // The Hollow Court (Sovereign's), thousands of years on: half buried, half swallowed by jungle
     id: "the_long_after", name: "The Long After", minTier: "Apex",
     description: "The ruins of a court older than any kingdom anyone remembers, half buried and half swallowed by jungle. Someone is digging it out.",
@@ -1178,6 +1245,26 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "High Nest":           { "giant_pillow":            { plausibility: 1, note: "Soft enough to be part of the nest." } },
     "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." },
                              "apex_volcano":            { plausibility: -2, note: "A volcano, on a cloud?" } },
+  },
+  // ── The Hollow Court · Sovereign's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
+  // A royal court in its prime: thrones, vaults and gates fit
+  hollow_court: {
+    "Gatehouse":           { "apex_castle_gate":        { plausibility: 2, note: "A gate, at the gatehouse." },
+                             "apex_watchtower":         { plausibility: 1, note: "A tower watching over the gate." } },
+    "Courtyard":           { "apex_colossus":           { plausibility: 1, note: "A monument to the King in the courtyard." },
+                             "grand_carriage":          { plausibility: 1, note: "A royal carriage, waiting." } },
+    "Barracks":            { "greater_bed":             { plausibility: 1, note: "A soldier's cot." },
+                             "giant_bed":               { plausibility: -1, note: "Far too grand for a barracks." } },
+    "Shrine":              { "apex_chapel":             { plausibility: 1, note: "The court's own shrine." },
+                             "greater_statue":          { plausibility: 2, note: "A statue of the King, of course." } },
+    "Great Hall":          { "apex_colossus":           { plausibility: 2, note: "The King's likeness, towering over the hall." },
+                             "grand_chandelier":        { plausibility: 1, note: "Every great hall has its chandelier." } },
+    "Treasury":            { "grand_vault":             { plausibility: 2, note: "The royal vault." },
+                             "giant_chest":             { plausibility: 1, note: "A great coffer of the King's gold." } },
+    "Royal Chambers":      { "giant_bed":               { plausibility: 2, note: "The royal bed." },
+                             "greater_bed":             { plausibility: 1, note: "A servant's bed in the royal chambers." } },
+    "Throne Hall":         { "giant_throne":            { plausibility: 2, note: "Your throne." },
+                             "greater_throne":          { plausibility: 2, note: "A throne in a throne hall: of course." } },
   },
   // ── The Long After · Eternal's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
   // A ruined court: thrones, vaults and idols fit; anything modern doesn't
