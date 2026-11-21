@@ -84,25 +84,31 @@ export function effectiveStats(
 
 // ============================================================
 // MASS DECAY
-// A mimic that goes unfed loses 1 mass per MASS_DECAY_DAYS days (never below 1). The time
-// that's been charged for moves lastFedAt forward, so loading the mimic again doesn't charge
-// the same days twice.
+// A mimic that goes unfed loses 1 mass per MASS_DECAY_DAYS days (never below 1); an Eternal one,
+// only every ETERNAL_MASS_DECAY_DAYS (its reward: it outlasts hunger). The time that's been
+// charged for moves lastFedAt forward, so loading the mimic again doesn't charge the same days twice.
 // ============================================================
 export const MASS_DECAY_DAYS = 3;
+export const ETERNAL_MASS_DECAY_DAYS = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** How many days unfed cost a mimic 1 mass. */
+export function massDecayDays(character: Pick<MimicCharacter, "branchTier">): number {
+  return character.branchTier === "Eternal" ? ETERNAL_MASS_DECAY_DAYS : MASS_DECAY_DAYS;
+}
+
 export function massDecay(
-  mass: number, lastFedAt: string | null | undefined, now: Date = new Date(),
+  mass: number, lastFedAt: string | null | undefined, now: Date = new Date(), days: number = MASS_DECAY_DAYS,
 ): { massLost: number; mass: number; lastFedAt: string; daysAway: number } | null {
   if (!lastFedAt || mass <= 1) return null;
   const fed = new Date(lastFedAt).getTime();
   const daysAway = (now.getTime() - fed) / DAY_MS;
-  const massLost = Math.min(Math.floor(daysAway / MASS_DECAY_DAYS), mass - 1);
+  const massLost = Math.min(Math.floor(daysAway / days), mass - 1);
   if (massLost <= 0) return null;
   return {
     massLost,
     mass: mass - massLost,
-    lastFedAt: new Date(fed + massLost * MASS_DECAY_DAYS * DAY_MS).toISOString(),
+    lastFedAt: new Date(fed + massLost * days * DAY_MS).toISOString(),
     daysAway: Math.floor(daysAway),
   };
 }
@@ -122,7 +128,7 @@ export function welcomeBack(
 } {
   let changes: Partial<MimicCharacter> = {};
   let massDecayNotice: string | null = null;
-  const decay = massDecay(character.mass, character.lastFedAt, now);
+  const decay = massDecay(character.mass, character.lastFedAt, now, massDecayDays(character));
   // The decay-free stretch starts the first time a mimic is opened (older saves included)...
   if (!character.decayFreeDate) changes = { decayFreeDate: now.toISOString() };
   if (decay) {
