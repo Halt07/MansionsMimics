@@ -69,7 +69,7 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     t.alert(`The hunters enter with weapons drawn. Suspicion starts at ${BOUNTY_START_SUSPICION}.`);
   } else {
     t.info(`You settle into the ${room} of ${the(location.name)}, perfectly still.`);
-    t.system(`${party.length} adventurers are exploring the premises.`);
+    t.system(`${party.length} adventurers are exploring nearby.`);
   }
   if (burned.location) t.alert(`🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
   if (burned.form && startForm) t.alert(`🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
@@ -80,7 +80,7 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     t.alert(`The air is thick with hunger. Others of your kind nest here — and one of them is old. Very old.`);
     t.alert(`Find the Elder Mimic and devour it. Watch where the adventurers vanish: something hungry hides there.`);
   } else if (rivals.length > 0) {
-    t.alert(`Something feels wrong. Another predator lurks within these walls — and it is not you.`);
+    t.alert(`Something feels wrong. Another predator lurks nearby — and it is not you.`);
   }
   if (hasMagic(character.currentAppearance, "Soulglass")) t.senseRival();
   t.info(`Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
@@ -358,7 +358,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
       t.escape(`Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
       boltAway(t, target, bite.targetSuspicion, bite.hits);
     } else if (bite.ending === "flees") {
-      t.escape(`Badly shaken, ${target.name} turns and flees the building!`);
+      t.escape(`Badly shaken, ${target.name} turns and flees, and doesn't come back!`);
       t.patchMember(target.id, () => ({ isAlive: false, fled: true }));
     } else {
       t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
@@ -383,7 +383,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
     t.escape(`${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
     boltAway(t, target, bite.targetSuspicion, bite.hits);
   } else if (bite.ending === "flees") {
-    t.escape(`${target.name} has had enough — they flee the building entirely!`);
+    t.escape(`${target.name} has had enough — they run for it, and don't stop running!`);
     t.patchMember(target.id, () => ({ isAlive: false, isConsumed: false, fled: true }));
   } else if (bite.ending === "collapses") {
     t.consume(`${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
@@ -483,7 +483,11 @@ function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, s
       t.alert(t.pick(glimpses));
     }
   } else {
-    t.consume(`The last of the party is gone. No one remains to grow suspicious.`);
+    // At the Hollow Court the crusade isn't done while waves are still to come
+    const siege = t.hunt.location.siege;
+    t.consume(siege && (t.hunt.wavesArrived ?? 0) < siege.waves
+      ? `The court is quiet, for now. The next wave is coming.`
+      : `The last of the party is gone. No one remains to grow suspicious.`);
   }
   t.react("feed", { excludeIds: [target.id] });
   if (learning.newMaterials.length > 0) t.evolve(`New materials absorbed: ${learning.newMaterials.join(", ")}!`);

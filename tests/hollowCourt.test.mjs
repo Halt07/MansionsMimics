@@ -123,6 +123,13 @@ export default async function ({ gameData: m, ok }) {
   ok(slipped.hunt.mimicRoom === 'Western Moat' && slipped.hunt.suspicion === start.suspicion + 1 && !slipped.log.some((l) => l.message.includes('notices')),
     '…at the usual cost (+1 suspicion), and the Serpent never gets a look at you');
 
+  // Eating the last crusader in the court, with waves still to come, isn't the end of it
+  const lastOne = m.strike(at([member('Herald', 'Throne Hall', { isAttracted: true })], { mimicRoom: 'Throne Hall', wavesArrived: 2 }), sovereign, { ...still, random: () => 0 });
+  ok(lastOne.hunt.party[0].isConsumed && lastOne.log.some((l) => l.message === 'The court is quiet, for now. The next wave is coming.') && !lastOne.log.some((l) => l.message.includes('No one remains')),
+    'the last crusader in the court eaten, with waves still to come: the court is only quiet for now');
+  const finalOne = m.strike(at([member('Herald', 'Throne Hall', { isAttracted: true })], { mimicRoom: 'Throne Hall', wavesArrived: 5 }), sovereign, { ...still, random: () => 0 });
+  ok(finalOne.log.some((l) => l.message.includes('No one remains to grow suspicious')), '…once every wave has come, it really is the last');
+
   // ---------- your minions ----------
   ok(start.minionsToPlace === 1 && start.minions.length === 0, 'one of your subjects is there from the start, waiting to be placed');
   const settings = court.siege.minions;
