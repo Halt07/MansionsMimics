@@ -105,6 +105,11 @@ export interface AdventurerTemplate {
   readonly isMimicHunter?: boolean;
   /** Only appears at these locations (any location if omitted). */
   readonly locations?: readonly LocationId[];
+  /**
+   * Never leaves the room it's in (the Hollow Court's Moat Serpents): it won't wander, follow a
+   * scent or be drawn out by a Lure. Like the Gargoyle (see isStationary), without its stone watch.
+   */
+  readonly stationary?: boolean;
   readonly behavior?: BehaviorId;
   /** Devotion: the name this adventurer takes once it converts (e.g. "Elder Zealot"). */
   readonly convertedName?: string;
@@ -1360,6 +1365,108 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a dog-eared spellbook full of crossed-out notes", "a wand that has never once worked", "a failed exam scroll, marked in red"],
   },
 
+  // ── The Hollow Court (Sovereign's hunting ground): the crusade come to end the Mimic King ──
+  // They arrive in waves (the location's siege); the Siege Champion leads the last one, and the
+  // Moat Serpents are in the moats from the start (neither comes in the ordinary party draw)
+  {
+    name: "Crusader Knight", type: "Paladin", discipline: 5, baseSuspicion: 3, constitution: 4, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    repelledBy: { traits: ["Thieves' Mark", "Shadowed Presence"] },
+    quirks: ["Prays before every door", "Strikes anything that looks at them wrong"],
+    appliedQuirk: "{name} raps the {form} with a mailed fist. \"In the name of the light, show yourself.\"",
+    alluringQualities: { materials: ["Steel", "Silver"], traits: ["Sacred Symbol", "Heraldic Crest", "Polished"], tags: ["Religious", "Defensive"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 2, text: 1, magical: 2, social: 1, spatial: 2, environmental: 1, acoustic: 2, presence: 3 },
+    lootMaterials: ["Steel", "Silver"],
+    lootTraits: ["Sacred Symbol"],
+    partialLoot: ["a dented pauldron", "a strip of tabard", "a prayer card"],
+  },
+  {
+    name: "Dragon-Slayer", type: "Warrior", discipline: 5, baseSuspicion: 3, constitution: 5, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    quirks: ["Has killed bigger things than you, they say", "Counts the notches on their blade aloud"],
+    appliedQuirk: "{name} sizes up the {form}. \"I've killed bigger.\"",
+    alluringQualities: { materials: ["Steel", "Dragonhide"], traits: ["Tally Marks", "Bloodstained", "Reinforced"], tags: ["Defensive", "Valuable"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 3, text: 0, magical: 1, social: 1, spatial: 2, environmental: 2, acoustic: 2, presence: 3 },
+    lootMaterials: ["Steel", "Dragonhide"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a scorched scale", "a notched greatsword hilt", "a trophy tooth"],
+  },
+  {
+    name: "Crusade Archmage", type: "Wizard", discipline: 6, baseSuspicion: 4, constitution: 2, interactionStyle: "spell",
+    group: "beyondApex", locations: ["hollow_court"],
+    repelledBy: { traits: ["Polished"] },
+    quirks: ["Reads the air for enchantments", "Floats an inch above the floor, to be safe"],
+    appliedQuirk: "{name} passes a glowing hand over the {form}, slowly.",
+    alluringQualities: { materials: ["Runestone", "Spellweave Silk"], traits: ["Runescript", "Arcane Sigil", "Faint Glow"], tags: ["Knowledge"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 0, text: 3, magical: 5, social: 1, spatial: 2, environmental: 1, acoustic: 1, presence: 4 },
+    lootMaterials: ["Runestone", "Spellweave Silk"],
+    lootTraits: ["Arcane Sigil"],
+    partialLoot: ["a crackling focus crystal", "a page of war-wards", "a singed sleeve"],
+  },
+  {
+    // Every artificer notices a Guild Mark
+    name: "Royal Sapper", type: "Artificer", discipline: 4, baseSuspicion: 3, constitution: 3, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    quirks: ["Taps walls, listening for the hollow places", "Always knows where the floor is weakest"],
+    appliedQuirk: "{name} taps the {form} with a little hammer, listening.",
+    alluringQualities: { materials: ["Iron", "Oak"], traits: ["Reinforced", "Iron-Banded", "Guild Mark"], tags: ["Structural"] },
+    perceptionAffinity: { material: 3, structure: 4, weight: 3, text: 0, magical: 0, social: 0, spatial: 3, environmental: 1, acoustic: 3, presence: 1 },
+    lootMaterials: ["Iron", "Oak"],
+    lootTraits: ["Guild Mark"],
+    partialLoot: ["a sapper's hammer", "a coil of fuse", "a map of the walls"],
+  },
+  {
+    name: "Mimic-Slayer", type: "Hunter", discipline: 5, baseSuspicion: 5, constitution: 4, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    repelledBy: { traits: ["Locked", "Heavy-Lidded"] },
+    quirks: ["Chosen for this, and proud of it", "Opens every lid with a long pole first"],
+    appliedQuirk: "{name} prods the {form} with a long pole, then waits.",
+    alluringQualities: { materials: ["Blacksteel"], traits: ["Tally Marks"], tags: ["Valuable"] },
+    perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 2, social: 0, spatial: 3, environmental: 2, acoustic: 2, presence: 4 },
+    lootMaterials: ["Blacksteel"],
+    lootTraits: ["Tally Marks"],
+    partialLoot: ["a long iron pole", "a ledger of mimics slain", "a vial of mimic acid"],
+  },
+  {
+    // The easy meal: carries the banner, and announces everything
+    name: "Herald", type: "Bard", discipline: 3, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["hollow_court"],
+    quirks: ["Announces every room they enter", "Never lets go of the banner"],
+    appliedQuirk: "{name} announces the {form} to nobody in particular.",
+    alluringQualities: { materials: ["Silk", "Velvet"], traits: ["Heraldic Crest", "Gilded", "Ornate"], tags: ["Authority", "Decor"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 0, text: 2, magical: 0, social: 3, spatial: 1, environmental: 1, acoustic: 2, presence: 1 },
+    lootMaterials: ["Silk", "Velvet"],
+    lootTraits: ["Heraldic Crest"],
+    partialLoot: ["a torn banner", "a brass horn", "a scroll of proclamations"],
+  },
+  {
+    // In the moats from the start (the Hollow Court's lurkers), and never leaves them
+    name: "Moat Serpent", type: "Beast", discipline: 4, baseSuspicion: 2, constitution: 6, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    stationary: true,
+    quirks: ["Never leaves the water", "Batters at the walls when it's bored"],
+    appliedQuirk: "{name} coils past the {form}, slow and curious.",
+    alluringQualities: { materials: ["Granite", "Iron"], traits: ["Briny", "Mossy", "Pitted"], tags: ["Defensive"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 3, text: 0, magical: 0, social: 0, spatial: 2, environmental: 3, acoustic: 2, presence: 3 },
+    lootMaterials: ["Granite"],
+    lootTraits: ["Briny"],
+    partialLoot: ["a moat-green scale", "a tooth like a dagger", "a mouthful of weed"],
+  },
+  {
+    // Leads the siege's last wave. Seven dice, can't be lured, and rallies the crusade on a miss
+    name: "The Siege Champion", type: "Paladin", discipline: 7, baseSuspicion: 4, constitution: 6, interactionStyle: "touch",
+    group: "beyondApex", locations: ["hollow_court"],
+    behavior: "unshakeable",
+    repelledBy: { traits: ["Thieves' Mark", "Shadowed Presence"] },
+    quirks: ["Will not be distracted", "Walks straight for the Throne Hall"],
+    appliedQuirk: "{name} glances at the {form} and keeps walking, eyes on the throne.",
+    alluringQualities: { materials: ["Mithril", "Gold"], traits: ["Heraldic Crest", "Sacred Symbol"], tags: ["Authority"] },
+    perceptionAffinity: { material: 3, structure: 3, weight: 3, text: 1, magical: 3, social: 2, spatial: 3, environmental: 2, acoustic: 3, presence: 4 },
+    lootMaterials: ["Mithril", "Gold"],
+    lootTraits: ["Heraldic Crest"],
+    partialLoot: ["a gilded gauntlet", "a champion's sash", "a chip of a legendary blade"],
+  },
+
   // ── The Long After (Eternal's hunting ground): the Hollow Court, lost to time ──
   // They all prize what's old (Worn, Weathered, Dusty, Mossy) and distrust anything new-looking
   // (Pristine, Polished): in a ruin, age is the best disguise
@@ -1585,6 +1692,10 @@ export const BEHAVIORS = {
   stoneWatch: {
     label: "Stone Watch",
     description: "Never leaves its perch. If you move out of, into, or past a room next to it, it notices the change.",
+  },
+  unshakeable: {
+    label: "Unshakeable",
+    description: "Can't be lured: you have to go to it, or wait where it's going. Once you're in the same room, you can Strike without luring it first. Miss, and it rallies the crusade: everyone in the rooms next door comes running.",
   },
   lucky: {
     label: "Lucky",

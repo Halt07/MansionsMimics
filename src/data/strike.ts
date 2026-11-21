@@ -109,11 +109,12 @@ export function strikeDice(adhesion: number, appearance: Partial<Appearance> | n
 
 /**
  * Who a Strike can reach: anyone lured. Under the fireworks (`skyward`), anyone in the mimic's
- * room too, since they're all staring at the sky; and anyone stuck in the tar in the mimic's room.
+ * room too, since they're all staring at the sky; anyone stuck in the tar in the mimic's room; and
+ * an unshakeable adventurer (the Siege Champion) in the mimic's room, who can never be lured.
  */
 export function strikeCandidates(party: readonly PartyMember[], mimicRoom: RoomName | null, skyward: boolean): PartyMember[] {
   return party.filter(a => stillInHunt(a) &&
-    (a.isAttracted || ((skyward || a.tarStuck !== undefined) && a.location === mimicRoom)));
+    (a.isAttracted || ((skyward || a.tarStuck !== undefined || a.behavior === "unshakeable") && a.location === mimicRoom)));
 }
 
 /** The one struck: the nearest candidate, and among the nearest, whoever likes the mimic's look most. */

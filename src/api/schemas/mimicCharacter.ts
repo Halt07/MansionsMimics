@@ -67,6 +67,8 @@ export const MimicCharacterFieldsSchema = z.strictObject({
   timeCasterEaten: z.boolean().default(false),
   /** True once the mimic has eaten the Curator at the Long After, before the dig was done (Closing Time). */
   curatorEaten: z.boolean().default(false),
+  /** True once the mimic has eaten the Siege Champion at the Hollow Court (Long Live the King). */
+  championEaten: z.boolean().default(false),
   /** Names of the Cloud Kingdom giants this mimic has consumed whole (for Titanic Feast). */
   giantsConsumedWhole: z.array(z.string()).default([]),
   /** True when a mimic that started at Minor tier has evolved all the way to Apex. */

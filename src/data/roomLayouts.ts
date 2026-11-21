@@ -27,6 +27,14 @@ const ROOM_LAYOUTS: { readonly [L in LocationId]: Readonly<Record<RoomOf<L>, Cel
   lonely_moor: { "Moorland Path North": [0, 0], "Bothy Interior": [1, 0], "Standing Stones": [0, 1], "Peat Stack": [1, 1], "Moorland Path South": [0, 2], "Boggy Hollow": [1, 2] },
   hollow_reliquary: { "Pilgrims' Dormitory": [0, 0], "Bell Loft": [1, 0], "Nave": [0, 1], "Candle Gallery": [1, 1], "Reliquary Vault": [0, 2], "Ossuary": [1, 2] },
   mimic_nest: { "Rope Loft": [1, 0], "Loading Dock": [0, 1], "Crate Stacks": [1, 1], "Foreman's Office": [0, 2], "Cold Storage": [1, 2], "Bonded Vault": [0, 3] },
+  // The Mimic King's court, plus-shaped: the Throne Hall at the top, the Gatehouse at the bottom
+  // (the Long After is the same plan, thousands of years on)
+  hollow_court: {
+    "Throne Hall": [1, 0],
+    "Treasury": [0, 1], "Great Hall": [1, 1], "Royal Chambers": [2, 1],
+    "Barracks": [0, 2], "Courtyard": [1, 2], "Shrine": [2, 2],
+    "Western Moat": [0, 3], "Gatehouse": [1, 3], "Eastern Moat": [2, 3],
+  },
   // A ruined court, plus-shaped: the Throne Hall at the top, the Toppled Arch at the bottom (the
   // Hollow Court's own plan, thousands of years on)
   the_long_after: {

@@ -284,6 +284,8 @@ export function becomePrimordial(
 export const TIME_CASTER = "Time Caster";
 /** The Long After's rare visitor, overseeing the dig until it's done: eating them is Closing Time. */
 export const CURATOR = "The Curator";
+/** The Hollow Court's siege leader, with the last wave: eating them is Long Live the King. */
+export const SIEGE_CHAMPION = "The Siege Champion";
 
 /**
  * What eating `member` adds to the records the branch tiers keep: the Tear in Time's counter
@@ -291,12 +293,13 @@ export const CURATOR = "The Curator";
  */
 export function branchMealRecords(
   character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
-): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten" | "curatorEaten">> {
+): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten" | "curatorEaten" | "championEaten">> {
   return {
     timeTearCounter: withTimeTear(character, member),
     ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}),
     // Only while they're still at the dig: once it's done, they've gone (see Turn.dig)
     ...(member.name === CURATOR ? { curatorEaten: true } : {}),
+    ...(member.name === SIEGE_CHAMPION ? { championEaten: true } : {}),
   };
 }
 
@@ -317,12 +320,12 @@ export const CANNIBAL_MIMICS = 10;
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
   "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler" |
-  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime" | "closingTime";
+  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime" | "closingTime" | "longLiveTheKing";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
   "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed" |
-  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten" | "curatorEaten">;
+  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten" | "curatorEaten" | "championEaten">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -483,6 +486,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     flavor: (n) => `Every crate that holds its breath answers to ${n}. Or did, once.`,
     // Kept, like the record of it, after a Sovereign shrinks below SOVEREIGN_MASS
     isEarned: (c) => c.sovereignReached,
+  },
+  {
+    id: "longLiveTheKing", name: "Long Live the King", icon: "⚔️", hidden: true,
+    description: "At the Hollow Court, eat the Siege Champion, who leads the crusade's final wave. They can't be lured, and they have seven dice.",
+    flavor: (n) => `The crusade's last hope went into ${n}, and did not come out. The court stands.`,
+    isEarned: (c) => c.championEaten,
   },
 ];
 

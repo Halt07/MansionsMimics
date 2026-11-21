@@ -1198,6 +1198,39 @@ button:disabled .key-hint { opacity: 0.4; }
   .ruin-card, .ruin-card::before { animation: none; }
 }
 
+/* The Hollow Court's card: a royal court. A slow drift of gold and deep purple around a smooth rim,
+   built like .ruin-card (::before the glow, ::after the card's own background over it). */
+.court-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  border-color: transparent !important;
+  animation: court-glow 8s ease-in-out infinite;
+}
+.court-card::before,
+.court-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.court-card::before {
+  inset: -3px;
+  background: linear-gradient(120deg, #4c1d95, #facc15, #7e22ce, #eab308, #581c87, #fde68a);
+  background-size: 300% 300%;
+  animation: tear-shift 12s ease-in-out infinite;
+}
+.court-card::after { inset: 0; background: hsl(var(--card)); }
+.court-badge { color: #fde047; text-shadow: 0 0 6px rgb(234 179 8 / 0.5); }
+@keyframes court-glow {
+  0%, 100% { box-shadow: 0 0 12px rgb(234 179 8 / 0.3); }
+  50% { box-shadow: 0 0 18px rgb(147 51 234 / 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .court-card, .court-card::before { animation: none; }
+}
+
 @keyframes tear-shift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }

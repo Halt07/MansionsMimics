@@ -8,7 +8,7 @@
 import type { Appearance, MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { stillInHunt, type PartyMember } from "./adventurerData";
 import { withDiscovered } from "./codex";
-import { BURN_SUSPICION, getRoomDistance, hasMagic, maxTargetForChance, rollDice } from "./core";
+import { BURN_SUSPICION, getAdjacentRooms, getRoomDistance, hasMagic, maxTargetForChance, rollDice } from "./core";
 import { PORTER_SISTER, PORTER_TOKEN_LINE, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE } from "./easterEggs";
 import {
   PRANKS, RIVAL_STATS, STAR_FRAGMENT, disguiseOf, remainsMealAp, isTheRealThing, pickTreasurePrize, rivalInRoom,
@@ -20,7 +20,7 @@ import type { HuntLocation, RoomName } from "./locationData";
 import { resolveLure } from "./lure";
 import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
 import { ALL_FORMS, type Form } from "./mimicData";
-import { VANISHING_LINES, moveCreatures, moveParty, rivalAteFirst } from "./movement";
+import { VANISHING_LINES, isStationary, moveCreatures, moveParty, rivalAteFirst } from "./movement";
 import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, becomePrimordial, branchMealRecords, lureRange, withBiggestMeal, withFormUsed } from "./stats";
 import {
   COLLAPSE_BONUS_AP, LUCKY_WANDER_CHANCE, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
@@ -286,6 +286,22 @@ function revealCostume(t: Turn, member: PartyMember) {
   }
 }
 
+// The Siege Champion, struck at and missed, rallies the crusade: everyone in the rooms next door
+// comes running into the Champion's room (and the next Strike there has a crowd watching).
+// The Moat Serpents stay in their moats, and anyone stuck in the tar stays stuck.
+function rally(t: Turn, champion: PartyMember) {
+  const room = champion.location;
+  const nextDoor = getAdjacentRooms(t.hunt.location, room);
+  const coming = t.hunt.party.filter(a => a.id !== champion.id && stillInHunt(a) && nextDoor.includes(a.location) && !isStationary(a));
+  if (coming.length === 0) {
+    t.alert(`${champion.name} raises a horn and sounds the rally, but nobody is near enough to answer.`);
+    return;
+  }
+  const ids = new Set(coming.map(a => a.id));
+  t.set({ party: t.hunt.party.map(a => ids.has(a.id) ? { ...a, location: room, isAttracted: false } : a) });
+  t.alert(`📯 ${champion.name} sounds the rally! ${coming.map(a => a.name).join(", ")} ${coming.length === 1 ? "comes" : "come"} running into the ${room}.`);
+}
+
 // Elusive adventurers never leave the hunting ground: when they get away they bolt to another
 // room instead (unattracted, and more wary).
 function boltAway(t: Turn, target: PartyMember, extraSuspicion: number, hitsTaken?: number) {
@@ -399,6 +415,7 @@ function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, s
     t.alert(`${target.name} saw you lunge — they've seen your true nature! (+${meal.suspicion} suspicion${meal.suspicion < 4 ? ", softened by your Dragonhide" : ""})`);
     if (meal.bolts) boltAway(t, target, 3);
     else t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + 3 }));
+    if (target.behavior === "unshakeable") rally(t, target);
     return;
   }
 

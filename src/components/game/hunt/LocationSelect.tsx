@@ -60,7 +60,7 @@ function saveHiddenLocations(ids: readonly string[]) {
 const BRANCH_CARDS: Record<BranchTier, { card: string; badge: string; icon: string; home: string }> = {
   Primordial: { card: "tear-card", badge: "tear-badge", icon: "🌀", home: "where it all began" },
   Eternal: { card: "ruin-card", badge: "ruin-badge", icon: "🌿", home: "where everything ends up" },
-  Sovereign: { card: "tear-card", badge: "tear-badge", icon: "👑", home: "your court" },
+  Sovereign: { card: "court-card", badge: "court-badge", icon: "👑", home: "your court" },
 };
 
 interface LocationSelectProps {

@@ -12,7 +12,7 @@ import {
   BURN_SUSPICION, advanceRareLocation, formBurn, locationBurn, shuffle, tickBurns, type RareLocationState,
 } from "./core";
 import {
-  addRealMonster, addStray, dressParty, rollEruption, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
+  addLurkers, addRealMonster, addStray, dressParty, heldBack, rollEruption, placeProcession, placeRivals, rollNestKinds, withWarmth, type RivalMimic,
 } from "./events";
 import { STAT_CAP, getActiveForm, isMagicUser, withCount, withFormUsed } from "./stats";
 import { withDiscovered } from "./codex";
@@ -130,8 +130,9 @@ export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass
   const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
 
   // A location's real monsters only ever join through addRealMonster, never the normal draw
+  const held = heldBack(location);
   const eligible = ADVENTURER_TEMPLATES.filter(t =>
-    isTemplateEligible(t, location, mimicTier, mimicMass) && !location.realMonsters?.names.includes(t.name));
+    isTemplateEligible(t, location, mimicTier, mimicMass) && !location.realMonsters?.names.includes(t.name) && !held.includes(t.name));
   // Some locations guarantee certain adventurers a place (e.g. the Reliquary's pilgrim)
   const required = eligible.filter(t => location.alwaysIncludes?.includes(t.name));
   const pool = eligible.filter(t => !required.includes(t));
@@ -306,7 +307,8 @@ export function startHunt(
     ? generateBountyParty(location, character.mass, random)
     : generateParty(location, character.tier, character.mass, random), location, random);
   const withMonster = bounty ? base : addRealMonster(base, location, character.tier, character.mass, random);
-  const { party: withStray, stray } = addStray(withMonster, location, character.tier, character.mass, random);
+  const { party: strayed, stray } = addStray(withMonster, location, character.tier, character.mass, random);
+  const withStray = addLurkers(strayed, location, random);
   const dressed = location.costumes ? dressParty(withStray, random) : withStray;
   const party = location.procession ? placeProcession(dressed, location, room, random) : dressed;
   const creatures = spawnSmallCreatures(location, random);
