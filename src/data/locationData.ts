@@ -126,6 +126,29 @@ interface LocationDef {
    * Academy. Adventurers tied to other locations stay there.
    */
   readonly magicUsersOnly?: boolean;
+  /**
+   * The Long After: rooms sealed (buried, or overgrown) when the hunt begins, opened one every
+   * `every` turns. `stages` open in order, one room at a time (a random one when a stage has
+   * several); `opened` says how each one comes open. Once the last is open, `leaves` (by name)
+   * leaves the hunt, if still in it. Sealed rooms aren't part of the hunt until they open: see
+   * sealedView.
+   */
+  readonly dig?: {
+    readonly every: number;
+    readonly stages: readonly (readonly string[])[];
+    readonly opened: Readonly<Record<string, string>>;
+    /** Sealed rooms that are buried (dug out); the rest are grown over (cut free). */
+    readonly buried: readonly string[];
+    /**
+     * What comes out of a room when it opens: in `rival.room`, a small mimic (revealed: it pops
+     * out) with `rival.chance`; in any other room, one of the location's creatures with `creatureChance`.
+     */
+    readonly emerges?: {
+      readonly creatureChance: number;
+      readonly rival?: { readonly room: string; readonly chance: number; readonly line: string };
+    };
+    readonly leaves?: { readonly name: string; readonly line: string };
+  };
 }
 
 const LOCATION_DATA = [
@@ -765,6 +788,55 @@ const LOCATION_DATA = [
   },
   // ── Beyond the Apex ──
   {
+    // The Hollow Court (Sovereign's), thousands of years on: half buried, half swallowed by jungle
+    id: "the_long_after", name: "The Long After", minTier: "Apex",
+    description: "The ruins of a court older than any kingdom anyone remembers, half buried and half swallowed by jungle. Someone is digging it out.",
+    flavorText: "Empires rose and fell while you waited. Now they've come to dig you up.",
+    rooms: ["Throne Hall", "Treasury", "Old Hall", "Royal Chambers", "Barracks", "Jungle Camp", "Derelict Shrine", "Toppled Arch"],
+    roomGraph: {
+      "Throne Hall":    ["Old Hall"],
+      "Treasury":       ["Old Hall"],
+      "Old Hall":     ["Throne Hall", "Treasury", "Royal Chambers", "Jungle Camp"],
+      "Royal Chambers": ["Old Hall"],
+      "Barracks":       ["Jungle Camp"],
+      "Jungle Camp":    ["Old Hall", "Barracks", "Derelict Shrine", "Toppled Arch"],
+      "Derelict Shrine":         ["Jungle Camp"],
+      "Toppled Arch":   ["Jungle Camp"],
+    },
+    partySize: [3, 4], suspicionGrowthRate: 2,
+    advantageTags: ["Decor", "Valuable"],
+    imageHint: "a vine-choked ruined palace in a jungle, half buried, an archaeologists' camp in its courtyard",
+    exclusiveRoster: true,
+    branch: "Eternal",
+    // Overseeing the dig, now and then
+    realMonsters: { chance: 1 / 12, names: ["The Curator"] },
+    dig: {
+      every: 4,
+      // The Old Hall is the way into the rest, then the two dug-out rooms (in either order);
+      // the Throne Hall, the prize, is last
+      stages: [["Old Hall"], ["Treasury", "Royal Chambers"], ["Throne Hall"]],
+      opened: {
+        "Old Hall": "Machetes finally hack through the curtain of vines over the Old Hall. Daylight falls on it for the first time in an age.",
+        "Treasury": "Shovels break through the floor of the Old Hall into a buried vault below: the Treasury.",
+        "Royal Chambers": "The diggers clear the stair down to the Royal Chambers, sealed for thousands of years.",
+        "Throne Hall": "The last wall of vines comes down. Beyond it, in the dark, a throne. The Throne Hall is open.",
+      },
+      buried: ["Treasury", "Royal Chambers"],
+      emerges: {
+        creatureChance: 0.6,
+        rival: { room: "Treasury", chance: 0.4, line: "Something in the Treasury's heaps of gold shifts, and a small mimic, dormant since the court fell, blinks awake. It looks very much like a coffer. Strike, before it hides again." },
+      },
+      leaves: { name: "The Curator", line: "The Curator declares the dig a triumph, and sets off for the museum to tell everyone." },
+    },
+    locationCreatures: [
+      { id: "temple_monkey", name: "Temple Monkey", ap: 2, discipline: 3, description: "Lives in the ruins, and thinks it owns them." },
+      { id: "ruin_snake", name: "Ruin Snake", ap: 2, discipline: 2, description: "Sleeps in the warm stones. Doesn't like being woken." },
+      { id: "glow_beetle", name: "Glow Beetle", ap: 1, discipline: 1, description: "A little green light, crawling over the carvings." },
+      { id: "tree_frog", name: "Tree Frog", ap: 1, discipline: 2, description: "Bright as a jewel, and about as easy to catch." },
+      { id: "ruin_parrot", name: "Ruin Parrot", ap: 1, discipline: 3, description: "Repeats words in a language nobody has spoken for four thousand years." },
+    ],
+  },
+  {
     id: "tear_in_time", name: "The Tear in Time", minTier: "Apex", minMass: 50,
     description: "A rip in the world, its edges crackling blue, opening onto a jungle from before anyone was there to see it.",
     flavorText: "Nothing on this side has ever met a mimic. Nothing here has ever had a reason to doubt a rock.",
@@ -1106,6 +1178,27 @@ export const ROOM_FORM_MODIFIERS: RoomFormModifiers = {
     "High Nest":           { "giant_pillow":            { plausibility: 1, note: "Soft enough to be part of the nest." } },
     "Beanstalk Landing":   { "apex_abandoned_cottage":  { plausibility: -2, note: "A cottage on a cloud landing makes no sense at all." },
                              "apex_volcano":            { plausibility: -2, note: "A volcano, on a cloud?" } },
+  },
+  // ── The Long After · Eternal's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
+  // A ruined court: thrones, vaults and idols fit; anything modern doesn't
+  the_long_after: {
+    "Toppled Arch":        { "apex_castle_gate":        { plausibility: 1, note: "One more fallen gate, swallowed by the vines." },
+                             "apex_roadside_inn":       { plausibility: -2, note: "An inn, in a ruin in the jungle?" } },
+    "Jungle Camp":         { "grand_carriage":          { plausibility: -1, note: "A carriage, this deep in the jungle?" },
+                             "apex_lighthouse":         { plausibility: -2, note: "A lighthouse in a jungle, miles from any sea." } },
+    "Barracks":            { "greater_bed":             { plausibility: 1, note: "A soldier's cot, rotting where it stood." },
+                             "giant_bed":               { plausibility: -1, note: "Too grand for a barracks." } },
+    "Derelict Shrine":     { "apex_chapel":             { plausibility: 1, note: "The court's old shrine, overgrown." },
+                             "greater_statue":          { plausibility: 2, note: "A statue of some forgotten king, mossed over." },
+                             "apex_colossus":           { plausibility: 1, note: "The shrine's great idol, toppled at a lean." } },
+    "Old Hall":          { "apex_colossus":           { plausibility: 2, note: "The guardian of the hall, still standing after all this time." },
+                             "grand_chandelier":        { plausibility: 1, note: "A fallen chandelier, choked with roots." } },
+    "Treasury":            { "grand_vault":             { plausibility: 2, note: "The court's own vault, buried and forgotten." },
+                             "giant_chest":             { plausibility: 1, note: "A great coffer, too heavy to carry off." } },
+    "Royal Chambers":      { "giant_bed":               { plausibility: 2, note: "The royal bed, under four thousand years of dust." },
+                             "greater_bed":             { plausibility: 1, note: "A servant's bed in the royal chambers." } },
+    "Throne Hall":         { "giant_throne":            { plausibility: 2, note: "The throne of the court, waiting for its king." },
+                             "greater_throne":          { plausibility: 2, note: "A throne in a throne hall: of course." } },
   },
   // ── The Tear in Time · Primordial's own ground · wearable forms: Grand–Apex (Greater with Thimblewood) ──
   // Nothing has been built yet: anything made by later hands looks wildly out of place

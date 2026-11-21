@@ -73,6 +73,9 @@ export default async function ({ gameData: m, load, storage, ok }) {
     ok(offered()[0] === 'tear_in_time' && cardOf('tear_in_time').textContent.includes('where it all began'), 'a Primordial mimic: always open, its own ground');
     choose(mimic({ tier: 'Apex', mass: 60, timeTearCounter: 50, branchTier: 'Eternal' }));
     ok(!offered().includes('tear_in_time'), 'an Eternal one never sees it');
+    ok(offered()[0] === 'the_long_after' && cardOf('the_long_after').classList.contains('ruin-card') && cardOf('the_long_after').textContent.includes('where everything ends up'),
+      '…it has the Long After instead: its own overgrown card, and its own words');
+    ok(!document.getElementById('tear-rip'), '…(no torn edge: that\'s the Tear\'s)');
 
     // ---------- a rare ground ----------
     choose(mimic({ tier: 'Standard', mass: 12, rareLocation: { id: 'hollow_reliquary', huntsLeft: 2 } }));
@@ -119,4 +122,9 @@ export default async function ({ gameData: m, load, storage, ok }) {
     'a room is heard by its name, then the rooms next to it');
   await user.click(screen.getByRole('button', { name: '← Back to location select' }));
   ok(handlers.onBack.calls.length === 1, 'Back returns to the grounds');
+  const ruin = loc('the_long_after');
+  s.showInHunt(RoomSelect, { onConfirm: spy(), onBack: spy() }, s.huntState(mimic({ tier: 'Apex', mass: 60, branchTier: 'Eternal' }), null, { location: ruin }));
+  const startable = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent).sort();
+  ok(startable.join() === ['Barracks', 'Derelict Shrine', 'Jungle Camp', 'Toppled Arch'].sort().join(), 'the Long After: you can only start in a room the dig has already opened');
+  ok(screen.getByRole('heading', { name: 'Jungle Camp' }).nextElementSibling.textContent === 'Adjacent: Barracks, Derelict Shrine, Toppled Arch', '…and the sealed ones aren\'t next door to anything yet');
 }

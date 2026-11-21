@@ -353,6 +353,13 @@
   background: hsl(var(--muted) / 0.25);
   transition: border-color 0.4s ease, background-color 0.4s ease, box-shadow 0.4s ease;
 }
+/* A room not yet open (the Long After's dig): there, but not part of the hunt yet */
+.room-cell.room-sealed {
+  border-style: dashed;
+  background: repeating-linear-gradient(135deg, hsl(var(--muted) / 0.15) 0 6px, transparent 6px 12px);
+  opacity: 0.7;
+}
+.room-cell.room-sealed .room-name { color: hsl(var(--muted-foreground)); font-style: italic; }
 .room-cell[data-in-range] {
   border-color: hsl(48 90% 55% / 0.35);
   background: hsl(48 90% 55% / 0.06);
@@ -1114,6 +1121,40 @@ button:disabled .key-hint { opacity: 0.4; }
   50%, 62%  { background-position: 100% 50%; }
   75%, 87%  { background-position: 50% 50%; }
   100%      { background-position: 0% 50%; }
+}
+
+/* The Long After's card: a court gone to jungle. A slow drift of moss green and old gold around a
+   smooth rim (the torn edge is the Tear's), built like .tear-card: ::before is the glow, ::after
+   repaints the card's own background over it. */
+.ruin-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  border-color: transparent !important;
+  animation: ruin-glow 9s ease-in-out infinite;
+}
+.ruin-card::before,
+.ruin-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.ruin-card::before {
+  inset: -3px;
+  background: linear-gradient(120deg, #3f6212, #a3e635, #ca8a04, #4d7c0f, #eab308, #365314);
+  background-size: 300% 300%;
+  animation: tear-shift 14s ease-in-out infinite;
+}
+.ruin-card::after { inset: 0; background: hsl(var(--card)); }
+.ruin-badge { color: #bef264; text-shadow: 0 0 6px rgb(132 204 22 / 0.5); }
+@keyframes ruin-glow {
+  0%, 100% { box-shadow: 0 0 12px rgb(132 204 22 / 0.3); }
+  50% { box-shadow: 0 0 18px rgb(234 179 8 / 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ruin-card, .ruin-card::before { animation: none; }
 }
 
 @keyframes tear-shift {

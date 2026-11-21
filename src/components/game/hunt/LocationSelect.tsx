@@ -2,8 +2,8 @@ import { useId, useState } from "react";
 import { EyeOff } from "lucide-react";
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import {
-  HOLIDAYS, LOCATIONS, TIER_ORDER, branchLocationOpen, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, locationBurn, plural, seasonEnd, today,
-  type Holiday, type HuntLocation, type RoomName,
+  HOLIDAYS, LOCATIONS, TIER_ORDER, branchLocationOpen, formTier, getAdjacentRooms, getSeasonalForms, isLocationAvailable, initiallySealed, locationBurn, openRooms, plural, sealedView, seasonEnd, today,
+  type BranchTier, type Holiday, type HuntLocation, type RoomName,
 } from "@/data/gameData";
 import { Card, CardContent } from "@/components/ui/card";
 import { asButton, FOCUS_RING } from "@/lib/asButton";
@@ -53,6 +53,16 @@ function saveHiddenLocations(ids: readonly string[]) {
   try { localStorage.setItem(HIDDEN_LOCATIONS_KEY, JSON.stringify(ids)); } catch { /* storage unavailable: just don't remember */ }
 }
 
+/**
+ * Each branch tier's own ground gets its own card (see index.css) and its own words: how it looks
+ * to a mimic already on that branch, and (for one it can still choose, the Tear) what going in means.
+ */
+const BRANCH_CARDS: Record<BranchTier, { card: string; badge: string; icon: string; home: string }> = {
+  Primordial: { card: "tear-card", badge: "tear-badge", icon: "🌀", home: "where it all began" },
+  Eternal: { card: "ruin-card", badge: "ruin-badge", icon: "🌿", home: "where everything ends up" },
+  Sovereign: { card: "tear-card", badge: "tear-badge", icon: "👑", home: "your court" },
+};
+
 interface LocationSelectProps {
   onChoose: (location: HuntLocation) => void;
   onChooseForms: () => void;
@@ -94,7 +104,7 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
           {" "}· Something in the air: you could take the shape of {seasonalHint.names}. <span className="text-primary">Choose forms →</span>
         </button>
       )}
-      {sorted.some(loc => loc.branch) && <TearFilter />}
+      {sorted.some(loc => loc.branch === "Primordial") && <TearFilter />}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {shown.map(loc => {
           const id = (part: string) => `${ids}-${loc.id}-${part}`;
@@ -104,7 +114,7 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
             <Card
               {...asButton(() => onChoose(loc), { labelledBy: id("name"), describedBy: [id("status"), id("about"), id("size")] })}
               data-holiday={loc.holiday}
-              className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.branch ? "tear-card" : loc.holiday ? "holiday-card border-border" : loc.rare
+              className={`cursor-pointer bg-card transition-all group ${FOCUS_RING} ${loc.branch ? BRANCH_CARDS[loc.branch].card : loc.holiday ? "holiday-card border-border" : loc.rare
                 ? "border-amber-400/50 hover:border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
                 : "border-border hover:border-primary/40"}`}
             >
@@ -117,9 +127,9 @@ export function LocationSelect({ onChoose, onChooseForms }: LocationSelectProps)
                     </p>
                   )}
                   {loc.branch && (
-                    <p className="tear-badge text-[11px] font-cinzel uppercase tracking-wide mb-1">
-                      🌀 Beyond the Apex · {character.branchTier === loc.branch
-                        ? "where it all began"
+                    <p className={`${BRANCH_CARDS[loc.branch].badge} text-[11px] font-cinzel uppercase tracking-wide mb-1`}>
+                      {BRANCH_CARDS[loc.branch].icon} Beyond the Apex · {character.branchTier === loc.branch
+                        ? BRANCH_CARDS[loc.branch].home
                         : `step through and you become ${loc.branch}. The other paths close behind you`}
                     </p>
                   )}
@@ -193,7 +203,7 @@ export function RoomSelect({ onConfirm, onBack }: RoomSelectProps) {
       <p className="text-muted-foreground text-sm mb-1 flavor-text italic">{location.flavorText}</p>
       <p className="text-xs text-muted-foreground mb-4">Choose the room where you will take your form and wait.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {location.rooms.map((room, i) => (
+        {openRooms(location).map((room, i) => (
           <Card
             key={room}
             {...asButton(() => onConfirm(room, location), { labelledBy: `${ids}-${i}-name`, describedBy: [`${ids}-${i}-next`] })}
@@ -202,7 +212,7 @@ export function RoomSelect({ onConfirm, onBack }: RoomSelectProps) {
             <CardContent className="p-4">
               <h3 id={`${ids}-${i}-name`} className="font-cinzel text-sm text-foreground group-hover:text-primary transition-colors mb-1">{room}</h3>
               <p id={`${ids}-${i}-next`} className="text-[11px] text-muted-foreground">
-                Adjacent: {getAdjacentRooms(location, room).join(", ")}
+                Adjacent: {getAdjacentRooms(sealedView(location, initiallySealed(location)), room).join(", ")}
               </p>
             </CardContent>
           </Card>

@@ -84,25 +84,31 @@ export function effectiveStats(
 
 // ============================================================
 // MASS DECAY
-// A mimic that goes unfed loses 1 mass per MASS_DECAY_DAYS days (never below 1). The time
-// that's been charged for moves lastFedAt forward, so loading the mimic again doesn't charge
-// the same days twice.
+// A mimic that goes unfed loses 1 mass per MASS_DECAY_DAYS days (never below 1); an Eternal one,
+// only every ETERNAL_MASS_DECAY_DAYS (its reward: it outlasts hunger). The time that's been
+// charged for moves lastFedAt forward, so loading the mimic again doesn't charge the same days twice.
 // ============================================================
 export const MASS_DECAY_DAYS = 3;
+export const ETERNAL_MASS_DECAY_DAYS = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** How many days unfed cost a mimic 1 mass. */
+export function massDecayDays(character: Pick<MimicCharacter, "branchTier">): number {
+  return character.branchTier === "Eternal" ? ETERNAL_MASS_DECAY_DAYS : MASS_DECAY_DAYS;
+}
+
 export function massDecay(
-  mass: number, lastFedAt: string | null | undefined, now: Date = new Date(),
+  mass: number, lastFedAt: string | null | undefined, now: Date = new Date(), days: number = MASS_DECAY_DAYS,
 ): { massLost: number; mass: number; lastFedAt: string; daysAway: number } | null {
   if (!lastFedAt || mass <= 1) return null;
   const fed = new Date(lastFedAt).getTime();
   const daysAway = (now.getTime() - fed) / DAY_MS;
-  const massLost = Math.min(Math.floor(daysAway / MASS_DECAY_DAYS), mass - 1);
+  const massLost = Math.min(Math.floor(daysAway / days), mass - 1);
   if (massLost <= 0) return null;
   return {
     massLost,
     mass: mass - massLost,
-    lastFedAt: new Date(fed + massLost * MASS_DECAY_DAYS * DAY_MS).toISOString(),
+    lastFedAt: new Date(fed + massLost * days * DAY_MS).toISOString(),
     daysAway: Math.floor(daysAway),
   };
 }
@@ -122,7 +128,7 @@ export function welcomeBack(
 } {
   let changes: Partial<MimicCharacter> = {};
   let massDecayNotice: string | null = null;
-  const decay = massDecay(character.mass, character.lastFedAt, now);
+  const decay = massDecay(character.mass, character.lastFedAt, now, massDecayDays(character));
   // The decay-free stretch starts the first time a mimic is opened (older saves included)...
   if (!character.decayFreeDate) changes = { decayFreeDate: now.toISOString() };
   if (decay) {
@@ -276,15 +282,22 @@ export function becomePrimordial(
 
 /** The Tear in Time's rare visitor, who opened it: eating them is A Stitch in Time. */
 export const TIME_CASTER = "Time Caster";
+/** The Long After's rare visitor, overseeing the dig until it's done: eating them is Closing Time. */
+export const CURATOR = "The Curator";
 
 /**
  * What eating `member` adds to the records the branch tiers keep: the Tear in Time's counter
- * (see withTimeTear), and whether this was the Time Caster. Pass them unmasked.
+ * (see withTimeTear), and whether this was the Time Caster or the Curator. Pass them unmasked.
  */
 export function branchMealRecords(
   character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
-): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten">> {
-  return { timeTearCounter: withTimeTear(character, member), ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}) };
+): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten" | "curatorEaten">> {
+  return {
+    timeTearCounter: withTimeTear(character, member),
+    ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}),
+    // Only while they're still at the dig: once it's done, they've gone (see Turn.dig)
+    ...(member.name === CURATOR ? { curatorEaten: true } : {}),
+  };
 }
 
 /** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
@@ -304,12 +317,12 @@ export const CANNIBAL_MIMICS = 10;
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
   "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler" |
-  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime";
+  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime" | "closingTime";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
   "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed" |
-  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten">;
+  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten" | "curatorEaten">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -445,6 +458,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: `At the Apex, go ${ETERNAL_DECAY_FREE_DAYS} days without losing any mass to hunger, and become Eternal.`,
     flavor: (n) => `${n} has outlasted hunger itself. Kingdoms will fall around it, and it will still be waiting.`,
     isEarned: (c) => c.branchTier === "Eternal",
+  },
+  {
+    id: "closingTime", name: "Closing Time", icon: "🏛️", hidden: true,
+    description: "At the Long After, eat the Curator before the dig is done and they leave. They don't come by often, and they are absurdly lucky.",
+    flavor: (n) => `The museum never did get its exhibit. ${n} is the exhibit.`,
+    isEarned: (c) => c.curatorEaten,
   },
   {
     id: "primordial", name: "Primordial", icon: "🌋", hidden: true,

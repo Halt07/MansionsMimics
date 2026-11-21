@@ -119,6 +119,7 @@ wide, but if one fails once, rerun before assuming a bug.
 | `spellOrSweet.test.mjs` | Spell or Sweet Street: the procession, answering the door, costumes |
 | `foundersFair.test.mjs` | The Founders' Fair: fireworks, the crate rummage |
 | `stargazersHill.test.mjs` | Stargazers' Hill: falling stars and the party running for them |
+| `theLongAfter.test.mjs` | The Long After: Eternal's ground, the dig opening sealed rooms, the lucky Curator |
 | `tearInTime.test.mjs` | The Tear in Time: who it opens to, its roster, strays and the Time Caster, becoming Primordial, kept out of the Codex, the eruption |
 | `branchTiers.test.mjs` | The branch tiers past Apex: taking Eternal, Primordial or Sovereign, losing Sovereign, one branch at a time |
 | `achievements.test.mjs` | Achievements and thresholds (and the hidden ones, listed only once earned), every material and trait being learnable, lifetime stats |

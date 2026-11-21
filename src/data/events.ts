@@ -289,6 +289,48 @@ export function uneatenRemains(party: readonly PartyMember[]): PartyMember[] {
 }
 
 // ============================================================
+// THE LONG AFTER: THE DIG
+// Some rooms start sealed (buried, or grown over) and open one every few turns. While sealed they
+// aren't part of the hunt at all: the hunt's location is a view of the place without them (see
+// sealedView), so movement, distances, luring, relocating and where everyone starts all leave
+// them alone, and the Codex and the report still see the whole place.
+// ============================================================
+/** The rooms a location's dig keeps sealed when a hunt begins. */
+export function initiallySealed(location: Pick<HuntLocation, "dig">): RoomName[] {
+  return (location.dig?.stages.flat() ?? []) as RoomName[];
+}
+
+/** The rooms a hunt can start in: everything not sealed. */
+export function openRooms(location: HuntLocation): RoomName[] {
+  const sealed = initiallySealed(location);
+  return location.rooms.filter(r => !sealed.includes(r));
+}
+
+/** The location as the hunt sees it with these rooms sealed: without them, or any way into them. */
+export function sealedView(location: HuntLocation, sealed: readonly RoomName[]): HuntLocation {
+  if (sealed.length === 0) return location;
+  const open = (r: RoomName) => !sealed.includes(r);
+  const roomGraph = Object.fromEntries(
+    Object.entries(location.roomGraph).filter(([r]) => open(r as RoomName)).map(([r, next]) => [r, (next ?? []).filter(open)]),
+  ) as HuntLocation["roomGraph"];
+  return { ...location, rooms: location.rooms.filter(open), roomGraph };
+}
+
+/** The dig opens a room this turn (every `every` turns, while any are sealed). */
+export function digDue(location: Pick<HuntLocation, "dig">, turn: number, sealed: readonly RoomName[]): boolean {
+  return !!location.dig && sealed.length > 0 && turn > 0 && turn % location.dig.every === 0;
+}
+
+/** The next room the dig opens: from the earliest stage with any still sealed (at random within it). */
+export function nextOpened(location: Pick<HuntLocation, "dig">, sealed: readonly RoomName[], random: () => number = Math.random): RoomName | null {
+  for (const stage of location.dig?.stages ?? []) {
+    const left = stage.filter(r => sealed.includes(r as RoomName)) as RoomName[];
+    if (left.length) return left[Math.floor(random() * left.length)];
+  }
+  return null;
+}
+
+// ============================================================
 // THE TEAR IN TIME: THE ERUPTION
 // Each hunt may (location.eruption.chance) see the volcano erupt, once, on a turn picked when the
 // hunt starts, with a warning the turn before. The crater room's occupants are killed outright;
@@ -349,7 +391,7 @@ export function eruptionToll(
 // them the Elder. Rivals hide in separate rooms, eat adventurers who wander in, and
 // are exposed when the mimic moves into their room.
 // ============================================================
-export type RivalKind = "lone" | "nest" | "elder";
+export type RivalKind = "lone" | "nest" | "elder" | "small";
 
 /**
  * What a rival mimic is posing as once it's found (its marker on the room map), and the mimic
@@ -389,6 +431,8 @@ export const RIVAL_STATS: Record<RivalKind, { dice: number; ap: number; name: st
   lone:  { dice: 3, ap: 12, name: "rival mimic" },
   nest:  { dice: 3, ap: 6,  name: "nest mimic" },
   elder: { dice: 5, ap: 18, name: "Elder Mimic" },
+  // Woken by the Long After's dig, dormant in the Treasury since the court fell
+  small: { dice: 3, ap: 6,  name: "small mimic" },
 };
 
 /** The kinds of rival in a nest: the Elder plus 2–3 younger mimics (per the location's range). */

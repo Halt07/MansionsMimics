@@ -46,6 +46,8 @@ export interface HuntState {
   starFragment: RoomName | null;
   /** The Tear in Time: the turn the volcano erupts, while it hasn't yet (null if it won't, or has). */
   eruptionTurn: number | null;
+  /** The Long After: rooms the dig hasn't opened yet. */
+  sealedRooms: readonly RoomName[];
   /** Everyone in your room is watching fireworks right now. */
   skyward: boolean;
 }
@@ -66,7 +68,7 @@ export function huntState(
     location: hunt?.location ?? location, mimicRoom: hunt?.mimicRoom ?? null, party: hunt?.party ?? [],
     activeAdventurers: hunt ? activeAdventurers(hunt) : [], creatures: hunt?.creatures ?? [], rivals: hunt?.rivals ?? [],
     isBountyHunt: hunt?.bounty ?? false, huntOver, actionCount: hunt?.actionCount ?? 0, acting,
-    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null, eruptionTurn: hunt?.eruptionTurn ?? null,
+    huntTurn: hunt?.turn ?? 0, fireworksRoom: hunt?.fireworksRoom ?? null, starFragment: hunt?.starFragment ?? null, eruptionTurn: hunt?.eruptionTurn ?? null, sealedRooms: hunt?.sealedRooms ?? [],
     skyward: !!hunt && skyward(hunt),
   };
 }

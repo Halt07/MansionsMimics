@@ -38,4 +38,12 @@ export default async function ({ gameData: m, ok }) {
     'losing mass to decay starts it over, from the last loss (a day ago here, not today)');
   ok(m.decayFreeDays(undefined, now) === 0 && m.decayFreeDays(ago(-1), now) === 0, 'no stretch, or one dated ahead, counts as 0 days');
   ok(m.ETERNAL_DECAY_FREE_DAYS === 45, 'Eternal will ask for 45 days');
+
+  // ---------- Eternal: hunger comes four times slower ----------
+  ok(m.massDecayDays({ branchTier: 'Eternal' }) === 12 && m.massDecayDays({ branchTier: null }) === 3 && m.massDecayDays({ branchTier: 'Sovereign' }) === 3, 'an Eternal mimic loses mass every 12 days unfed (everyone else, every 3)');
+  const eternal = { ...base, tier: 'Apex', branchTier: 'Eternal', mass: 60, lastFedAt: ago(13) };
+  const slow = m.welcomeBack(eternal, { now, day });
+  ok(slow.character.mass === 59 && slow.massDecayNotice?.includes('diminished by 1'), 'away 13 days: an Eternal mimic has lost just 1 mass (anyone else, 4)');
+  ok(!m.welcomeBack({ ...eternal, lastFedAt: ago(11) }, { now, day }).changes.mass, '…and nothing at all for 11 days');
+  ok(m.welcomeBack({ ...eternal, branchTier: null }, { now, day }).character.mass === 56, '(the same mimic, not Eternal: 4 mass)');
 }
