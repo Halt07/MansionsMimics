@@ -155,6 +155,9 @@ export default async function ({ gameData: m, ok }) {
   ok(m.skyward({ ...tossed.hunt, mimicRoom: gate }), 'skyward: everyone under the volley is looking up');
   const slipped = m.relocate(hunt({ location: fair, mimicRoom: gate, party: [], turn: fair.fireworks.every - 1 }), crate, nextToGate, opts(0));
   ok(slipped.hunt.fireworksRoom === gate && slipped.hunt.mimicRoom === nextToGate && slipped.hunt.suspicion === 1, '…but one that just slipped out from under it isn\'t');
+  const gazer = member('Gazer', { location: gate });
+  const underFireworks = m.strike(hunt({ location: fair, mimicRoom: gate, fireworksRoom: gate, party: [gazer] }), mimic({ adhesion: 6 }), opts(0));
+  ok(said(underFireworks, 'Gazer is staring up at the fireworks, mouth open, right next to you'), 'under the volley, a Strike reaches someone unlured, staring up at the fireworks');
   const luredAtGate = member('Lured', { location: gate, isAttracted: true });
   const thrownOut = m.wait(hunt({ location: fair, mimicRoom: gate, party: [luredAtGate], turn: fair.fireworks.every - 1 }), crate, opts(0));
   ok(said(thrownOut, 'heave you out') && thrownOut.hunt.party[0].location === gate && !thrownOut.hunt.party[0].isAttracted, 'thrown out: whoever you had lured stays behind, no longer lured');

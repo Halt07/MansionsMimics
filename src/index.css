@@ -793,6 +793,19 @@
   text-shadow: 0 1px 0 rgb(255 255 255 / 0.15);
 }
 
+/* A device pressed into the wax (the Crown's 👑). Emoji ignore `color`, so the glyph itself is made
+   transparent and its first text-shadow paints it in one wax-dark color; the offset shadows behind
+   give the pressed-in edge: a highlight below, a shade above. */
+.report-seal--emblem {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.4rem;
+  color: transparent;
+  text-shadow:
+    0 0 0 rgb(72 9 5 / 0.88),
+    0 1px 0 rgb(255 170 150 / 0.28),
+    0 -1px 0 rgb(0 0 0 / 0.45);
+}
+
 /* Rubber stamp, slapped on at an angle */
 .report-stamp {
   position: absolute;

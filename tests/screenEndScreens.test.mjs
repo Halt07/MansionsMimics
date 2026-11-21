@@ -46,6 +46,12 @@ export default async function ({ gameData: m, load, ok }) {
   ok(museum.querySelector('.report-paper--placard') && museum.querySelector('.report-wall--museum') && !museum.querySelector('.report-nail') && !museum.querySelector('.report-seal'),
     'at the Long After: a museum placard on a gallery wall (no nails, no Guild seal)');
   ok(!placard.quote || museum.textContent.includes(`— recorded from ${placard.quote.by}`), '…its witness "recorded from", like a museum label');
+  const crowned = m.buildHuntReport({ ending: 'cleared', party: [{ name: 'Herald', isConsumed: true }], seed: 3, locationName: 'The Hollow Court', locationId: 'hollow_court',
+    lastRoom: 'Throne Hall', formName: 'Throne', tier: 'Apex', mimicName: 'K', bounty: false, peakSuspicion: 2, biggestMeal: null, mimicsDevoured: 0, sank: false });
+  const { container: crown } = s.show(HuntOverPanel, { report: crowned, ...over });
+  ok(crown.querySelector('.report-seal.report-seal--emblem')?.textContent === '👑', 'by order of the Crown: a crown pressed into the wax seal');
+  const guildNotice = report('discovered', [{ name: 'Greedy Rogue' }]);
+  ok(!guildNotice.seal && s.show(HuntOverPanel, { report: guildNotice, ...over }).container.querySelector('.report-seal')?.textContent === 'G', '…the Guild\'s notices keep their G');
 
   // ---------- found out ----------
   const caught = report('discovered', [{ name: 'Greedy Rogue' }]);

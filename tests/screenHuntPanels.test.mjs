@@ -7,7 +7,7 @@ import { setup, spy, mimic } from './screen.mjs';
 
 export default async function ({ gameData: m, load, ok }) {
   const s = await setup(load);
-  const { FormSwitcher, RelocatePanel, MealsHere } = await load('/src/components/game/hunt/HuntPanels.tsx');
+  const { FormSwitcher, RelocatePanel, MealsHere, MinionPanel } = await load('/src/components/game/hunt/HuntPanels.tsx');
   const user = userEvent.setup();
   const opts = { random: () => 0.5, now: new Date('2026-05-15T12:00:00Z') };
   const loc = (id) => m.LOCATIONS.find((l) => l.id === id);
@@ -90,4 +90,15 @@ export default async function ({ gameData: m, load, ok }) {
   ok(has('Roasted in the Ash') && button('Cave Painter')?.textContent.includes('🍖') && !has('Frozen Solid'), 'a roasted adventurer in your room is a meal too, under Roasted in the Ash');
   await user.click(button('Cave Painter'));
   ok(ash.onEatRemains.calls[0][0].id === 'roast', '…clicking it eats them');
+
+  // ---------- minions waiting to be placed (the Hollow Court) ----------
+  const onPlace = spy();
+  const { container: none } = s.show(MinionPanel, { waiting: 0, rooms: ['Shrine'], disabled: false, onPlace });
+  ok(none.innerHTML === '', 'no minion waiting: no panel');
+  s.show(MinionPanel, { waiting: 2, rooms: ['Shrine', 'Treasury'], disabled: false, onPlace });
+  ok(has('2 subjects await your command') && screen.getByRole('button', { name: 'Place a minion in the Shrine' }), 'minions waiting: how many, and a button for each room it can go');
+  await user.click(screen.getByRole('button', { name: 'Place a minion in the Treasury' }));
+  ok(onPlace.calls.length === 1 && onPlace.calls[0][0] === 'Treasury', '…clicking one places it there');
+  s.show(MinionPanel, { waiting: 1, rooms: [], disabled: false, onPlace });
+  ok(has('Nowhere to put it right now'), '…and when nowhere is free, it says so');
 }

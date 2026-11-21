@@ -1756,6 +1756,8 @@ export type PartyMember = Omit<AdventurerTemplate, "type" | "group"> & {
   tarStuck?: number;
   /** Sank into the tar: gone, with nothing left to eat. */
   isSunk?: boolean;
+  /** Eaten by one of the mimic's minions (the Hollow Court), not by the mimic itself. */
+  byMinion?: boolean;
   /**
    * In costume (see dressParty): `name` is the costume; who they really are stays hidden until
    * eaten. When the two are the same, it isn't a costume at all (a real werewolf).

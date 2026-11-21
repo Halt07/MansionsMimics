@@ -67,7 +67,11 @@ Object.defineProperty(dom.window, 'localStorage', {
   },
 });
 // Loaded after the page exists: Testing Library binds `screen` to document.body when it loads
-const { cleanup } = await import('@testing-library/react');
+const { cleanup, configure } = await import('@testing-library/react');
+// findBy… and waitFor give up after 1 second by default, which a busy full run (every file, back to
+// back) can overshoot, failing a check that passes on its own. A longer limit costs nothing when
+// things appear quickly: they return as soon as they do.
+configure({ asyncUtilTimeout: 5000 });
 
 // Use the app's own Vite config, whatever its extension
 const configFile = ['vite.config.mjs', 'vite.config.js', 'vite.config.ts']

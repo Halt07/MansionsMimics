@@ -127,7 +127,6 @@ export function eliteSlots(tier: Tier): number {
 export function generateParty(location: HuntLocation, mimicTier: Tier, mimicMass: number, random: () => number = Math.random): PartyMember[] {
   const [min, max] = location.partySize;
   const size = min + Math.floor(random() * (max - min + 1));
-  const tierIdx = TIER_ORDER.indexOf(mimicTier || "Minor");
 
   // A location's real monsters only ever join through addRealMonster, never the normal draw
   const held = heldBack(location);

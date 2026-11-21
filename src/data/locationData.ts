@@ -147,6 +147,12 @@ interface LocationDef {
     readonly champion: string;
     readonly finalEscort: number;
     readonly suspicion: number;
+    /**
+     * Mimics of your own: one to place when the hunt begins and one with each wave. Never in
+     * `bannedRooms`, one to a room. Each eats up to `meals` who wander in (you get `apShare` of
+     * their AP), then the crusade destroys it. See placeMinion and Turn.minionsFeed.
+     */
+    readonly minions?: { readonly bannedRooms: readonly string[]; readonly meals: number; readonly apShare: number };
   };
   /**
    * Adventurers already lurking when the hunt begins, never in the ordinary party draw: `count`
@@ -242,6 +248,8 @@ const LOCATION_DATA = [
       "Innkeeper's Quarters":["Kitchen", "Guest Rooms"],
     },
     partySize: [4, 6], suspicionGrowthRate: 1,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Comfort", "Social", "Storage", "Hospitality"],
     imageHint: "dark cozy haunted inn at night",
     locationCreatures: [
@@ -265,6 +273,8 @@ const LOCATION_DATA = [
       "Cemetery":   ["Narthex"],
     },
     partySize: [3, 5], suspicionGrowthRate: 2,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Religious", "Structural", "Valuable"],
     imageHint: "dark gothic chapel ruins",
     locationCreatures: [
@@ -591,6 +601,8 @@ const LOCATION_DATA = [
       "Boggy Hollow":         ["Peat Stack", "Moorland Path South"],
     },
     partySize: [2, 4], suspicionGrowthRate: 2,
+    // One place in every party goes to something that haunts it (see nativeShare)
+    nativeShare: 1,
     advantageTags: ["Structural", "Rural", "Comfort"],
     imageHint: "isolated stone bothy on a dark foggy moorland at night",
     locationCreatures: [
@@ -843,7 +855,9 @@ const LOCATION_DATA = [
     exclusiveRoster: true,
     branch: "Sovereign",
     // The crusade comes in waves, the Siege Champion leading the last
-    siege: { every: 5, waves: 5, size: [2, 3], entry: "Gatehouse", champion: "The Siege Champion", finalEscort: 4, suspicion: 1 },
+    siege: { every: 5, waves: 5, size: [2, 3], entry: "Gatehouse", champion: "The Siege Champion", finalEscort: 4, suspicion: 1,
+      // Your subjects: never in the choke points, where they'd eat whole waves at the door
+      minions: { bannedRooms: ["Gatehouse", "Courtyard", "Great Hall"], meals: 2, apShare: 0.5 } },
     lurkers: { name: "Moat Serpent", rooms: ["Western Moat", "Eastern Moat"], count: [1, 2] },
     // A Serpent left alive batters through the wall beside its moat
     breach: { turn: 10, by: "Moat Serpent", walls: { "Western Moat": "Barracks", "Eastern Moat": "Shrine" }, extra: [1, 2] },

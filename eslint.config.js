@@ -36,7 +36,8 @@ export default tseslint.config(
       "react/jsx-uses-react": "error",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
-        "warn",
+        // An error, not a warning: `npm run lint` runs --quiet, which would hide a warning
+        "error",
         {
           vars: "all",
           varsIgnorePattern: "^_",
@@ -66,7 +67,8 @@ export default tseslint.config(
       "no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
-        "warn",
+        // An error, not a warning: `npm run lint` runs --quiet, which would hide a warning
+        "error",
         { vars: "all", varsIgnorePattern: "^_", args: "after-used", argsIgnorePattern: "^_" },
       ],
     },

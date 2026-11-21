@@ -152,4 +152,24 @@ export default async function ({ gameData: m, ok, log }) {
   ok(!placards.some((r) => text(r).includes('did not return')), '…and with the Curator never at the dig, no word of them');
   const curated = m.buildHuntReport({ ...ruin, ending: 'cleared', party: [...dig, member('The Curator', { isConsumed: true })] });
   ok(curated.body.some((p) => p.includes('its Curator, who oversaw the dig in person, did not return')), 'eating the Curator: the museum regrets they did not return');
+
+  // ---------- too many to name: regiments ----------
+  ok(m.namesOrRegiments(['the Herald', 'the Knight']) === 'the Herald and the Knight' && m.REGIMENT_SIZE === 8, 'a handful of people are named');
+  ok(m.namesOrRegiments(Array.from({ length: 9 }, (_, i) => `the Knight ${i}`)) === 'A regiment' && m.namesOrRegiments(Array.from({ length: 17 }, () => 'x')) === 'Two regiments',
+    'past eight, they\'re counted in regiments (about one per eight)');
+  const horde = Array.from({ length: 14 }, (_, i) => member(`Footsoldier ${i}`, { fled: true }));
+  const guildHorde = m.buildHuntReport({ ...base, ending: 'discovered', party: horde, peakSuspicion: 10 });
+  ok(guildHorde.fields.find((f) => f.label === 'Survivors').value === 'Two regiments', '…so a notice doesn\'t list fourteen names');
+
+  // ---------- the Hollow Court: told by the crusade ----------
+  const court = { ...base, locationId: 'hollow_court', locationName: 'The Hollow Court', formName: 'Throne', tier: 'Apex', lastRoom: 'Throne Hall' };
+  const lost = m.buildHuntReport({ ...court, ending: 'discovered', party: [member('Herald'), member('Crusader Knight', { isConsumed: true })], peakSuspicion: 10 });
+  ok(lost.heading === 'Proclamation of the Crusade' && lost.stamp === 'Victory' && /Fallen|Won|Victorious/.test(lost.title), 'found out at your own court: the crusade proclaims its victory');
+  ok(!/Guild|ten-foot/.test(text(lost)), '…in its own words, not the Guild\'s');
+  const tellings = [['cleared', [member('Herald', { isConsumed: true })]], ['cleared', [member('Herald', { isConsumed: true }), member('Dragon-Slayer', { fled: true })]], ['abandoned', [member('Herald')]]]
+    .map(([ending, party]) => m.buildHuntReport({ ...court, ending, party }));
+  ok(tellings[0].title === 'The Crusade Never Returned' && tellings[1].heading === 'A Lament for the Crusade' && tellings[2].title === 'The Siege Is Lifted', '…and the court still standing: the crusade never returned, a lament, or the siege lifted');
+  const routed = m.buildHuntReport({ ...court, ending: 'discovered', party: Array.from({ length: 20 }, (_, i) => member(`Crusader ${i}`, { isConsumed: i < 10 })), peakSuspicion: 10 });
+  ok(routed.fields.find((f) => f.label === 'Fallen').value.startsWith('A regiment') && routed.fields.find((f) => f.label === 'Victorious').value === 'A regiment', 'a whole siege\'s worth: counted in regiments');
+  ok(tellings[0].seal === '👑' && tellings[0].signoff === 'By order of the Crown' && !lost.seal, 'a notice by order of the Crown is sealed with a crown (the rest keep the Guild\'s G)');
 }

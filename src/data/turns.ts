@@ -15,12 +15,12 @@ import {
   initiallySealed, sealedView, unmask, type RivalMimic,
 } from "./events";
 import { formsStillAllowed, formTier } from "./forms";
-import { skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
+import { minionRooms, skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
 import type { HuntLocation, RoomName } from "./locationData";
 import { resolveLure } from "./lure";
 import { BOUNTY_START_SUSPICION, startHunt } from "./mealPrep";
 import { ALL_FORMS, type Form } from "./mimicData";
-import { VANISHING_LINES, isStationary, moveCreatures, moveParty, rivalAteFirst } from "./movement";
+import { VANISHING_LINES, isStationary, moveCreatures, moveParty, notices, rivalAteFirst } from "./movement";
 import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, becomePrimordial, branchMealRecords, lureRange, withBiggestMeal, withFormUsed } from "./stats";
 import {
   COLLAPSE_BONUS_AP, LUCKY_WANDER_CHANCE, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
@@ -47,6 +47,8 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     suspicion: start.suspicion, bounty: start.bounty, sickness: start.sickness,
     actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, eruptionTurn: start.eruptionTurn, ending: null,
     ...(sealedRooms.length ? { sealedRooms } : {}),
+    // The Hollow Court: one of your subjects is there from the start, waiting to be placed
+    ...(location.siege?.minions ? { minionsToPlace: 1, minions: [] } : {}),
     stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null,
     seed: Math.floor(random() * 2 ** 31), recorded: false,
   };
@@ -67,7 +69,7 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     t.alert(`The hunters enter with weapons drawn. Suspicion starts at ${BOUNTY_START_SUSPICION}.`);
   } else {
     t.info(`You settle into the ${room} of ${the(location.name)}, perfectly still.`);
-    t.system(`${party.length} adventurers are exploring the premises.`);
+    t.system(`${party.length} adventurers are exploring nearby.`);
   }
   if (burned.location) t.alert(`🔥 Word of your last hunt here has spread. Everyone is on edge. (+${BURN_SUSPICION} suspicion)`);
   if (burned.form && startForm) t.alert(`🔥 The survivors described a ${startForm.name} that moved. People are watching for one. (+${BURN_SUSPICION} suspicion)`);
@@ -78,7 +80,7 @@ export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: 
     t.alert(`The air is thick with hunger. Others of your kind nest here — and one of them is old. Very old.`);
     t.alert(`Find the Elder Mimic and devour it. Watch where the adventurers vanish: something hungry hides there.`);
   } else if (rivals.length > 0) {
-    t.alert(`Something feels wrong. Another predator lurks within these walls — and it is not you.`);
+    t.alert(`Something feels wrong. Another predator lurks nearby — and it is not you.`);
   }
   if (hasMagic(character.currentAppearance, "Soulglass")) t.senseRival();
   t.info(`Small creatures scurry about: ${creatures.map(c => c.name).join(", ")}.`);
@@ -125,10 +127,26 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
 
   t.countAction();
   t.raise(1);
-  // Anyone already in the room gets a look at you
-  t.stealth(hunt.party.filter(a => stillInHunt(a) && a.location === targetRoom));
+  // Anyone already in the room gets a look at you (not a Moat Serpent, down in the water: see notices)
+  t.stealth(hunt.party.filter(a => notices(a) && a.location === targetRoom));
   t.react("relocate", { fromRoom });
   t.endTurn();
+  return t.finish();
+}
+
+// ---------- Minions (the Hollow Court) ----------
+
+/**
+ * Place a waiting minion in `room` (see minionRooms for where it can go). It takes no turn. If a
+ * Moat Serpent is down in that moat, the minion goes straight for it.
+ */
+export function placeMinion(hunt: Hunt, character: MimicCharacter, room: RoomName, opts: TurnOptions = {}): TurnResult {
+  const t = new Turn(hunt, character, opts);
+  if (!hunt.minionsToPlace || !minionRooms(hunt).includes(room)) return t.finish();
+  const minion = { id: `minion_${(hunt.minions ?? []).length}`, room, meals: 0, destroyed: false };
+  t.set({ minions: [...(hunt.minions ?? []), minion], minionsToPlace: hunt.minionsToPlace - 1 });
+  t.info(`🫥 One of your subjects settles into the ${room}, and goes still. It will take whoever wanders in.`);
+  t.minionsFeed();
   return t.finish();
 }
 
@@ -232,7 +250,12 @@ export function strike(hunt: Hunt, character: MimicCharacter, opts: TurnOptions 
   // A Strike that lands on someone stirs the mimic (the spiderweb starts over); one with nothing to strike takes no turn
   t.stir();
   t.set({ actionCount: 0 });
-  if (!target.isAttracted) t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+  // Not lured, yet in reach: say why (stuck in the tar says so itself, in the Strike's own line)
+  if (!target.isAttracted && target.behavior === "unshakeable") {
+    t.info(`${target.name} stands their ground right beside you. There's no luring this one: you go for them.`);
+  } else if (!target.isAttracted && target.tarStuck === undefined && skyward(hunt)) {
+    t.info(`🎆 ${target.name} is staring up at the fireworks, mouth open, right next to you.`);
+  }
   const seen = strikeWitnesses(hunt.party, target, mimicRoom, looking);
   t.react("strike", { excludeIds: [target.id] });
   // Heard lunging and found out: you flee before the attack lands
@@ -335,7 +358,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
       t.escape(`Badly shaken, ${target.name} runs for the door, but it won't budge under the drifts!`);
       boltAway(t, target, bite.targetSuspicion, bite.hits);
     } else if (bite.ending === "flees") {
-      t.escape(`Badly shaken, ${target.name} turns and flees the building!`);
+      t.escape(`Badly shaken, ${target.name} turns and flees, and doesn't come back!`);
       t.patchMember(target.id, () => ({ isAlive: false, fled: true }));
     } else {
       t.patchMember(target.id, a => ({ isAttracted: false, suspicion: a.suspicion + bite.targetSuspicion, hitsTaken: bite.hits }));
@@ -360,7 +383,7 @@ function strikeBite(t: Turn, target: PartyMember, form: Form, dice: number, seen
     t.escape(`${target.name} has had enough and claws at the door, but the snow has sealed it shut!`);
     boltAway(t, target, bite.targetSuspicion, bite.hits);
   } else if (bite.ending === "flees") {
-    t.escape(`${target.name} has had enough — they flee the building entirely!`);
+    t.escape(`${target.name} has had enough — they run for it, and don't stop running!`);
     t.patchMember(target.id, () => ({ isAlive: false, isConsumed: false, fled: true }));
   } else if (bite.ending === "collapses") {
     t.consume(`${target.name} collapses from their wounds. You finish the meal. +${COLLAPSE_BONUS_AP} AP bonus.`);
@@ -460,7 +483,11 @@ function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, s
       t.alert(t.pick(glimpses));
     }
   } else {
-    t.consume(`The last of the party is gone. No one remains to grow suspicious.`);
+    // At the Hollow Court the crusade isn't done while waves are still to come
+    const siege = t.hunt.location.siege;
+    t.consume(siege && (t.hunt.wavesArrived ?? 0) < siege.waves
+      ? `The court is quiet, for now. The next wave is coming.`
+      : `The last of the party is gone. No one remains to grow suspicious.`);
   }
   t.react("feed", { excludeIds: [target.id] });
   if (learning.newMaterials.length > 0) t.evolve(`New materials absorbed: ${learning.newMaterials.join(", ")}!`);

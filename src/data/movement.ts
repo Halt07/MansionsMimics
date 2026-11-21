@@ -24,6 +24,25 @@ export function isStationary(adventurer: Pick<PartyMember, "behavior" | "tarStuc
   return adventurer.behavior === "stoneWatch" || adventurer.tarStuck !== undefined || !!adventurer.stationary;
 }
 
+/**
+ * Who a Relocate has to slip past unseen: everyone still in the hunt, except a stationary lurker
+ * (a Moat Serpent, down in the murky water, never notices a mimic sliding in or out). The Gargoyle's
+ * stone watch is different: it always counts.
+ */
+export function notices(member: PartyMember): boolean {
+  return stillInHunt(member) && !member.stationary;
+}
+
+/**
+ * Where a Relocate can go from `mimicRoom`: the rooms next door with nobody in them who'd notice
+ * (see notices). None at all while someone who'd notice shares the mimic's room.
+ */
+export function relocateRooms(location: HuntLocation, party: readonly PartyMember[], mimicRoom: RoomName): RoomName[] {
+  const watched = (room: RoomName) => party.some(a => notices(a) && a.location === room);
+  if (watched(mimicRoom)) return [];
+  return getAdjacentRooms(location, mimicRoom).filter(room => !watched(room));
+}
+
 /** The adjacent room that brings `fromRoom` closest to `targetRoom` (or fromRoom if already there). */
 export function stepToward(location: HuntLocation, fromRoom: RoomName, targetRoom: RoomName): RoomName {
   if (fromRoom === targetRoom) return fromRoom;

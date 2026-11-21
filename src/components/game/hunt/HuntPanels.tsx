@@ -69,6 +69,43 @@ export function RelocatePanel({ rooms, onRelocate }: { rooms: readonly RoomName[
   );
 }
 
+/**
+ * The Hollow Court: a minion (or more) waiting to be placed, and where it can go. Placing one takes
+ * no turn; it can wait for later.
+ */
+export function MinionPanel({ waiting, rooms, disabled, onPlace }: {
+  waiting: number; rooms: readonly RoomName[]; disabled: boolean; onPlace: (room: RoomName) => void;
+}) {
+  if (waiting <= 0) return null;
+  return (
+    <div className="bg-violet-500/5 border border-violet-400/30 rounded-lg p-3 space-y-2">
+      <p className="text-[11px] text-violet-300 font-cinzel uppercase tracking-widest">
+        🫥 {waiting === 1 ? "A subject awaits your command" : `${waiting} subjects await your command`}
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        Place it in a room (not the Gatehouse, Courtyard or Great Hall). It can't move or lure, but it will take the first two who wander in: you get half of what they're worth. Placing it takes no turn.
+      </p>
+      {rooms.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">Nowhere to put it right now: every free room is watched, or taken.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {rooms.map(room => (
+            <button
+              key={room}
+              onClick={() => onPlace(room)}
+              disabled={disabled}
+              aria-label={`Place a minion in the ${room}`}
+              className={`${MEAL_BUTTON} border-violet-400/30 hover:border-violet-300/60 hover:text-violet-200`}
+            >
+              {room}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const MEAL_BUTTON = "disabled:opacity-50 disabled:pointer-events-none text-xs px-3 py-1.5 rounded border bg-card transition-all text-muted-foreground";
 
 interface MealsHereProps {

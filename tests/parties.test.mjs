@@ -26,9 +26,18 @@ export default async function ({ gameData: m, ok }) {
   const streetNames = runs(300, () => templateNames(m.generateParty(street, 'Apex', 40))).flat();
   ok(!streetNames.some((n) => street.realMonsters.names.includes(n)), 'the street\'s real monsters never join the normal way');
 
-  // …but elsewhere they join like anyone else: the Swamp Hag haunts the Lonely Moor
+  // …but elsewhere they join like anyone else: the Swamp Hag haunts the Lonely Moor. With a place
+  // in every party saved for the moor's own four haunts, she's in about 1 party in 4
   const moorNames = runs(300, () => templateNames(m.generateParty(loc('lonely_moor'), 'Apex', 30))).flat();
   ok(moorNames.includes('Swamp Hag'), 'the Swamp Hag turns up on the Lonely Moor through the normal draw');
+
+  // The haunted places always have something haunting them: one place in every party is saved for their own
+  for (const [id, tier, mass] of [['lonely_moor', 'Apex', 30], ['haunted_inn', 'Minor', 2], ['cursed_chapel', 'Minor', 2], ['haunted_inn', 'Apex', 30]]) {
+    const place = loc(id);
+    const own = m.ADVENTURER_TEMPLATES.filter((t) => t.locations?.includes(id)).map((t) => t.name);
+    const parties = runs(200, () => templateNames(m.generateParty(place, tier, mass)));
+    ok(place.nativeShare === 1 && parties.every((names) => names.some((n) => own.includes(n))), `${place.name} (${tier}): every party has one of its haunts in it`);
+  }
 
   // A seeded roll gives the same party
   const seeded = (seed) => () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
