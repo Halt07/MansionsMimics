@@ -11,9 +11,9 @@ export default async function ({ gameData: m, ok }) {
   const { ACHIEVEMENTS, CULT_CONVERSIONS, CANNIBAL_MIMICS } = m;
   const fresh = { hatboxToLegendReached: false, apexPeakReached: false, titanicFeastReached: false, downWithTheShipReached: false, conversions: 0, mimicsConsumed: 0, adventurersEaten: [], learnedMaterials: [], learnedTraits: [], formsUsed: [] };
   const earned = (c) => ACHIEVEMENTS.filter((a) => a.isEarned(c)).map((a) => a.id);
-  ok(ACHIEVEMENTS.length === 16 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 16, 'sixteen distinct achievements…');
+  ok(ACHIEVEMENTS.length === 17 && new Set(ACHIEVEMENTS.map((a) => a.id)).size === 17, 'seventeen distinct achievements…');
   const hidden = ACHIEVEMENTS.filter((a) => a.hidden).map((a) => a.id);
-  ok(hidden.join() === 'eternal,primordial,stitchInTime,rulerOfAllMimics', '…four of them hidden: one for each branch tier past Apex, and A Stitch in Time');
+  ok(hidden.join() === 'eternal,closingTime,primordial,stitchInTime,rulerOfAllMimics', '…five of them hidden: one for each branch tier past Apex, A Stitch in Time and Closing Time');
   ok(earned(fresh).length === 0, 'a new mimic has none');
   ok(CULT_CONVERSIONS === 3 && CANNIBAL_MIMICS === 10, 'Cult of Personality needs 3 conversions; Cannibal needs 10 mimics');
   ok(!earned({ ...fresh, conversions: 2 }).includes('cultOfPersonality') && earned({ ...fresh, conversions: 3 }).includes('cultOfPersonality'), 'Cult of Personality is earned at the 3rd conversion');

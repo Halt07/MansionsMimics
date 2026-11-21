@@ -321,7 +321,7 @@ export default function Game({ ceremonyStepMs = CEREMONY_STEP_MS }: {
     const earned = new Set(ACHIEVEMENTS.filter(a => a.isEarned(character)).map(a => a.id));
     if (earnedRef.current) {
       for (const a of ACHIEVEMENTS) {
-        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons", "seasonedTraveler", "stitchInTime"];
+        const announced: readonly string[] = ["connoisseur", "masterOfDisguise", "curiosityCabinet", "festive", "forAllSeasons", "seasonedTraveler", "stitchInTime", "closingTime"];
         if (announced.includes(a.id) && earned.has(a.id) && !earnedRef.current.has(a.id)) {
           addEvent("evolve", `${a.icon} ${a.name}! ${a.flavor(character.name)}`);
         }

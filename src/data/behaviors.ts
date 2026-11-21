@@ -123,6 +123,9 @@ export function getBehaviorReactions(
       case "elusive":
         // Handled when a Strike is resolved (extra resist die; bolts to another room instead of fleeing)
         return;
+      case "lucky":
+        // Handled when a Strike is resolved (extra resist die; a miss goes unnoticed)
+        return;
       case "devotion":
         // Doesn't react to individual actions; the game checks findDevotee() whenever the party changes
         return;

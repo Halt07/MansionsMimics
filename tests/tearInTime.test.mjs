@@ -17,7 +17,7 @@ export default async function ({ gameData: m, ok }) {
 
   // ---------- the place ----------
   ok(tear && tear.branch === 'Primordial' && tear.minTier === 'Apex' && tear.minMass === m.TIME_TEAR_MASS && tear.exclusiveRoster, 'the Tear in Time: Primordial\'s ground, Apex and 50 mass, its own roster');
-  ok(m.LOCATIONS.filter((l) => l.branch).length === 1, '…the only branch location so far');
+  ok(m.LOCATIONS.filter((l) => l.branch && l.branch === 'Primordial').length === 1, '…Primordial\'s only ground');
 
   // ---------- who it opens to ----------
   ok(!m.isLocationAvailable(tear, 'Apex', 200, null), 'never offered on tier and mass alone');

@@ -58,6 +58,15 @@ export default async function ({ gameData: m, load, ok }) {
   ok(at[next].dataset.distracted === 'true' && !at[here].dataset.distracted, 'rooms under the fireworks are flagged (they glow)');
   ok(within(at[far]).getByTitle('A fallen star fragment').textContent === '🌠', 'markers (a fallen star) appear in their room');
 
+  // ---------- the Long After: rooms the dig hasn't opened ----------
+  const ruin = m.LOCATIONS.find((l) => l.id === 'the_long_after');
+  const view = m.sealedView(ruin, m.initiallySealed(ruin));
+  const { container: dig } = s.show(RoomMap, { location: view, mimicRoom: 'Jungle Camp' });
+  const sealedCells = [...dig.querySelectorAll('.room-sealed')];
+  ok(sealedCells.length === 4 && dig.querySelectorAll('.room-cell:not(.room-sealed)').length === 4, 'sealed rooms keep their places on the map, apart from the open ones');
+  ok(sealedCells.filter((c) => c.textContent.includes('Buried')).length === 2 && sealedCells.filter((c) => c.textContent.includes('Overgrown')).length === 2 && !dig.textContent.includes('Throne Hall'),
+    '…shown as buried or overgrown, unnamed until they open');
+
   // ---------- a place nobody has mapped ----------
   const { container: fog } = s.show(MysteryMap, {});
   ok(screen.getByRole('img', { name: 'Unmapped. Hunt here to learn its rooms.' }) && !manor.rooms.some((r) => fog.textContent.includes(r)),

@@ -42,6 +42,7 @@ export default function LocationBanners() {
       {live && location.starfall && <StarfallBanner {...props} />}
       {live && location.snowbound && <SnowboundBanner {...props} />}
       {live && location.eruption && props.eruptionTurn === props.huntTurn + 1 && <EruptionBanner {...props} />}
+      {live && location.dig && props.sealedRooms.length > 0 && <DigBanner {...props} />}
       {live && location.tarPits && props.party.some(a => a.tarStuck !== undefined && stillInHunt(a)) && <TarBanner {...props} />}
       {/* The party gets bored and leaves (not when snowed in: the cold is the clock there) */}
       {!location.snowbound && actionsLeft <= ACTION_WARNING && (
@@ -135,6 +136,22 @@ function FireworksBanner({ location, huntTurn, fireworksRoom, activeForm, skywar
           ? `Everyone in the ${distractedRooms(location, fireworksRoom).join(", ")} is looking up: a meal there now has no witnesses${skyward ? ", and you can Strike anyone in your room without luring them first" : ""}.`
           : `The next volley goes up in ${turns(turnsUntil(every, huntTurn))}.`}
         {crate ? " The crew is short of rockets: a crate under the fireworks will get opened." : ""}
+      </Note>
+    </Banner>
+  );
+}
+
+// The Long After: how much is still sealed, when the next room opens, and whether the Curator is
+// still about (they leave once the last room is open)
+function DigBanner({ location, huntTurn, sealedRooms, party }: BannerProps) {
+  const dig = location.dig;
+  if (!dig) return null;
+  const overseer = dig.leaves && party.some(a => a.name === dig.leaves?.name && stillInHunt(a));
+  return (
+    <Banner tone="border-lime-500/30 bg-lime-500/5 text-lime-300/90" title={`⛏️ The dig: ${sealedRooms.length} ${plural(sealedRooms.length, "room")} still sealed`}>
+      <Note>
+        The next one opens in {turns(turnsUntil(dig.every, huntTurn))}.
+        {overseer ? ` ${dig.leaves?.name} is overseeing it, and will leave once the last room is open.` : ""}
       </Note>
     </Banner>
   );

@@ -1360,6 +1360,104 @@ export const ADVENTURER_TEMPLATES: readonly AdventurerTemplate[] = [
     partialLoot: ["a dog-eared spellbook full of crossed-out notes", "a wand that has never once worked", "a failed exam scroll, marked in red"],
   },
 
+  // ── The Long After (Eternal's hunting ground): the Hollow Court, lost to time ──
+  // They all prize what's old (Worn, Weathered, Dusty, Mossy) and distrust anything new-looking
+  // (Pristine, Polished): in a ruin, age is the best disguise
+  {
+    name: "Archaeologist", type: "Artificer", discipline: 5, baseSuspicion: 3, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Pristine", "Polished"] },
+    quirks: ["Brushes the dust off everything with a tiny brush", "Measures, sketches, then measures again"],
+    appliedQuirk: "{name} kneels by the {form} with a soft brush, sweeping away four thousand years of dust.",
+    // An ancient guild's seal is a find (like every artificer, they notice a Guild Mark)
+    alluringQualities: { materials: ["Granite", "Marble", "Limestone"], traits: ["Carved", "Etched", "Weathered", "Dusty", "Guild Mark"], tags: ["Knowledge", "Decor"] },
+    perceptionAffinity: { material: 3, structure: 4, weight: 1, text: 3, magical: 1, social: 1, spatial: 2, environmental: 2, acoustic: 1, presence: 2 },
+    lootMaterials: ["Granite", "Marble"],
+    lootTraits: ["Etched"],
+    partialLoot: ["a soft-bristled brush", "a page of careful sketches", "a wide-brimmed hat"],
+  },
+  {
+    name: "Relic-Digger", type: "Commoner", discipline: 3, baseSuspicion: 1, constitution: 3, interactionStyle: "touch",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Polished"] },
+    quirks: ["Digs first and asks questions never", "Whistles while shovelling"],
+    appliedQuirk: "{name} leans on a shovel beside the {form} and wipes their brow.",
+    alluringQualities: { materials: ["Iron", "Burlap"], traits: ["Worn", "Dusty", "Earthy"], tags: ["Storage"] },
+    perceptionAffinity: { material: 1, structure: 1, weight: 3, text: 0, magical: 0, social: 1, spatial: 1, environmental: 2, acoustic: 1, presence: 1 },
+    lootMaterials: ["Burlap"],
+    lootTraits: ["Earthy"],
+    partialLoot: ["a dented shovel", "a sack of potsherds", "a mud-caked boot"],
+  },
+  {
+    name: "Scavenger", type: "Rogue", discipline: 4, baseSuspicion: 3, constitution: 3, interactionStyle: "touch",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Pristine"] },
+    quirks: ["Pockets anything small enough to pocket", "Always one room ahead of the dig"],
+    appliedQuirk: "{name} tries the {form}'s lid, quietly, while nobody is looking.",
+    alluringQualities: { materials: ["Gold", "Silver"], traits: ["Thieves' Mark", "Locked", "Tarnished", "Dusty"], tags: ["Valuable"] },
+    perceptionAffinity: { material: 2, structure: 3, weight: 2, text: 0, magical: 0, social: 1, spatial: 3, environmental: 1, acoustic: 2, presence: 2 },
+    lootMaterials: ["Silver"],
+    lootTraits: ["Thieves' Mark"],
+    partialLoot: ["a pocketful of old coins", "a crowbar", "a sack with a hole in it"],
+  },
+  {
+    name: "Lorekeeper", type: "Bard", discipline: 4, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Polished"] },
+    quirks: ["Collects the old stories", "Believes every legend except the one about chests with teeth"],
+    appliedQuirk: "{name} reads the old carvings around the {form} aloud, and laughs at the part about the Mimic King.",
+    alluringQualities: { materials: ["Runestone", "Linen"], traits: ["Runescript", "Sacred Symbol", "Weathered", "Mossy"], tags: ["Knowledge", "Religious"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 0, text: 4, magical: 2, social: 2, spatial: 1, environmental: 1, acoustic: 1, presence: 2 },
+    lootMaterials: ["Linen"],
+    lootTraits: ["Runescript"],
+    partialLoot: ["a book of old stories", "a rubbing of a carved wall", "a pencil worn to a stub"],
+  },
+  {
+    name: "Tomb Automaton", type: "Construct", discipline: 6, baseSuspicion: 4, constitution: 5, interactionStyle: "touch",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Pristine", "Polished"] },
+    quirks: ["Built to open tombs, and patient about it", "Counts everything it can see, out loud, in a whisper"],
+    appliedQuirk: "{name} clicks to a stop before the {form} and tests the seam with a brass finger.",
+    alluringQualities: { materials: ["Gold", "Brass"], traits: ["Locked", "Iron-Banded", "Dusty"], tags: ["Valuable", "Storage"] },
+    perceptionAffinity: { material: 3, structure: 4, weight: 4, text: 1, magical: 2, social: 0, spatial: 2, environmental: 1, acoustic: 2, presence: 0 },
+    lootMaterials: ["Brass", "Iron"],
+    lootTraits: ["Pitted"],
+    partialLoot: ["a brass finger joint", "a coil of fine wire", "a cracked lens eye"],
+  },
+  {
+    name: "Jungle Guide", type: "Ranger", discipline: 5, baseSuspicion: 3, constitution: 3, interactionStyle: "sight",
+    group: "beyondApex", locations: ["the_long_after"],
+    repelledBy: { traits: ["Pristine", "Fragrant"] },
+    quirks: ["Knows every vine by name", "Hears the jungle change before anyone else does"],
+    appliedQuirk: "{name} hacks a vine away from the {form}, then frowns at it, as if it had moved.",
+    alluringQualities: { materials: ["Birch", "Horn"], traits: ["Mossy", "Earthy", "Weathered"], tags: ["Rural"] },
+    perceptionAffinity: { material: 1, structure: 2, weight: 1, text: 0, magical: 1, social: 1, spatial: 4, environmental: 4, acoustic: 3, presence: 3 },
+    lootMaterials: ["Horn"],
+    lootTraits: ["Mossy"],
+    partialLoot: ["a notched machete", "a coil of jungle rope", "a sweat-stained bandana"],
+    companion: {
+      chance: 0.4,
+      options: [
+        { nameSuffix: "'s Capuchin", type: "AnimalCompanion", ap: 2, discipline: 3, constitution: 2, description: "A clever little monkey that steals anything shiny, including from you." },
+      ],
+    },
+  },
+  {
+    // Rare: oversees the dig only now and then (the Long After's realMonsters), and leaves once the
+    // last room is open. Eating them first is Closing Time. Absurdly lucky: see the "lucky" behavior
+    name: "The Curator", type: "Nobility", discipline: 5, baseSuspicion: 2, constitution: 2, interactionStyle: "sight",
+    group: "beyondApex", locations: ["the_long_after"],
+    behavior: "lucky",
+    repelledBy: { traits: ["Polished"] },
+    quirks: ["Never looks where they're going", "Narrates the dig to nobody in particular"],
+    appliedQuirk: "{name} sweeps past the {form}, admiring something on the far wall.",
+    alluringQualities: { materials: ["Gold", "Marble", "Velvet"], traits: ["Ornate", "Gilded", "Carved", "Weathered"], tags: ["Decor", "Valuable"] },
+    perceptionAffinity: { material: 2, structure: 2, weight: 0, text: 2, magical: 1, social: 3, spatial: 0, environmental: 0, acoustic: 0, presence: 1 },
+    lootMaterials: ["Velvet", "Marble"],
+    lootTraits: ["Gilded"],
+    partialLoot: ["a monocle on a ribbon", "a museum catalogue", "a velvet glove"],
+  },
+
   // ── The Tear in Time (Primordial's hunting ground) ──
   // They teach only what can be learned elsewhere, so Master of Disguise never needs the Tear
   {
@@ -1487,6 +1585,10 @@ export const BEHAVIORS = {
   stoneWatch: {
     label: "Stone Watch",
     description: "Never leaves its perch. If you move out of, into, or past a room next to it, it notices the change.",
+  },
+  lucky: {
+    label: "Lucky",
+    description: "Absurdly, obliviously lucky: rolls an extra die when resisting your Strikes, and never even notices a miss. It doesn't run, and loses interest in you; half the time it ambles off into the next room, unaware it was ever in danger.",
   },
   elusive: {
     label: "Elusive",

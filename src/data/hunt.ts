@@ -8,13 +8,13 @@
 // ============================================================
 import type { MimicCharacter } from "@/api/schemas/mimicCharacter";
 import { stillInHunt, type PartyMember } from "./adventurerData";
-import type { HuntLocation, RoomName } from "./locationData";
+import { LOCATIONS, type HuntLocation, type RoomName } from "./locationData";
 import { getBehaviorReactions, type BehaviorContext, type BehaviorTrigger } from "./behaviors";
 import { BURN_HUNTS, burnAfterDiscovery } from "./core";
 import { CAT_KNOWS_LINE, STILLNESS_LINE, STILLNESS_TURNS, isCat } from "./easterEggs";
 import {
   RIVAL_STATS, chillParty, distractedRooms, fireworksDue, fireworksRummage, isNestCleared, sinkingWarning,
-  ERUPTION_PROOF_FORM, eruptionToll, eruptionZone, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
+  ERUPTION_PROOF_FORM, RIVAL_DISGUISES, digDue, eruptionToll, eruptionZone, nextOpened, sealedView, starfallDue, tossRoom, uneatenRemains, type RivalMimic,
 } from "./events";
 import { DUPLICATE_ROOM_SUSPICION, resolveStealth } from "./lure";
 import type { SmallCreature } from "./mealPrep";
@@ -55,6 +55,8 @@ export interface Hunt {
   eruptionTurn?: number | null;
   /** The Tear in Time: the volcano has erupted this hunt (the report comes out sooty). */
   erupted?: boolean;
+  /** The Long After: rooms still sealed (buried or overgrown). `location` is the place without them. */
+  sealedRooms?: RoomName[];
   /** Set once the hunt ends early: found out, or the party got bored and left. A cleared hunt (see huntCleared) leaves it null. */
   ending: Exclude<HuntEnding, "cleared"> | null;
 
@@ -346,8 +348,53 @@ export class Turn {
     if (location.starfall && !this.over) this.starfall();
     if (location.sinkingTurns && !this.over) this.sinking(location.sinkingTurns);
     if (location.snowbound && !this.over) this.frost();
+    if (location.dig && !this.over) this.dig();
     if (location.tarPits && !this.over) this.tar();
     if (location.eruption && !this.over) this.erupt();
+  }
+
+  // The Long After: every few turns the dig opens another sealed room (cut free of the vines, or
+  // dug out), and it joins the hunt. Once the last is open, whoever was overseeing it leaves.
+  private dig() {
+    const { location, turn, sealedRooms = [] } = this.hunt;
+    const dig = location.dig;
+    if (!dig || !digDue(location, turn, sealedRooms)) return;
+    const room = nextOpened(location, sealedRooms, this.random);
+    if (!room) return;
+    const full = LOCATIONS.find(l => l.id === location.id) ?? location;
+    const sealed = sealedRooms.filter(r => r !== room);
+    this.set({ sealedRooms: sealed, location: sealedView(full, sealed) });
+    this.info(`⛏️ ${dig.opened[room] ?? `The ${room} is open.`}`);
+    this.emerge(room);
+    if (sealed.length > 0 || !dig.leaves) return;
+    const leaving = this.hunt.party.find(a => a.name === dig.leaves?.name && stillInHunt(a));
+    if (!leaving) return;
+    this.set({ party: this.hunt.party.map(a => a.id === leaving.id ? { ...a, isAlive: false, isAttracted: false, fled: true } : a) });
+    this.escape(dig.leaves.line);
+  }
+
+  // Whatever was shut in a room the dig has just opened: a small mimic in the Treasury (now and
+  // then), a creature anywhere else (often)
+  private emerge(room: RoomName) {
+    const emerges = this.hunt.location.dig?.emerges;
+    if (!emerges) return;
+    if (emerges.rival && room === emerges.rival.room) {
+      if (this.random() >= emerges.rival.chance) return;
+      const rival: RivalMimic = {
+        id: `rival_${this.hunt.rivals.length}`, kind: "small", room, revealed: true, consumed: false, clueGiven: true,
+        disguise: RIVAL_DISGUISES[Math.floor(this.random() * RIVAL_DISGUISES.length)],
+      };
+      this.set({ rivals: [...this.hunt.rivals, rival] });
+      this.alert(`🪙 ${emerges.rival.line}`);
+      return;
+    }
+    if (this.random() >= emerges.creatureChance) return;
+    const pool = this.hunt.location.locationCreatures.filter(c => !c.rooms || c.rooms.includes(room));
+    if (pool.length === 0) return;
+    const template = pool[Math.floor(this.random() * pool.length)];
+    const uid = `sc_dig_${this.hunt.turn}`;
+    this.set({ creatures: [...this.hunt.creatures, { ...template, uid, isConsumed: false, location: room }] });
+    this.info(`A ${template.name} scurries out of the ${room}, disturbed for the first time in an age.`);
   }
 
   // The Tear in Time's tar pits: whoever ends a turn there may get stuck. The stuck sink a little

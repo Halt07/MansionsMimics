@@ -1,4 +1,5 @@
 import {
+  LOCATIONS,
   creatureEmoji, floorPlan, getRoomDistance, RIVAL_STATS,
   type HuntLocation, type PartyMember, type RivalMimic, type RoomName,
 } from "@/data/gameData";
@@ -40,8 +41,21 @@ export default function RoomMap({
   location, mimicRoom = null, lureRange = 0, adventurers = [], creatures = [], rivals = [], remains = [], distracted = [], markers = [], formName,
 }: RoomMapProps) {
   const plan = floorPlan(location);
+  // Rooms still sealed in this hunt (the Long After's dig): in their places, but not yet named
+  const whole = LOCATIONS.find(l => l.id === location.id) ?? location;
+  const sealed = whole === location ? [] : floorPlan(whole).cells.filter(c => !location.rooms.includes(c.room));
+  const cols = Math.max(plan.cols, ...sealed.map(c => c.col + 1));
   return (
-    <div className="room-map" style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(0, 1fr))` }}>
+    <div className="room-map" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {sealed.map(cell => {
+        const buried = whole.dig?.buried.includes(cell.room);
+        return (
+          <div key={cell.room} className="room-cell room-sealed" style={{ gridColumn: cell.col + 1, gridRow: cell.row + 1 }}
+            title={buried ? "Still buried: the diggers haven't reached it" : "Still overgrown: the vines haven't been cut back"}>
+            <p className="room-name">{buried ? "⛏️ Buried" : "🌿 Overgrown"}</p>
+          </div>
+        );
+      })}
       {plan.cells.map(cell => {
         const here = cell.room === mimicRoom;
         const dist = mimicRoom ? getRoomDistance(location, mimicRoom, cell.room) : Infinity;

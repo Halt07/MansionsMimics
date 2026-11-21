@@ -12,7 +12,7 @@ import { BURN_SUSPICION, getRoomDistance, hasMagic, maxTargetForChance, rollDice
 import { PORTER_SISTER, PORTER_TOKEN_LINE, RIVAL_SAME_SHAPE_CHANCE, RIVAL_SAME_SHAPE_LINE } from "./easterEggs";
 import {
   PRANKS, RIVAL_STATS, STAR_FRAGMENT, disguiseOf, remainsMealAp, isTheRealThing, pickTreasurePrize, rivalInRoom,
-  unmask, type RivalMimic,
+  initiallySealed, sealedView, unmask, type RivalMimic,
 } from "./events";
 import { formsStillAllowed, formTier } from "./forms";
 import { skyward, Turn, type Hunt, type TurnOptions, type TurnResult } from "./hunt";
@@ -23,26 +23,30 @@ import { ALL_FORMS, type Form } from "./mimicData";
 import { VANISHING_LINES, moveCreatures, moveParty, rivalAteFirst } from "./movement";
 import { CANNIBAL_MIMICS, TITANIC_FEAST_GIANTS, becomePrimordial, branchMealRecords, lureRange, withBiggestMeal, withFormUsed } from "./stats";
 import {
-  COLLAPSE_BONUS_AP, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
+  COLLAPSE_BONUS_AP, LUCKY_WANDER_CHANCE, consumeSuspicion, escapeRoom, needsPartialBites, pickStrikeTarget, resolveBite,
   resolveRivalStrike, resolveSwallow, strikeCandidates, strikeDice, strikeWitnesses, type Witnesses,
 } from "./strike";
 import { plural, the } from "./text";
 
 /** How a devoured rival is named in the "biggest meal" stat. */
-const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic" };
+const RIVAL_MEAL_NAMES: Record<RivalMimic["kind"], string> = { lone: "Rival Mimic", nest: "Nest Mimic", elder: "Elder Mimic", small: "Small Mimic" };
 /** Waiting always has at least this chance to lower suspicion, however penalized your Patience. */
 export const WAIT_MIN_CHANCE = 0.4;
 
 // ---------- the start ----------
 
 /** The mimic has picked its room: set up the hunt (see startHunt) and write it up. */
-export function beginHunt(character: MimicCharacter, location: HuntLocation, room: RoomName, opts: TurnOptions = {}): TurnResult {
+export function beginHunt(character: MimicCharacter, whole: HuntLocation, room: RoomName, opts: TurnOptions = {}): TurnResult {
   const random = opts.random ?? Math.random;
+  // The Long After: its sealed rooms aren't part of the hunt until the dig opens them
+  const sealedRooms = initiallySealed(whole);
+  const location = sealedView(whole, sealedRooms);
   const start = startHunt(character, location, room, random);
   const hunt: Hunt = {
     location, mimicRoom: room, party: start.party, creatures: start.creatures, rivals: start.rivals,
     suspicion: start.suspicion, bounty: start.bounty, sickness: start.sickness,
     actionCount: 0, turn: 0, starFragment: null, fireworksRoom: null, eruptionTurn: start.eruptionTurn, ending: null,
+    ...(sealedRooms.length ? { sealedRooms } : {}),
     stillTurns: 0, catsThatKnow: [], peakSuspicion: 0, biggestMeal: null,
     seed: Math.floor(random() * 2 ** 31), recorded: false,
   };
@@ -106,6 +110,8 @@ export function relocate(hunt: Hunt, character: MimicCharacter, targetRoom: Room
       t.alert(`It is older and stronger than anything you have faced. Strike to devour it, and the nest is yours.`);
     } else if (found.kind === "nest") {
       t.alert(`A young mimic is nested here in the ${targetRoom}, gorged and sluggish. It is not the Elder, but it will feed you. Strike!`);
+    } else if (found.kind === "small") {
+      t.alert(`The small mimic from the Treasury is hiding here in the ${targetRoom}, trying very hard to look like part of the ruins. Strike!`);
     } else {
       t.alert(`You sense it immediately — another mimic has been hunting in your territory! It lurks here in the ${targetRoom}, fat with stolen prey.`);
       t.alert(`This is YOUR hunting ground. Entering its room has drawn it out: Strike to devour the intruder and reclaim it.`);
@@ -373,6 +379,21 @@ function strikeSwallow(t: Turn, target: PartyMember, form: Form, dice: number, s
   const meal = resolveSwallow(target, character, { dice, form, witnesses: seen }, t.random);
   t.say(meal.swallowed ? "attack" : "escape", meal.narrative);
 
+  if (!meal.swallowed && meal.oblivious) {
+    // Lucky: they never noticed a thing, and just wander off. Only the commotion is any risk.
+    t.raise(meal.suspicion);
+    t.info(`${target.name} never noticed a thing. (+${meal.suspicion} suspicion, from the commotion)`);
+    t.patchMember(target.id, () => ({ isAttracted: false }));
+    // Half the time they amble off next door, none the wiser (no bolt, no suspicion)
+    if (t.random() < LUCKY_WANDER_CHANCE) {
+      const room = escapeRoom(t.hunt.location, target.location, t.hunt.mimicRoom, t.random);
+      if (room !== target.location) {
+        t.info(`${target.name} strolls off toward the ${room}, humming.`);
+        t.patchMember(target.id, () => ({ location: room }));
+      }
+    }
+    return;
+  }
   if (!meal.swallowed) {
     t.raise(meal.suspicion);
     t.alert(`${target.name} saw you lunge — they've seen your true nature! (+${meal.suspicion} suspicion${meal.suspicion < 4 ? ", softened by your Dragonhide" : ""})`);

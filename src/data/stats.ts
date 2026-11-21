@@ -282,15 +282,22 @@ export function becomePrimordial(
 
 /** The Tear in Time's rare visitor, who opened it: eating them is A Stitch in Time. */
 export const TIME_CASTER = "Time Caster";
+/** The Long After's rare visitor, overseeing the dig until it's done: eating them is Closing Time. */
+export const CURATOR = "The Curator";
 
 /**
  * What eating `member` adds to the records the branch tiers keep: the Tear in Time's counter
- * (see withTimeTear), and whether this was the Time Caster. Pass them unmasked.
+ * (see withTimeTear), and whether this was the Time Caster or the Curator. Pass them unmasked.
  */
 export function branchMealRecords(
   character: Pick<MimicCharacter, "timeTearCounter" | "forms" | "activeFormIndex">, member: { name: string; type: string },
-): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten">> {
-  return { timeTearCounter: withTimeTear(character, member), ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}) };
+): Pick<MimicCharacter, "timeTearCounter"> & Partial<Pick<MimicCharacter, "timeCasterEaten" | "curatorEaten">> {
+  return {
+    timeTearCounter: withTimeTear(character, member),
+    ...(member.name === TIME_CASTER ? { timeCasterEaten: true } : {}),
+    // Only while they're still at the dig: once it's done, they've gone (see Turn.dig)
+    ...(member.name === CURATOR ? { curatorEaten: true } : {}),
+  };
 }
 
 /** Whole days since the mimic last lost mass to decay (0 if the stretch hasn't started). */
@@ -310,12 +317,12 @@ export const CANNIBAL_MIMICS = 10;
 export type AchievementId =
   "hatboxToLegend" | "apexPeak" | "titanicFeast" | "downWithTheShip" | "cultOfPersonality" | "cannibal" |
   "connoisseur" | "masterOfDisguise" | "curiosityCabinet" | "festive" | "forAllSeasons" | "seasonedTraveler" |
-  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime";
+  "eternal" | "primordial" | "rulerOfAllMimics" | "stitchInTime" | "closingTime";
 
 type AchievementProgress = Pick<MimicCharacter,
   "hatboxToLegendReached" | "apexPeakReached" | "titanicFeastReached" | "downWithTheShipReached" |
   "conversions" | "mimicsConsumed" | "adventurersEaten" | "learnedMaterials" | "learnedTraits" | "formsUsed" |
-  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten">;
+  "locationHuntCounts" | "branchTier" | "sovereignReached" | "timeCasterEaten" | "curatorEaten">;
 
 /**
  * Every material and trait an adventurer (or companion, or treasure) can teach. Master of
@@ -451,6 +458,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: `At the Apex, go ${ETERNAL_DECAY_FREE_DAYS} days without losing any mass to hunger, and become Eternal.`,
     flavor: (n) => `${n} has outlasted hunger itself. Kingdoms will fall around it, and it will still be waiting.`,
     isEarned: (c) => c.branchTier === "Eternal",
+  },
+  {
+    id: "closingTime", name: "Closing Time", icon: "🏛️", hidden: true,
+    description: "At the Long After, eat the Curator before the dig is done and they leave. They don't come by often, and they are absurdly lucky.",
+    flavor: (n) => `The museum never did get its exhibit. ${n} is the exhibit.`,
+    isEarned: (c) => c.curatorEaten,
   },
   {
     id: "primordial", name: "Primordial", icon: "🌋", hidden: true,

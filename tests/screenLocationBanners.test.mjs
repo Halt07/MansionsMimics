@@ -69,6 +69,12 @@ export default async function ({ gameData: m, load, ok }) {
   ok(banners(gooey).includes(`${tear.party[0].name} (2 turns until they sink)`) && banners(gooey).includes("They can't get away"), 'someone stuck in the tar: who, how long they have, and that they can\'t get away');
   ok(!banners(tear).includes('Stuck in the'), '…and no strip when nobody is stuck');
 
+  // ---------- the Long After: the dig ----------
+  const ruinHunt = start('the_long_after', 'Jungle Camp', mimic({ tier: 'Apex', mass: 60, branchTier: 'Eternal' }));
+  ok(banners(ruinHunt).includes('The dig: 4 rooms still sealed') && banners(ruinHunt).includes('The next one opens in 4 turns'), 'the Long After: how many rooms are still sealed, and when the next opens');
+  ok(banners({ ...ruinHunt, party: [{ ...ruinHunt.party[0], name: 'The Curator' }] }).includes('The Curator is overseeing it, and will leave once the last room is open'), '…and that the Curator is there, until it\'s done');
+  ok(!banners({ ...ruinHunt, sealedRooms: [] }).includes('The dig'), '…and nothing once the whole court is open');
+
   // ---------- Stargazers' Hill ----------
   const hill = start('stargazers_hill');
   ok(banners(hill).includes(`The next one should fall in ${loc('stargazers_hill').starfall.every} turns.`), 'stars: when the next one falls');

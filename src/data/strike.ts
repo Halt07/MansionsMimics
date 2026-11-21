@@ -29,13 +29,27 @@ export function consumeSuspicion(witnesses: number): number {
   return 1;
 }
 
-/** Extra dice an Elusive adventurer rolls when resisting a Strike (or bite). */
+/** Extra dice an Elusive (or Lucky) adventurer rolls when resisting a Strike (or bite). */
 export const ELUSIVE_EXTRA_DICE = 1;
 
-/** Dice an adventurer resists a Strike (or bite) with: its Discipline, plus any Elusive dice. */
+/** Dice an adventurer resists a Strike (or bite) with: its Discipline, plus any Elusive or Lucky dice. */
 export function strikeResistDice(adventurer: Pick<PartyMember, "discipline" | "behavior">): number {
-  return adventurer.discipline + (adventurer.behavior === "elusive" ? ELUSIVE_EXTRA_DICE : 0);
+  return adventurer.discipline + (adventurer.behavior === "elusive" || adventurer.behavior === "lucky" ? ELUSIVE_EXTRA_DICE : 0);
 }
+
+/** A Lucky adventurer slipping a Strike without ever knowing it (the Curator). {name} and {form}. */
+export const LUCKY_ESCAPES: readonly string[] = [
+  "{name} turns to admire a frieze on the far wall, and the {form}'s jaws close on empty air.",
+  "A vine snaps overhead and a branch drops between you. You get a mouthful of leaves; {name} gets a closer look at the frieze.",
+  "{name} stoops to pick up a shard of pottery. Your lunge sails clean over their head.",
+  "A chunk of masonry comes loose and catches you square between the eyes. {name} doesn't even look up.",
+  "{name} steps aside to make a note, and you bite a column instead.",
+  "A monkey drops onto you at the worst possible moment. {name} wanders on, humming.",
+];
+/** Suspicion from a Lucky adventurer's narrow escape: only the commotion, since they never noticed. */
+export const LUCKY_ESCAPE_SUSPICION = 1;
+/** After a narrow escape, the chance a Lucky adventurer ambles off into a room next door (oblivious, not fleeing). */
+export const LUCKY_WANDER_CHANCE = 0.5;
 
 /** Where an adventurer that slipped a Strike runs to: a room next to it, never the mimic's. */
 export function escapeRoom(
@@ -307,6 +321,8 @@ export type SwallowOutcome =
       suspicion: number;
       /** An elusive target bolts to another room; anyone else just stays, warier. */
       bolts: boolean;
+      /** A lucky target never noticed: they just wander off (no longer drawn to you). */
+      oblivious: boolean;
     }
   | {
       swallowed: true;
@@ -341,11 +357,18 @@ export function resolveSwallow(
   ctx: SwallowContext, random: () => number = Math.random,
 ): SwallowOutcome {
   const check = adhesionCheck(ctx.dice, ctx.form, target, random);
+  if (!check.success && target.behavior === "lucky") {
+    const line = LUCKY_ESCAPES[Math.floor(random() * LUCKY_ESCAPES.length)];
+    return {
+      swallowed: false, narrative: line.replaceAll("{name}", target.name).replaceAll("{form}", ctx.form.name),
+      suspicion: LUCKY_ESCAPE_SUSPICION, bolts: false, oblivious: true,
+    };
+  }
   if (!check.success) {
     return {
       swallowed: false, narrative: check.narrative,
       suspicion: hasMagic(character.currentAppearance, "Dragonhide") ? 3 : 4,
-      bolts: target.behavior === "elusive",
+      bolts: target.behavior === "elusive", oblivious: false,
     };
   }
   const feastGiant = !target.isCompanion && TITANIC_FEAST_GIANTS.includes(target.name);
