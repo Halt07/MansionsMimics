@@ -44,7 +44,7 @@ const AppRoutes = () => (
 function App() {
   return (
     <>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <AppRoutes />
       </Router>
       <Toaster />

@@ -69,3 +69,4 @@ entries as decisions are made, with the reason if one was given.
 ## Code and dependencies
 
 - **The unused shadcn UI components were removed on purpose** (including alert, skeleton, table and textarea). Don't re-add them speculatively; add a component back when a screen actually needs it.
+- **The app is served from GitHub Pages at `/MansionsMimics/`** (`.github/workflows/deploy.yml`, on every push to `main`). `vite.config.mjs` sets `base: '/MansionsMimics/'` and the router takes its `basename` from `import.meta.env.BASE_URL`, so links and asset paths must stay relative to the router or the base, never written as bare `/...`. Pages has no fallback for app routes, so the workflow copies `index.html` to `404.html`; opening or refreshing a link like `/MansionsMimics/Codex` loads the app through that 404 page.
