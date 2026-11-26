@@ -46,6 +46,7 @@ const NAME_REMARKS: readonly { names: readonly string[]; line: (name: string) =>
   { names: ["luggage"], line: () => "It has hundreds of little legs, and it will follow you anywhere." },
   { names: ["wardrobe"], line: () => "Is that a forest in there?" },
   { names: ["spare oom", "spareoom", "sparoom", "spare um", "spareum", "sparum"], line: () => "Definitely not in Narnia." },
+  { names: ["devil", "diablo", "diable", "diavolo", "diavola"], line: () => "You're in disguise all right. But I think Elvis may be on to you..." },
 ];
 
 /** A remark on the mimic's name — or null for an unremarkable name. */
